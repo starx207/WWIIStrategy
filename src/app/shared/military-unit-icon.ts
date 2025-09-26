@@ -1,13 +1,13 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, input, numberAttribute } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
-import { NEUTRAL_UNIT_TYPES, UNIT_TYPES, UnitType } from '../models/unit-type';
+import { NEUTRAL_UNIT_TYPES, UNIT_TYPES, UnitType } from './unit-type';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, switchMap } from 'rxjs';
-import { NATIONALITIES, Nationality } from '../models/nationality';
+import { NATIONALITIES, Nationality } from './nationality';
 
 @Component({
-  selector: 'ww2-military-unit',
+  selector: 'ww2-military-unit-icon',
   imports: [],
   template: ` <span class="graphics-container" [innerHTML]="graphics()"></span> `,
   styles: `
@@ -27,19 +27,18 @@ import { NATIONALITIES, Nationality } from '../models/nationality';
   }
   `,
   host: {
-    '[class]': '"military-unit " + nationalityClass()',
+    '[class]': '"military-unit-icon " + nationalityClass()',
   },
 })
-export class MilitaryUnitComponent {
+export class MilitaryUnitIcon {
   private readonly http = inject(HttpClient);
   private readonly sanitizer = inject(DomSanitizer);
 
-  readonly nationalityClass = computed(() =>
-    NEUTRAL_UNIT_TYPES.includes(this.type())
-      ? 'nationality-neutral'
-      : `nationality-${this.nationality()}`
-  );
+  nationality = input.required<Nationality>();
+  type = input.required<UnitType>();
+
   private readonly isNeutral = computed(() => NEUTRAL_UNIT_TYPES.includes(this.type()));
+
   private readonly imageSrc = computed(() =>
     UNIT_TYPES.includes(this.type()) && NATIONALITIES.includes(this.nationality())
       ? this.isNeutral()
@@ -48,14 +47,17 @@ export class MilitaryUnitComponent {
       : ''
   );
 
-  readonly graphics = toSignal(
+  protected readonly nationalityClass = computed(() =>
+    NEUTRAL_UNIT_TYPES.includes(this.type())
+      ? 'nationality-neutral'
+      : `nationality-${this.nationality()}`
+  );
+
+  protected readonly graphics = toSignal(
     toObservable(this.imageSrc).pipe(
       filter((src) => !!src),
       switchMap((src) => this.http.get(src, { responseType: 'text' })),
       map((svg) => this.sanitizer.bypassSecurityTrustHtml(svg))
     )
   );
-
-  nationality = input.required<Nationality>();
-  type = input.required<UnitType>();
 }
