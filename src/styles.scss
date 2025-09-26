@@ -1,1 +1,34 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --unit-color-us: #538649;
+  --unit-color-uk: #c5b197;
+  --unit-color-su: #802a2a;
+  --unit-color-ja: #f89c46;
+  --unit-color-de: #353535;
+  --unit-color-neutral: #b1b1b1;
+}
+
+.military-unit {
+  &.nationality-us {
+    fill: var(--unit-color-us);
+  }
+
+  &.nationality-uk {
+    fill: var(--unit-color-uk);
+  }
+
+  &.nationality-su {
+    fill: var(--unit-color-su);
+  }
+
+  &.nationality-ja {
+    fill: var(--unit-color-ja);
+  }
+
+  &.nationality-de {
+    fill: var(--unit-color-de);
+  }
+
+  &.nationality-neutral {
+    fill: var(--unit-color-neutral);
+  }
+}
