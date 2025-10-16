@@ -1,0 +1,7 @@
+<h1 class="battalion__strength">{{ strength() }}</h1>
+
+<div class="battalion__squads">
+  @for (squad of squads(); track squad) {
+  <ww2-military-unit-squad [units]="squad" [direction]="squadDirection()" />
+  }
+</div>

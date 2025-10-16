@@ -1,0 +1,14 @@
+.ww2-badge {
+  // TODO: Define the colors elsewhere (maybe make another set of classes for applying colors?)
+  color: white;
+  background-color: red;
+
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  box-sizing: content-box;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+}

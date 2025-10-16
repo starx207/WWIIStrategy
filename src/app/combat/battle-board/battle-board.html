@@ -1,0 +1,93 @@
+<div class="battle-board__army battle-board__attack">
+  <h1 class="battle-board__role-label">{{ 'Attacker' | uppercase }}</h1>
+  <ww2-battalion
+    class="battle-board__squad-5 battle-board__attack__4"
+    [nationality]="Nationality.UNITED_KINGDOM"
+    [fromArmy]="attackers"
+    [unitTypes]="[UnitType.BOMBER, UnitType.BATTLESHIP]"
+    [strength]="4"
+    role="attack"
+  />
+  <ww2-battalion
+    class="battle-board__squad-4 battle-board__attack__3"
+    [nationality]="Nationality.UNITED_KINGDOM"
+    [fromArmy]="attackers"
+    [unitTypes]="[UnitType.TANK, UnitType.FIGHTER_JET, UnitType.DESTROYER]"
+    [strength]="3"
+    role="attack"
+  />
+  <ww2-battalion
+    class="battle-board__squad-3 battle-board__attack__2"
+    [nationality]="Nationality.UNITED_KINGDOM"
+    [fromArmy]="attackers"
+    [unitTypes]="[UnitType.ARTILLERY, UnitType.SUBMARINE]"
+    [strength]="2"
+    role="attack"
+  />
+  <ww2-battalion
+    class="battle-board__squad-2 battle-board__attack__1"
+    [nationality]="Nationality.UNITED_KINGDOM"
+    [fromArmy]="attackers"
+    [unitTypes]="[UnitType.INFANTRY, UnitType.AIRCRAFT_CARRIER]"
+    [strength]="1"
+    role="attack"
+  />
+  <ww2-battalion
+    class="battle-board__squad-1 battle-board__attack__0"
+    [nationality]="Nationality.UNITED_KINGDOM"
+    [fromArmy]="attackers"
+    [unitTypes]="[UnitType.TRANSPORT]"
+    [strength]="0"
+    role="attack"
+  />
+  <div class="battle-board__casualties">
+    <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
+  </div>
+</div>
+<div class="battle-board__army battle-board__defend">
+  <h1 class="battle-board__role-label">{{ 'Defender' | uppercase }}</h1>
+  <ww2-battalion
+    class="battle-board__squad-5 battle-board__defend__5"
+    [nationality]="Nationality.GERMANY"
+    [fromArmy]="defenders"
+    [unitTypes]="[UnitType.FIGHTER_JET]"
+    [strength]="5"
+    role="defend"
+  />
+  <ww2-battalion
+    class="battle-board__squad-4 battle-board__defend__4"
+    [nationality]="Nationality.GERMANY"
+    [fromArmy]="defenders"
+    [unitTypes]="[UnitType.FIGHTER_JET, UnitType.BATTLESHIP]"
+    [strength]="4"
+    role="defend"
+  />
+  <ww2-battalion
+    class="battle-board__squad-3 battle-board__defend__3"
+    [nationality]="Nationality.GERMANY"
+    [fromArmy]="defenders"
+    [unitTypes]="[UnitType.TANK, UnitType.DESTROYER, UnitType.AIRCRAFT_CARRIER]"
+    [strength]="3"
+    role="defend"
+  />
+  <ww2-battalion
+    class="battle-board__squad-2 battle-board__defend__2"
+    [nationality]="Nationality.GERMANY"
+    [fromArmy]="defenders"
+    [unitTypes]="[UnitType.INFANTRY, UnitType.ARTILLERY, UnitType.SUBMARINE]"
+    [strength]="2"
+    role="defend"
+  />
+  <ww2-battalion
+    class="battle-board__squad-1 battle-board__defend__1"
+    [nationality]="Nationality.GERMANY"
+    [fromArmy]="defenders"
+    [unitTypes]="[UnitType.ANTI_AIR_GUN, UnitType.BOMBER, UnitType.TRANSPORT]"
+    [strength]="1"
+    role="defend"
+  />
+  <div class="battle-board__casualties">
+    <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
+  </div>
+</div>
+<div class="battle-board__dice-tray"></div>

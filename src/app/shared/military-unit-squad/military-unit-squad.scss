@@ -1,0 +1,22 @@
+:host {
+  font-size: 1rem;
+  display: block;
+  position: relative;
+}
+
+.unit-count-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+
+  font-size: 0.8em;
+  height: 1em;
+  padding: 2px;
+}
+
+:host.military-unit-squad__left-face {
+  .military-unit-icon {
+    transform: scale(-1, 1);
+  }
+}

@@ -1,34 +1,9 @@
-:root {
-  --unit-color-us: #538649;
-  --unit-color-uk: #c5b197;
-  --unit-color-su: #802a2a;
-  --unit-color-ja: #f89c46;
-  --unit-color-de: #353535;
-  --unit-color-neutral: #b1b1b1;
-}
+@import 'styles/colors.scss';
 
-.military-unit-icon {
-  &.nationality-us {
-    fill: var(--unit-color-us);
-  }
+@import 'styles/resets.scss';
 
-  &.nationality-uk {
-    fill: var(--unit-color-uk);
-  }
+@import 'styles/fonts.scss';
 
-  &.nationality-su {
-    fill: var(--unit-color-su);
-  }
+@import 'styles/theme-nationality.scss';
 
-  &.nationality-ja {
-    fill: var(--unit-color-ja);
-  }
-
-  &.nationality-de {
-    fill: var(--unit-color-de);
-  }
-
-  &.nationality-neutral {
-    fill: var(--unit-color-neutral);
-  }
-}
+@import 'styles/badges.scss';

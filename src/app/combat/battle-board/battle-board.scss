@@ -1,0 +1,114 @@
+:host {
+  display: grid;
+  font-size: 1rem;
+  grid-template-columns: 6fr 1fr 6fr;
+  grid-template-areas: 'attack dice defend';
+  gap: 0.5em;
+  padding: 0.5em;
+
+  --battle-board-margin: 1em;
+  width: calc(100vw - var(--battle-board-margin) - var(--battle-board-margin));
+  height: calc(100vh - var(--battle-board-margin) - var(--battle-board-margin));
+  margin: var(--battle-board-margin);
+  border: 1px dashed red;
+  background-color: pink;
+}
+
+.battle-board__army {
+  --battle-board-army-col-1: 2fr;
+  --battle-board-army-col-2: 4fr;
+
+  display: grid;
+  grid-template:
+    'label label' auto
+    'casualties squad5' 1fr
+    'casualties squad4' 1fr
+    'casualties squad3' 1fr
+    'casualties squad2' 1fr
+    'casualties squad1' 1fr
+    / var(--battle-board-army-col-1) var(--battle-board-army-col-2);
+  gap: 0.5em;
+  padding: 0.5em;
+
+  border: 2px solid blue;
+  background-color: lightblue;
+}
+
+.battle-board__dice-tray {
+  grid-area: dice;
+}
+
+.battle-board__attack {
+  grid-area: attack;
+}
+
+.battle-board__role-label {
+  grid-area: label;
+  text-align: right;
+}
+
+.battle-board__casualties {
+  position: relative;
+  grid-area: casualties;
+
+  border: 1px solid red;
+  background-color: pink;
+}
+
+.battle-board__casualties__label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  writing-mode: vertical-lr;
+  text-orientation: sideways;
+
+  transform: rotate(180deg);
+  transform-origin: center;
+
+  font-size: 4em;
+  letter-spacing: 0.5em;
+  padding-top: 0.5em;
+  opacity: 0.15;
+}
+
+.battle-board__squad-1 {
+  grid-area: squad1;
+}
+
+.battle-board__squad-2 {
+  grid-area: squad2;
+}
+
+.battle-board__squad-3 {
+  grid-area: squad3;
+}
+
+.battle-board__squad-4 {
+  grid-area: squad4;
+}
+
+.battle-board__squad-5 {
+  grid-area: squad5;
+}
+
+.battle-board__defend {
+  grid-area: defend;
+  grid-template:
+    'squad5 casualties' 1fr
+    'squad4 casualties' 1fr
+    'squad3 casualties' 1fr
+    'squad2 casualties' 1fr
+    'squad1 casualties' 1fr
+    'label label' auto
+    / var(--battle-board-army-col-2) var(--battle-board-army-col-1);
+
+  .battle-board__role-label {
+    text-align: left;
+  }
+
+  .battle-board__casualties__label {
+    transform: unset;
+    right: 0;
+    left: unset;
+  }
+}

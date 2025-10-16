@@ -1,0 +1,5 @@
+@if (unitCount() > 0) {
+<ww2-military-unit-icon [nationality]="nationality()" [unitType]="unitType()" />
+} @if (unitCount() > 1) {
+<span class="unit-count-badge ww2-badge">{{ unitCount() }}</span>
+}
