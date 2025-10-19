@@ -1,96 +1,98 @@
 import { Nationality } from './nationality';
 import { UnitType } from './unit-type';
 
-export interface MilitaryUnit {
-  type: UnitType;
-  nationality: Nationality;
-  attack: number;
-  // canTarget: UnitType[];
-  defense: number;
-  // movement: number;
+export interface MilitaryUnitInitOptions {
+  attack?: number;
+  defense?: number;
+  hitPoints?: number;
+}
+
+export abstract class MilitaryUnit {
+  constructor(
+    public type: UnitType,
+    public nationality: Nationality,
+    options?: MilitaryUnitInitOptions
+  ) {
+    this.attack = options?.attack ?? 1;
+    this.defense = options?.defense ?? 1;
+    this.hitPoints = options?.hitPoints ?? 1;
+  }
+
+  readonly attack: number;
+  readonly defense: number;
   hitPoints: number;
+  // canTarget: UnitType[];
+  // movement: number;
 }
 
-export interface InfantryUnit extends MilitaryUnit {
-  type: UnitType.INFANTRY;
-  attack: 1;
-  defense: 2;
-  hitPoints: 1;
+export class InfantryUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.INFANTRY, nationality, { defense: 2 });
+  }
 }
 
-export interface ArtilleryUnit extends MilitaryUnit {
-  type: UnitType.ARTILLERY;
-  attack: 2;
-  defense: 2;
-  hitPoints: 1;
+export class ArtilleryUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.ARTILLERY, nationality, { attack: 2, defense: 2 });
+  }
 }
 
-export interface TankUnit extends MilitaryUnit {
-  type: UnitType.TANK;
-  attack: 3;
-  defense: 3;
-  hitPoints: 1;
+export class TankUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.TANK, nationality, { attack: 3, defense: 3 });
+  }
 }
 
-export interface AntiAirUnit extends MilitaryUnit {
-  type: UnitType.ANTI_AIR_GUN;
-  attack: 0;
-  defense: 1;
-  hitPoints: 1;
+export class AntiAirUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.ANTI_AIR_GUN, nationality, { attack: 0 });
+  }
 }
 
-export interface FactoryUnit extends MilitaryUnit {
-  type: UnitType.FACTORY;
-  attack: 0;
-  defense: 0;
-  hitPoints: 1;
+export class FactoryUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.FACTORY, nationality, { attack: 0, defense: 0 });
+  }
 }
 
-export interface FighterJetUnit extends MilitaryUnit {
-  type: UnitType.FIGHTER_JET;
-  attack: 3;
-  defense: 4;
-  hitPoints: 1;
+export class FighterJetUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.FIGHTER_JET, nationality, { attack: 3, defense: 4 });
+  }
 }
 
-export interface BomberUnit extends MilitaryUnit {
-  type: UnitType.BOMBER;
-  attack: 4;
-  defense: 1;
-  hitPoints: 1;
+export class BomberUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.BOMBER, nationality, { attack: 4 });
+  }
 }
 
-export interface BattleshipUnit extends MilitaryUnit {
-  type: UnitType.BATTLESHIP;
-  attack: 4;
-  defense: 4;
-  hitPoints: 2;
+export class BattleshipUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.BATTLESHIP, nationality, { attack: 4, defense: 4, hitPoints: 2 });
+  }
 }
 
-export interface DestroyerUnit extends MilitaryUnit {
-  type: UnitType.DESTROYER;
-  attack: 3;
-  defense: 3;
-  hitPoints: 1;
+export class DestroyerUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.DESTROYER, nationality, { attack: 3, defense: 3 });
+  }
 }
 
-export interface AircraftCarrierUnit extends MilitaryUnit {
-  type: UnitType.AIRCRAFT_CARRIER;
-  attack: 1;
-  defense: 3;
-  hitPoints: 1;
+export class AircraftCarrierUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.AIRCRAFT_CARRIER, nationality, { defense: 3 });
+  }
 }
 
-export interface TransportUnit extends MilitaryUnit {
-  type: UnitType.TRANSPORT;
-  attack: 0;
-  defense: 1;
-  hitPoints: 1;
+export class TransportUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.TRANSPORT, nationality, { attack: 0 });
+  }
 }
 
-export interface SubmarineUnit extends MilitaryUnit {
-  type: UnitType.SUBMARINE;
-  attack: 2;
-  defense: 2;
-  hitPoints: 1;
+export class SubmarineUnit extends MilitaryUnit {
+  constructor(nationality: Nationality) {
+    super(UnitType.SUBMARINE, nationality, { attack: 2, defense: 2 });
+  }
 }

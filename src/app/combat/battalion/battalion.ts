@@ -1,15 +1,13 @@
 import { Component, computed, input, output } from '@angular/core';
-import {
-  SquadDirection,
-  MilitaryUnitSquad,
-} from '@ww2/shared/military-unit-squad/military-unit-squad';
+import { SquadDirection, SquadComponent } from '@ww2/shared/squad-component/squad-component';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { createSquads } from '@ww2/shared/military-unit-squad';
 
 export type BattalionRole = 'attack' | 'defend';
 
 @Component({
   selector: 'ww2-battalion',
-  imports: [MilitaryUnitSquad],
+  imports: [SquadComponent],
   templateUrl: './battalion.html',
   styleUrl: './battalion.scss',
   host: {
@@ -33,17 +31,5 @@ export class Battalion {
     this.role() == 'defend' ? 'left-face' : 'right-face'
   );
 
-  protected squads = computed(() => {
-    const groups: Record<string, MilitaryUnit[]> = {};
-
-    this.battalionUnits().forEach((unit) => {
-      const groupKey = `${unit.type}-${unit.nationality}`;
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push(unit);
-    });
-
-    return Object.values(groups);
-  });
+  protected squads = computed(() => createSquads(this.battalionUnits()));
 }
