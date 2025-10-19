@@ -1,0 +1,18 @@
+button {
+  padding: 3px 12px;
+
+  background-color: var(--color-button-background);
+  color: var(--color-button-foreground);
+  border: 1px solid black;
+  letter-spacing: 0.1em;
+
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--color-button-hover-background);
+  }
+
+  &:active {
+    background-color: var(--color-button-active-background);
+  }
+}

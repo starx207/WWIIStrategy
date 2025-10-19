@@ -1,10 +1,8 @@
-import { Component, computed, input } from '@angular/core';
-import { Nationality } from '@ww2/shared/nationality';
+import { Component, computed, input, output } from '@angular/core';
 import {
   SquadDirection,
   MilitaryUnitSquad,
 } from '@ww2/shared/military-unit-squad/military-unit-squad';
-import { UnitType } from '@ww2/shared/unit-type';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 
 export type BattalionRole = 'attack' | 'defend';
@@ -19,28 +17,26 @@ export type BattalionRole = 'attack' | 'defend';
   },
 })
 export class Battalion {
-  nationality = input.required<Nationality>();
   strength = input.required<number>();
   role = input.required<BattalionRole>();
 
   fromArmy = input<MilitaryUnit[]>([]);
-  unitTypes = input<UnitType[]>([]);
 
-  protected hostClasses = computed(() => `battalion battalion__${this.role()}`);
-  protected squadDirection = computed<SquadDirection>(() =>
-    this.role() == 'defend' ? 'left-face' : 'right-face'
-  );
-  protected randomCount = Math.floor(Math.random() * 25);
-  protected strengthFilterUnits = computed(() =>
+  battalionUnits = computed(() =>
     this.fromArmy().filter(
       (unit) => (this.role() == 'attack' ? unit.attack : unit.defense) == this.strength()
     )
   );
 
+  protected hostClasses = computed(() => `battalion battalion__${this.role()}`);
+  protected squadDirection = computed<SquadDirection>(() =>
+    this.role() == 'defend' ? 'left-face' : 'right-face'
+  );
+
   protected squads = computed(() => {
     const groups: Record<string, MilitaryUnit[]> = {};
 
-    this.strengthFilterUnits().forEach((unit) => {
+    this.battalionUnits().forEach((unit) => {
       const groupKey = `${unit.type}-${unit.nationality}`;
       if (!groups[groupKey]) {
         groups[groupKey] = [];

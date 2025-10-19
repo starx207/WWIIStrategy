@@ -11,12 +11,12 @@
   height: calc(100vh - var(--battle-board-margin) - var(--battle-board-margin));
   margin: var(--battle-board-margin);
   border: 1px dashed red;
-  background-color: pink;
+  background-color: rgba(255, 192, 203, 0.582);
 }
 
 .battle-board__army {
   --battle-board-army-col-1: 2fr;
-  --battle-board-army-col-2: 4fr;
+  --battle-board-army-col-2: 5fr;
 
   display: grid;
   grid-template:
@@ -29,13 +29,25 @@
     / var(--battle-board-army-col-1) var(--battle-board-army-col-2);
   gap: 0.5em;
   padding: 0.5em;
+  max-height: calc(100vh - var(--battle-board-margin) - var(--battle-board-margin) - 1em);
 
   border: 2px solid blue;
-  background-color: lightblue;
+  background-color: rgba(173, 216, 230, 0.507);
 }
 
 .battle-board__dice-tray {
   grid-area: dice;
+  border: 1px solid lime;
+  background-color: rgba(212, 255, 212, 0.521);
+}
+
+.battle-board__dice-tray__results {
+  display: flex;
+  gap: 3px;
+  align-items: start;
+  align-content: start;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .battle-board__attack {
@@ -51,8 +63,20 @@
   position: relative;
   grid-area: casualties;
 
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: start;
+
   border: 1px solid red;
-  background-color: pink;
+  background-color: rgba(255, 192, 203, 0.493);
+
+  overflow-y: auto;
+
+  // TODO: I need a better way to keep this on top
+  .military-unit-icon {
+    z-index: 1;
+  }
 }
 
 .battle-board__casualties__label {
@@ -65,7 +89,7 @@
   transform: rotate(180deg);
   transform-origin: center;
 
-  font-size: 4em;
+  font-size: 4.5em;
   letter-spacing: 0.5em;
   padding-top: 0.5em;
   opacity: 0.15;

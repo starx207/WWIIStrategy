@@ -1,93 +1,46 @@
 <div class="battle-board__army battle-board__attack">
   <h1 class="battle-board__role-label">{{ 'Attacker' | uppercase }}</h1>
+  @for (rank of ATTACK_SQUAD_RANKS; track $index) {
   <ww2-battalion
-    class="battle-board__squad-5 battle-board__attack__4"
-    [nationality]="Nationality.UNITED_KINGDOM"
-    [fromArmy]="attackers"
-    [unitTypes]="[UnitType.BOMBER, UnitType.BATTLESHIP]"
-    [strength]="4"
+    #attacker
+    [class]="`battle-board__squad-${ATTACK_SQUAD_RANKS.length - $index} battle-board__attack__${rank}`"
+    [fromArmy]="attackers()"
+    [strength]="rank"
     role="attack"
+    (click)="selectBattalion(attacker)"
   />
-  <ww2-battalion
-    class="battle-board__squad-4 battle-board__attack__3"
-    [nationality]="Nationality.UNITED_KINGDOM"
-    [fromArmy]="attackers"
-    [unitTypes]="[UnitType.TANK, UnitType.FIGHTER_JET, UnitType.DESTROYER]"
-    [strength]="3"
-    role="attack"
-  />
-  <ww2-battalion
-    class="battle-board__squad-3 battle-board__attack__2"
-    [nationality]="Nationality.UNITED_KINGDOM"
-    [fromArmy]="attackers"
-    [unitTypes]="[UnitType.ARTILLERY, UnitType.SUBMARINE]"
-    [strength]="2"
-    role="attack"
-  />
-  <ww2-battalion
-    class="battle-board__squad-2 battle-board__attack__1"
-    [nationality]="Nationality.UNITED_KINGDOM"
-    [fromArmy]="attackers"
-    [unitTypes]="[UnitType.INFANTRY, UnitType.AIRCRAFT_CARRIER]"
-    [strength]="1"
-    role="attack"
-  />
-  <ww2-battalion
-    class="battle-board__squad-1 battle-board__attack__0"
-    [nationality]="Nationality.UNITED_KINGDOM"
-    [fromArmy]="attackers"
-    [unitTypes]="[UnitType.TRANSPORT]"
-    [strength]="0"
-    role="attack"
-  />
+  }
   <div class="battle-board__casualties">
     <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
+    @for (unit of attackers(); track $index) {
+    <ww2-military-unit-icon [nationality]="unit.nationality" [unitType]="unit.type" />
+    }
   </div>
 </div>
 <div class="battle-board__army battle-board__defend">
   <h1 class="battle-board__role-label">{{ 'Defender' | uppercase }}</h1>
+  @for (rank of DEFENSE_SQUAD_RANKS; track $index) {
   <ww2-battalion
-    class="battle-board__squad-5 battle-board__defend__5"
-    [nationality]="Nationality.GERMANY"
-    [fromArmy]="defenders"
-    [unitTypes]="[UnitType.FIGHTER_JET]"
-    [strength]="5"
+    #defender
+    [class]="`battle-board__squad-${DEFENSE_SQUAD_RANKS.length - $index} battle-board__defend__${rank}`"
+    [fromArmy]="defenders()"
+    [strength]="rank"
     role="defend"
+    (click)="selectBattalion(defender)"
   />
-  <ww2-battalion
-    class="battle-board__squad-4 battle-board__defend__4"
-    [nationality]="Nationality.GERMANY"
-    [fromArmy]="defenders"
-    [unitTypes]="[UnitType.FIGHTER_JET, UnitType.BATTLESHIP]"
-    [strength]="4"
-    role="defend"
-  />
-  <ww2-battalion
-    class="battle-board__squad-3 battle-board__defend__3"
-    [nationality]="Nationality.GERMANY"
-    [fromArmy]="defenders"
-    [unitTypes]="[UnitType.TANK, UnitType.DESTROYER, UnitType.AIRCRAFT_CARRIER]"
-    [strength]="3"
-    role="defend"
-  />
-  <ww2-battalion
-    class="battle-board__squad-2 battle-board__defend__2"
-    [nationality]="Nationality.GERMANY"
-    [fromArmy]="defenders"
-    [unitTypes]="[UnitType.INFANTRY, UnitType.ARTILLERY, UnitType.SUBMARINE]"
-    [strength]="2"
-    role="defend"
-  />
-  <ww2-battalion
-    class="battle-board__squad-1 battle-board__defend__1"
-    [nationality]="Nationality.GERMANY"
-    [fromArmy]="defenders"
-    [unitTypes]="[UnitType.ANTI_AIR_GUN, UnitType.BOMBER, UnitType.TRANSPORT]"
-    [strength]="1"
-    role="defend"
-  />
+  }
   <div class="battle-board__casualties">
     <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
+    @for (unit of defenders(); track $index) {
+    <ww2-military-unit-icon [nationality]="unit.nationality" [unitType]="unit.type" />
+    }
   </div>
 </div>
-<div class="battle-board__dice-tray"></div>
+<div class="battle-board__dice-tray">
+  <button (click)="rollDice()">Fire!</button>
+  <div class="battle-board__dice-tray__results">
+    @for (i of activeUnits(); track i) {
+    <ww2-dice #dice [hit]="dice.value() <= activeBattalionStrength()" />
+    }
+  </div>
+</div>

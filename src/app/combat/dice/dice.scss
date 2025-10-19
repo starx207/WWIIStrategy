@@ -1,0 +1,94 @@
+// TODO: use color variables instead of hard-coding where appropriate
+:host {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 3px;
+  gap: 3px;
+
+  font-size: 1rem;
+
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 10%;
+
+  width: 50px;
+  height: auto;
+  aspect-ratio: 1/1;
+}
+
+:host.dice__hit {
+  border: 2px solid red;
+  background-color: rgb(255, 224, 224);
+}
+
+:host.dice__value__1 {
+  grid-template-areas:
+    '. . .'
+    '. one .'
+    '. . .';
+}
+
+:host.dice__value__2 {
+  grid-template-areas:
+    'one . .'
+    '. . .'
+    '. . two';
+}
+
+:host.dice__value__3 {
+  grid-template-areas:
+    'one . .'
+    '. two .'
+    '. . three';
+}
+
+:host.dice__value__4 {
+  grid-template-areas:
+    'one . two'
+    '. . .'
+    'three . four';
+}
+
+:host.dice__value__5 {
+  grid-template-areas:
+    'one . two'
+    '. three .'
+    'four . five';
+}
+
+:host.dice__value__6 {
+  grid-template-areas:
+    'one . two'
+    'three . four'
+    'five . six';
+}
+
+.dice__dot {
+  border-radius: 50%;
+  background-color: black;
+}
+
+.dice__dot__1 {
+  grid-area: one;
+}
+
+.dice__dot__2 {
+  grid-area: two;
+}
+
+.dice__dot__3 {
+  grid-area: three;
+}
+
+.dice__dot__4 {
+  grid-area: four;
+}
+
+.dice__dot__5 {
+  grid-area: five;
+}
+
+.dice__dot__6 {
+  grid-area: six;
+}

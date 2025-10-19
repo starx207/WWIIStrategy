@@ -1,25 +1,25 @@
 .military-unit-icon {
   &.nationality-us {
-    fill: var(--unit-color-us);
+    fill: var(--color-unit-us);
   }
 
   &.nationality-uk {
-    fill: var(--unit-color-uk);
+    fill: var(--color-unit-uk);
   }
 
   &.nationality-su {
-    fill: var(--unit-color-su);
+    fill: var(--color-unit-su);
   }
 
   &.nationality-ja {
-    fill: var(--unit-color-ja);
+    fill: var(--color-unit-ja);
   }
 
   &.nationality-de {
-    fill: var(--unit-color-de);
+    fill: var(--color-unit-de);
   }
 
   &.nationality-neutral {
-    fill: var(--unit-color-neutral);
+    fill: var(--color-unit-neutral);
   }
 }

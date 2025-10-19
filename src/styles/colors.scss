@@ -1,8 +1,21 @@
 :root {
-  --unit-color-us: #538649;
-  --unit-color-uk: #c5b197;
-  --unit-color-su: #802a2a;
-  --unit-color-ja: #f89c46;
-  --unit-color-de: #353535;
-  --unit-color-neutral: #b1b1b1;
+  // Main Palette
+  --color-default-background: rgb(44, 44, 44);
+  --color-default-foreground: rgba(255, 255, 255, 0.884);
+  --color-primary: rgb(24, 24, 97);
+  --color-secondary: rgb(134, 46, 46);
+
+  // Unit colors
+  --color-unit-us: #538649;
+  --color-unit-uk: #c5b197;
+  --color-unit-su: #802a2a;
+  --color-unit-ja: #f89c46;
+  --color-unit-de: #353535;
+  --color-unit-neutral: #b1b1b1;
+
+  // Buttons
+  --color-button-foreground: var(--color-default-foreground);
+  --color-button-background: rgb(54, 54, 54);
+  --color-button-hover-background: rgb(87, 87, 87);
+  --color-button-active-background: rgb(65, 65, 65);
 }
