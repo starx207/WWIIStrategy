@@ -1,12 +1,12 @@
-@import 'styles/colors.scss';
-@import 'styles/typography.scss';
+@use 'styles/colors';
+@use 'styles/typography';
 
-@import 'styles/resets.scss';
+@use 'styles/resets';
 
-@import 'styles/fonts.scss';
+@use 'styles/fonts';
 
-@import 'styles/theme-nationality.scss';
+@use 'styles/theme-nationality';
 
-@import 'styles/badges.scss';
+@use 'styles/badges';
 
-@import 'styles/buttons.scss';
+@use 'styles/buttons';
