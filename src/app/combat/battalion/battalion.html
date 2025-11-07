@@ -1,12 +1,20 @@
-<h1 class="battalion__strength">{{ strength() }}</h1>
+<div class="battalion__garrison">
+  <h1 class="battalion__strength">{{ strength() }}</h1>
 
-<div class="battalion__squads">
-  @for (item of squads(); track $index) {
-  <ww2-squad
-    [squad]="item.squad"
-    [direction]="squadDirection()"
-    [disabled]="!item.enabled"
-    (selected)="selectSquad(item.squad)"
-  />
+  <div class="battalion__squads">
+    @for (item of healthySquads(); track item) {
+    <ww2-squad
+      [squad]="item.squad"
+      [direction]="squadDirection()"
+      [disabled]="!item.enabled"
+      (selected)="selectSquad(item.squad)"
+    />
+    }
+  </div>
+</div>
+
+<div class="battalion__casualties">
+  @for (item of casualtySquads(); track item) {
+  <ww2-squad [squad]="item.squad" [direction]="squadDirection()" [disabled]="!item.enabled" />
   }
 </div>

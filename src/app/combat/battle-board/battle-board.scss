@@ -18,14 +18,15 @@
   --battle-board-army-col-1: 2fr;
   --battle-board-army-col-2: 5fr;
 
+  position: relative;
   display: grid;
   grid-template:
     'label label' auto
-    'casualties squad5' 1fr
-    'casualties squad4' 1fr
-    'casualties squad3' 1fr
-    'casualties squad2' 1fr
-    'casualties squad1' 1fr
+    'squad5 squad5' 1fr
+    'squad4 squad4' 1fr
+    'squad3 squad3' 1fr
+    'squad2 squad2' 1fr
+    'squad1 squad1' 1fr
     / var(--battle-board-army-col-1) var(--battle-board-army-col-2);
   gap: 0.5em;
   padding: 0.5em;
@@ -67,26 +68,6 @@
   font-weight: bold;
 }
 
-.battle-board__casualties {
-  position: relative;
-  grid-area: casualties;
-
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-content: start;
-
-  border: 1px solid red;
-  background-color: rgba(255, 192, 203, 0.493);
-
-  overflow-y: auto;
-
-  // TODO: I need a better way to keep this on top
-  .military-unit-icon {
-    z-index: 1;
-  }
-}
-
 .battle-board__casualties__label {
   position: absolute;
   left: 0;
@@ -100,7 +81,7 @@
   font-size: 4.5em;
   letter-spacing: 0.5em;
   padding-top: 0.5em;
-  opacity: 0.15;
+  opacity: 0.25;
 }
 
 // TODO: Don't call these squads. They are now battalions. I need some consistency with how I'm naming things
@@ -131,11 +112,11 @@
 .battle-board__defend {
   grid-area: defend;
   grid-template:
-    'squad5 casualties' 1fr
-    'squad4 casualties' 1fr
-    'squad3 casualties' 1fr
-    'squad2 casualties' 1fr
-    'squad1 casualties' 1fr
+    'squad5 squad5' 1fr
+    'squad4 squad4' 1fr
+    'squad3 squad3' 1fr
+    'squad2 squad2' 1fr
+    'squad1 squad1' 1fr
     'label label' auto
     / var(--battle-board-army-col-2) var(--battle-board-army-col-1);
 
@@ -157,4 +138,9 @@
 .battle-board__dice__hit-pending {
   border: 2px solid red;
   background-color: rgb(255, 224, 224);
+}
+
+.battalion {
+  position: relative;
+  z-index: 1;
 }

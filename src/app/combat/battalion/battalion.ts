@@ -36,6 +36,13 @@ export class Battalion {
       (unit) => (this.roleFilter == 'attack' ? unit.attack : unit.defense) == this.strength()
     )
   );
+  casualtyIds = this.store.selectSignal(CombatSelectors.allCasualtyIds);
+  healthyUnits = computed(() => {
+    return this.battalionUnits().filter((unit) => !this.casualtyIds().includes(unit.id));
+  });
+  casualtyUnits = computed(() => {
+    return this.battalionUnits().filter((unit) => this.casualtyIds().includes(unit.id));
+  });
 
   readyUnits!: Signal<MilitaryUnit[]>;
 
@@ -52,9 +59,17 @@ export class Battalion {
     () => this.role !== this.activeRole() && this.pendingHits().length > 0
   );
 
-  protected squads = computed(() => {
+  protected healthySquads = computed(() => {
     const readyUnits = this.readyUnits();
-    return createSquads(this.battalionUnits(), { separateUnits: readyUnits }).map((squad) => ({
+    return createSquads(this.healthyUnits(), { separateUnits: readyUnits }).map((squad) => ({
+      squad,
+      enabled: this.casualtiesPending() || (this.readyToFire() && squad.isSubsetOf(readyUnits)),
+    }));
+  });
+
+  protected casualtySquads = computed(() => {
+    const readyUnits = this.readyUnits();
+    return createSquads(this.casualtyUnits(), { separateUnits: readyUnits }).map((squad) => ({
       squad,
       enabled: this.casualtiesPending() || (this.readyToFire() && squad.isSubsetOf(readyUnits)),
     }));

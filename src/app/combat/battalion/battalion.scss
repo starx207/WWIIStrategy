@@ -1,6 +1,14 @@
 :host {
   font-size: 1rem;
   display: grid;
+  grid-template: 'casualties garrison';
+  grid-template-rows: 1fr;
+  grid-template-columns: subgrid;
+}
+
+.battalion__garrison {
+  grid-area: garrison;
+  display: grid;
   grid-template:
     'strength squad' auto
     '. squad' 1fr
@@ -8,6 +16,14 @@
 
   border: 2px dotted green;
   background-color: lightgreen;
+}
+
+.battalion__casualties {
+  grid-area: casualties;
+  border: 1px solid red;
+  background-color: rgba(255, 192, 203, 0.493);
+
+  overflow-y: auto;
 }
 
 .battalion__strength {
@@ -33,17 +49,22 @@
 }
 
 :host.battalion__defend {
-  grid-template-areas:
-    'squad strength'
-    'squad .';
-  grid-template-columns: 1fr auto;
+  grid-template: 'garrison casualties'; // 1fr
+  grid-template-columns: subgrid; // This isn't actually changed, but need to re-declare it for subgrid behavior to kick-in correctly
 
-  .battalion__strength {
-    padding-left: unset;
-    padding-right: 0.25em;
-  }
+  .battalion__garrison {
+    grid-template-areas:
+      'squad strength'
+      'squad .';
+    grid-template-columns: 1fr auto;
 
-  .battalion__squads {
-    direction: ltr;
+    .battalion__strength {
+      padding-left: unset;
+      padding-right: 0.25em;
+    }
+
+    .battalion__squads {
+      direction: ltr;
+    }
   }
 }

@@ -71,4 +71,9 @@ export class CombatSelectors {
   static activeCombatRole(state: CombatStateModel) {
     return state.phaseRole;
   }
+
+  @Selector([CombatState])
+  static allCasualtyIds(state: CombatStateModel) {
+    return [...state.pendingCasualties, ...state.phaseCasualties];
+  }
 }

@@ -16,12 +16,7 @@
     (click)="selectBattalion(attacker)"
   />
   }
-  <div class="battle-board__casualties">
-    <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
-    @for (unit of attackers(); track $index) {
-    <ww2-military-unit-icon [nationality]="unit.nationality" [unitType]="unit.type" />
-    }
-  </div>
+  <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
 </div>
 <div class="battle-board__army battle-board__defend">
   <h1
@@ -41,12 +36,7 @@
     (click)="selectBattalion(defender)"
   />
   }
-  <div class="battle-board__casualties">
-    <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
-    @for (unit of defenders(); track $index) {
-    <ww2-military-unit-icon [nationality]="unit.nationality" [unitType]="unit.type" />
-    }
-  </div>
+  <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
 </div>
 <div class="battle-board__dice-tray">
   <button (click)="rollDice()" [disabled]="!readyForVolley()">Fire!</button>
