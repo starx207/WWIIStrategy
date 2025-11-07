@@ -3,18 +3,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ng serve",
+      "name": "Attach to Angular App (Remote Debug)",
       "type": "chrome",
-      "request": "launch",
-      "preLaunchTask": "npm: start",
-      "url": "http://localhost:4200/"
+      "request": "attach",
+      "port": 9222,
+      "url": "http://localhost:4200/*",
+      "webRoot": "${workspaceFolder}/src"
     },
     {
-      "name": "ng test",
+      "name": "Launch Chrome for Angular",
       "type": "chrome",
       "request": "launch",
-      "preLaunchTask": "npm: test",
-      "url": "http://localhost:9876/debug.html"
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/src",
+      "runtimeArgs": ["--remote-debugging-port=9222"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch & Attach to Angular",
+      "configurations": ["Launch Chrome for Angular", "Attach to Angular App (Remote Debug)"],
+      "stopAll": true
     }
   ]
 }

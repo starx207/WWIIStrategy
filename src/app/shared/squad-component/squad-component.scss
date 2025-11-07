@@ -20,3 +20,13 @@
     transform: scale(-1, 1);
   }
 }
+
+:host.military-unit-squad__disabled {
+  --disabled-opacity: 0.5;
+  .military-unit-icon {
+    opacity: var(--disabled-opacity);
+  }
+  .unit-count-badge {
+    opacity: var(--disabled-opacity);
+  }
+}

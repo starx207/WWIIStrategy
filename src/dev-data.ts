@@ -1,24 +1,20 @@
-import { Injectable } from '@angular/core';
 import {
-  AircraftCarrierUnit,
-  AntiAirUnit,
-  ArtilleryUnit,
-  BattleshipUnit,
-  BomberUnit,
-  DestroyerUnit,
-  FighterJetUnit,
-  InfantryUnit,
   MilitaryUnit,
-  SubmarineUnit,
+  InfantryUnit,
+  ArtilleryUnit,
   TankUnit,
+  FighterJetUnit,
+  BomberUnit,
+  BattleshipUnit,
+  DestroyerUnit,
+  AircraftCarrierUnit,
   TransportUnit,
+  SubmarineUnit,
+  AntiAirUnit,
 } from '@ww2/shared/military-unit';
 import { Nationality } from '@ww2/shared/nationality';
-import { UnitType } from '@ww2/shared/unit-type';
-import { of } from 'rxjs';
-import { toSignal } from '@angular/core/rxjs-interop';
 
-const TEST_ATTACKERS: MilitaryUnit[] = [
+export const TEST_ATTACKERS: MilitaryUnit[] = [
   // Infantry units
   new InfantryUnit(Nationality.UNITED_STATES),
   new InfantryUnit(Nationality.UNITED_KINGDOM),
@@ -82,7 +78,7 @@ const TEST_ATTACKERS: MilitaryUnit[] = [
   new SubmarineUnit(Nationality.SOVIET_UNION),
 ];
 
-const TEST_DEFENDERS: MilitaryUnit[] = [
+export const TEST_DEFENDERS: MilitaryUnit[] = [
   // Infantry units
   new InfantryUnit(Nationality.GERMANY),
   new InfantryUnit(Nationality.JAPAN),
@@ -148,14 +144,3 @@ const TEST_DEFENDERS: MilitaryUnit[] = [
   new SubmarineUnit(Nationality.JAPAN),
   new SubmarineUnit(Nationality.GERMANY),
 ];
-
-@Injectable({
-  providedIn: 'root',
-})
-export class CombatService {
-  private attackers$ = of(TEST_ATTACKERS);
-  private defenders$ = of(TEST_DEFENDERS);
-
-  attackers = toSignal(this.attackers$, { initialValue: [] });
-  defenders = toSignal(this.defenders$, { initialValue: [] });
-}

@@ -11,6 +11,7 @@ import { withNgxsRouterPlugin } from '@ngxs/router-plugin';
 import { withNgxsStoragePlugin } from '@ngxs/storage-plugin';
 import { provideStore } from '@ngxs/store';
 import { provideHttpClient } from '@angular/common/http';
+import { CombatState } from './combat/combat-state';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -19,7 +20,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(),
     provideStore(
-      [],
+      [CombatState],
       withNgxsReduxDevtoolsPlugin(),
       withNgxsRouterPlugin(),
       withNgxsStoragePlugin({

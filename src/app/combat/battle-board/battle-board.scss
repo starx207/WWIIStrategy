@@ -59,6 +59,14 @@
   text-align: right;
 }
 
+.battle-board__role-label__active {
+  // TODO: These colors should come from our theme files
+  color: #ffeb3b; // Bright yellow
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 235, 59, 0.6),
+    0 0 12px rgba(255, 235, 59, 0.4);
+  font-weight: bold;
+}
+
 .battle-board__casualties {
   position: relative;
   grid-area: casualties;
@@ -93,6 +101,11 @@
   letter-spacing: 0.5em;
   padding-top: 0.5em;
   opacity: 0.15;
+}
+
+// TODO: Don't call these squads. They are now battalions. I need some consistency with how I'm naming things
+.battle-board__squad__active {
+  border: 3px solid red;
 }
 
 .battle-board__squad-1 {
@@ -135,4 +148,13 @@
     right: 0;
     left: unset;
   }
+}
+
+.battle-board__dice__miss {
+  opacity: 0.25;
+}
+
+.battle-board__dice__hit-pending {
+  border: 2px solid red;
+  background-color: rgb(255, 224, 224);
 }

@@ -1,9 +1,15 @@
 <div class="battle-board__army battle-board__attack">
-  <h1 class="battle-board__role-label">{{ 'Attacker' | uppercase }}</h1>
+  <h1
+    class="battle-board__role-label"
+    [class.battle-board__role-label__active]="activeRole() === 'attack'"
+  >
+    {{ 'Attacker' | uppercase }}
+  </h1>
   @for (rank of ATTACK_SQUAD_RANKS; track $index) {
   <ww2-battalion
     #attacker
     [class]="`battle-board__squad-${ATTACK_SQUAD_RANKS.length - $index} battle-board__attack__${rank}`"
+    [class.battle-board__squad__active]="activeBattalion() === attacker"
     [fromArmy]="attackers()"
     [strength]="rank"
     role="attack"
@@ -18,11 +24,17 @@
   </div>
 </div>
 <div class="battle-board__army battle-board__defend">
-  <h1 class="battle-board__role-label">{{ 'Defender' | uppercase }}</h1>
+  <h1
+    class="battle-board__role-label"
+    [class.battle-board__role-label__active]="activeRole() === 'defend'"
+  >
+    {{ 'Defender' | uppercase }}
+  </h1>
   @for (rank of DEFENSE_SQUAD_RANKS; track $index) {
   <ww2-battalion
     #defender
     [class]="`battle-board__squad-${DEFENSE_SQUAD_RANKS.length - $index} battle-board__defend__${rank}`"
+    [class.battle-board__squad__active]="activeBattalion() === defender"
     [fromArmy]="defenders()"
     [strength]="rank"
     role="defend"
@@ -37,10 +49,15 @@
   </div>
 </div>
 <div class="battle-board__dice-tray">
-  <button (click)="rollDice()">Fire!</button>
+  <button (click)="rollDice()" [disabled]="!readyForVolley()">Fire!</button>
   <div class="battle-board__dice-tray__results">
-    @for (i of activeUnits(); track i) {
-    <ww2-dice #dice [hit]="dice.value() <= activeBattalionStrength()" />
+    @for (x of activeUnits(); track x) {
+    <ww2-dice
+      [class.battle-board__dice__miss]="
+        pendingDiceHits().length > 0 && !diceHitIndices().includes($index)
+      "
+      [class.battle-board__dice__hit-pending]="pendingDiceHits().includes($index)"
+    />
     }
   </div>
 </div>

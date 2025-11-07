@@ -1,7 +1,12 @@
 <h1 class="battalion__strength">{{ strength() }}</h1>
 
 <div class="battalion__squads">
-  @for (squad of squads(); track $index) {
-  <ww2-squad [squad]="squad" [direction]="squadDirection()" />
+  @for (item of squads(); track $index) {
+  <ww2-squad
+    [squad]="item.squad"
+    [direction]="squadDirection()"
+    [disabled]="!item.enabled"
+    (selected)="selectSquad(item.squad)"
+  />
   }
 </div>

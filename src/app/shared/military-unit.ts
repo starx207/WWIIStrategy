@@ -1,5 +1,6 @@
 import { Nationality } from './nationality';
 import { UnitType } from './unit-type';
+import { v4 as uuid } from 'uuid';
 
 export interface MilitaryUnitInitOptions {
   attack?: number;
@@ -13,11 +14,13 @@ export abstract class MilitaryUnit {
     public nationality: Nationality,
     options?: MilitaryUnitInitOptions
   ) {
+    this.id = uuid();
     this.attack = options?.attack ?? 1;
     this.defense = options?.defense ?? 1;
     this.hitPoints = options?.hitPoints ?? 1;
   }
 
+  readonly id: string;
   readonly attack: number;
   readonly defense: number;
   hitPoints: number;
@@ -69,7 +72,11 @@ export class BomberUnit extends MilitaryUnit {
 
 export class BattleshipUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.BATTLESHIP, nationality, { attack: 4, defense: 4, hitPoints: 2 });
+    super(UnitType.BATTLESHIP, nationality, {
+      attack: 4,
+      defense: 4,
+      hitPoints: 1 /* TODO: This should be 2, but I want to get basic combat going first */,
+    });
   }
 }
 
