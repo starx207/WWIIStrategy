@@ -15,6 +15,8 @@ import { CombatActions } from '../combat.actions';
 import { CombatSelectors } from '../combat-selectors';
 import { Dice } from '@ww2/shared/dice/dice';
 
+const MAX_DICE_COUNT = 20;
+
 @Component({
   selector: 'ww2-battle-board',
   imports: [Battalion, UpperCasePipe, Dice, MilitaryUnitIcon],
@@ -35,11 +37,17 @@ export class BattleBoard implements OnInit {
   protected diceHitIndices = this.store.selectSignal(CombatSelectors.hitIndices);
   protected pendingDiceHits = this.store.selectSignal(CombatSelectors.pendingHitIndices);
   protected activeRole = this.store.selectSignal(CombatSelectors.activeCombatRole);
+  protected lastDiceRoll = this.store.selectSignal(CombatSelectors.diceValues);
 
   activeBattalion = signal<Battalion | undefined>(undefined);
 
   activeUnits = computed(() => this.activeBattalion()?.battalionUnits() ?? []);
   activeBattalionStrength = computed(() => this.activeBattalion()?.strength() ?? 100);
+  liveDiceValues = computed(() => {
+    const values =
+      this.activeUnits().length > 0 ? this.activeUnits().map(() => -1) : this.lastDiceRoll();
+    return values.length > MAX_DICE_COUNT ? values.slice(0, MAX_DICE_COUNT) : values;
+  });
 
   readyForVolley = computed(() => this.activeBattalion() && this.pendingDiceHits().length === 0);
 
@@ -58,17 +66,14 @@ export class BattleBoard implements OnInit {
     const selectedBattalionUnits = battalion.battalionUnits();
 
     this.diceComponents.forEach((dice) => dice.roll());
-    const results = this.diceComponents.map((dc) => dc.value());
+    const results = this.diceComponents.map((dc) => dc.value);
 
-    setTimeout(() => {
-      this.store.dispatch(
-        new CombatActions.CombatantsFiring(
-          results,
-          selectedBattalionStrength,
-          selectedBattalionUnits
-        )
-      );
-    }, 2000); // 2 sec delay so player can see the result of the roll before we handle the result
+    // setTimeout(() => {
+    this.store.dispatch(
+      new CombatActions.CombatantsFiring(results, selectedBattalionStrength, selectedBattalionUnits)
+    );
+    this.activeBattalion.set(undefined);
+    // }, 2000); // 2 sec delay so player can see the result of the roll before we handle the result
   }
 
   selectBattalion(battalion: Battalion): void {

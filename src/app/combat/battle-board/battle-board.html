@@ -39,10 +39,17 @@
   <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
 </div>
 <div class="battle-board__dice-tray">
-  <button (click)="rollDice()" [disabled]="!readyForVolley()">Fire!</button>
+  <button
+    class="battle-board__dice-tray__fire-button"
+    (click)="rollDice()"
+    [disabled]="!readyForVolley()"
+  >
+    Fire!
+  </button>
   <div class="battle-board__dice-tray__results">
-    @for (x of activeUnits(); track x) {
+    @for (x of liveDiceValues(); track x + ($index * 10)) {
     <ww2-dice
+      [value]="x"
       [class.battle-board__dice__miss]="
         pendingDiceHits().length > 0 && !diceHitIndices().includes($index)
       "

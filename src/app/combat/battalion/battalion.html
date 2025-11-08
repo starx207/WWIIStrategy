@@ -2,19 +2,24 @@
   <h1 class="battalion__strength">{{ strength() }}</h1>
 
   <div class="battalion__squads">
-    @for (item of healthySquads(); track item) {
+    @for (item of healthySquads(); track item.squad.id) {
     <ww2-squad
       [squad]="item.squad"
       [direction]="squadDirection()"
       [disabled]="!item.enabled"
-      (selected)="selectSquad(item.squad)"
+      (selected)="electCasualty(item.squad)"
     />
     }
   </div>
 </div>
 
 <div class="battalion__casualties">
-  @for (item of casualtySquads(); track item) {
-  <ww2-squad [squad]="item.squad" [direction]="squadDirection()" [disabled]="!item.enabled" />
+  @for (item of casualtySquads(); track item.squad.id) {
+  <ww2-squad
+    [squad]="item.squad"
+    [direction]="squadDirection()"
+    [disabled]="!item.enabled"
+    (selected)="undoCasualty(item.squad)"
+  />
   }
 </div>

@@ -73,7 +73,17 @@ export class CombatSelectors {
   }
 
   @Selector([CombatState])
+  static pendingCasualties(state: CombatStateModel) {
+    return state.pendingCasualties;
+  }
+
+  @Selector([CombatState])
   static allCasualtyIds(state: CombatStateModel) {
     return [...state.pendingCasualties, ...state.phaseCasualties];
+  }
+
+  @Selector([CombatState])
+  static diceValues(state: CombatStateModel) {
+    return state.lastDiceRoll;
   }
 }

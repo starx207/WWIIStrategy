@@ -23,6 +23,15 @@
   border: 1px solid red;
   background-color: rgba(255, 192, 203, 0.493);
 
+  display: flex;
+  flex-flow: wrap;
+  justify-content: end;
+  align-items: start;
+  direction: rtl;
+
+  padding: 0 0.25em;
+  gap: 0.25em;
+
   overflow-y: auto;
 }
 
@@ -49,7 +58,7 @@
 }
 
 :host.battalion__defend {
-  grid-template: 'garrison casualties'; // 1fr
+  grid-template: 'garrison casualties';
   grid-template-columns: subgrid; // This isn't actually changed, but need to re-declare it for subgrid behavior to kick-in correctly
 
   .battalion__garrison {
@@ -66,5 +75,9 @@
     .battalion__squads {
       direction: ltr;
     }
+  }
+
+  .battalion__casualties {
+    direction: ltr;
   }
 }

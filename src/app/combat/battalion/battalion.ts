@@ -37,6 +37,7 @@ export class Battalion {
     )
   );
   casualtyIds = this.store.selectSignal(CombatSelectors.allCasualtyIds);
+  pendingCasualtyIds = this.store.selectSignal(CombatSelectors.pendingCasualties);
   healthyUnits = computed(() => {
     return this.battalionUnits().filter((unit) => !this.casualtyIds().includes(unit.id));
   });
@@ -69,13 +70,15 @@ export class Battalion {
 
   protected casualtySquads = computed(() => {
     const readyUnits = this.readyUnits();
-    return createSquads(this.casualtyUnits(), { separateUnits: readyUnits }).map((squad) => ({
+    const squads = createSquads(this.casualtyUnits(), { separateUnits: readyUnits });
+    squads.sort((a, b) => (a.id > b.id ? 1 : a.id < b.id ? -1 : 0));
+    return squads.map((squad) => ({
       squad,
-      enabled: this.casualtiesPending() || (this.readyToFire() && squad.isSubsetOf(readyUnits)),
+      enabled: squad.intersectsWith(this.pendingCasualtyIds()),
     }));
   });
 
-  protected selectSquad(squad: MilitaryUnitSquad) {
+  protected electCasualty(squad: MilitaryUnitSquad) {
     // Squad selection is for electing casualties,
     // so if the current role is the same role as this battalion,
     // squad selection does nothing.
@@ -91,5 +94,10 @@ export class Battalion {
 
     const casualty = squad.units[0];
     this.store.dispatch(new CombatActions.CasualtiesElected([casualty]));
+  }
+
+  protected undoCasualty(squad: MilitaryUnitSquad) {
+    const casualty = squad.units[0];
+    this.store.dispatch(new CombatActions.UndoCasualties([casualty]));
   }
 }

@@ -80,10 +80,14 @@ export class CombatState {
   @Action(CombatActions.CombatantsFiring)
   giveThemAVolley(context: CombatStateContext, action: CombatActions.CombatantsFiring) {
     const currentState = context.getState();
+    const participatingUnitIds = action.units
+      .map((u) => u.id)
+      .filter((id) => currentState.phaseParticipants.includes(id));
+    const firingUnitIds = participatingUnitIds.slice(0, action.shotValues.length);
     context.setState(
       patch<CombatStateModel>({
         // phasePendingHits: append(hitIds),
-        phaseParticipants: removeAll(action.units.map((u) => u.id)), //removeItem((id) => action.units.some((u) => u.id === id)),
+        phaseParticipants: removeAll(firingUnitIds), //removeItem((id) => action.units.some((u) => u.id === id)),
         // phaseHitCount: context.getState().phaseHitCount + hits.length,
         phaseCasualties: append(currentState.pendingCasualties),
         pendingCasualties: [],
@@ -119,6 +123,17 @@ export class CombatState {
     this.checkForEndOfTurn(context);
   }
 
+  @Action(CombatActions.UndoCasualties)
+  undoCasualties(context: CombatStateContext, action: CombatActions.UndoCasualties) {
+    const casualtyIds = action.casualties.map((c) => c.id);
+
+    context.setState(
+      patch<CombatStateModel>({
+        pendingCasualties: removeAll(casualtyIds),
+      })
+    );
+  }
+
   private checkForEndOfTurn(context: CombatStateContext) {
     const updatedState = context.getState();
     const phase = updatedState.currentPhase!;
@@ -142,8 +157,8 @@ export class CombatState {
             patch<CombatStateModel>({
               phaseRole: 'defend',
               phaseParticipants: defenders.map((d) => d.id),
-              phaseCasualties: append(updatedState.pendingCasualties),
-              pendingCasualties: [],
+              diceTarget: undefined,
+              lastDiceRoll: [],
             })
           );
           return;

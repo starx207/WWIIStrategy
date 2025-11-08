@@ -40,6 +40,11 @@
   grid-area: dice;
   border: 1px solid lime;
   background-color: rgba(212, 255, 212, 0.521);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .battle-board__dice-tray__results {

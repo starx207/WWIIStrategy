@@ -86,3 +86,21 @@
 .dice__dot__6 {
   grid-area: six;
 }
+
+:host.dice__value__-1 {
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr;
+  grid-template-areas: 'one';
+  .dice__dot__1 {
+    background-color: unset;
+    border-radius: unset;
+    margin: auto;
+
+    &::after {
+      content: '?';
+      color: black;
+      font-size: 2em;
+      font-family: 'consolas';
+    }
+  }
+}

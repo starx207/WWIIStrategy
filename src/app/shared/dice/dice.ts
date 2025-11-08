@@ -1,4 +1,4 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, Input, input, signal } from '@angular/core';
 
 // TODO: We'll need dice for other things in the game, so move it to the "shared" folder
 @Component({
@@ -11,11 +11,17 @@ import { Component, computed, input, signal } from '@angular/core';
   },
 })
 export class Dice {
-  private rolledValue = signal<number | null>(null);
+  protected rolledValue = signal<number>(-1);
 
-  value = computed(() => this.rolledValue() ?? 6);
+  @Input()
+  set value(x: number) {
+    this.rolledValue.set(x);
+  }
+  get value(): number {
+    return this.rolledValue();
+  }
 
-  protected hostClasses = computed(() => `dice dice__value__${this.value()}`);
+  protected hostClasses = computed(() => `dice dice__value__${this.rolledValue()}`);
 
   roll(): void {
     // Generate random number from 1 to 6 with equal probability

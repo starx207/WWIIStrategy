@@ -1,6 +1,7 @@
 import { MilitaryUnit } from './military-unit';
 import { Nationality } from './nationality';
 import { UnitType } from './unit-type';
+import { v4 as uuid } from 'uuid';
 
 export interface CreateSquadOptions {
   separateUnits?: MilitaryUnit[];
@@ -23,12 +24,16 @@ export function createSquads(
     groups[groupKey].push(unit);
   });
 
-  const squads = Object.values(groups).map((units) => new MilitaryUnitSquad(units));
+  const squads = Object.entries(groups).map(([key, units]) => new MilitaryUnitSquad(units, key));
   return squads;
 }
 
 export class MilitaryUnitSquad {
-  constructor(public units: MilitaryUnit[]) {}
+  readonly id: string;
+
+  constructor(public units: MilitaryUnit[], id?: string) {
+    this.id = id ?? uuid();
+  }
 
   get count() {
     return this.units.length;
@@ -42,7 +47,23 @@ export class MilitaryUnitSquad {
     return this.count == 0 ? UnitType.INFANTRY : this.units[0].type;
   }
 
-  isSubsetOf(army: MilitaryUnit[]): boolean {
-    return this.units.every((unit) => army.includes(unit));
+  isSubsetOf(armyOrIds: MilitaryUnit[] | string[]): boolean {
+    if (this.isStringArray(armyOrIds)) {
+      return this.units.every((unit) => armyOrIds.includes(unit.id));
+    } else {
+      return this.units.every((unit) => armyOrIds.includes(unit));
+    }
+  }
+
+  intersectsWith(armyOrIds: MilitaryUnit[] | string[]): boolean {
+    if (this.isStringArray(armyOrIds)) {
+      return this.units.some((unit) => armyOrIds.includes(unit.id));
+    } else {
+      return this.units.some((unit) => armyOrIds.includes(unit));
+    }
+  }
+
+  private isStringArray(arr: MilitaryUnit[] | string[]): arr is string[] {
+    return arr.length > 0 && typeof arr[0] === 'string';
   }
 }
