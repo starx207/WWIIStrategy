@@ -100,6 +100,14 @@ export namespace CombatActions {
     constructor(public casualties: MilitaryUnit[]) {}
   }
 
+  export class PressAttack {
+    static readonly type = `${ACTION_SOURCE} Press Attack`;
+  }
+
+  export class Retreat {
+    static readonly type = `${ACTION_SOURCE} Retreat`;
+  }
+
   export class CombatEnded {
     static readonly type = `${ACTION_SOURCE} Combat Ended`;
   }

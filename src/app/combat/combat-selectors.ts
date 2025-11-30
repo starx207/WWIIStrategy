@@ -5,6 +5,11 @@ import { CombatRole } from './combat.actions';
 import { CombatRules } from './combat-rules';
 
 export class CombatSelectors {
+  @Selector([CombatState])
+  static currentPhase(state: CombatStateModel) {
+    return state.currentPhase;
+  }
+
   static battleReadyIds(role: CombatRole) {
     return createSelector([CombatState], (state: CombatStateModel) => {
       const participants = state.phaseParticipants ?? [];

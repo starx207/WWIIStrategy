@@ -14,6 +14,7 @@ import { Store } from '@ngxs/store';
 import { CombatActions } from '../combat.actions';
 import { CombatSelectors } from '../combat-selectors';
 import { Dice } from '@ww2/shared/dice/dice';
+import { CombatPhase } from '../combat-phase';
 
 const MAX_DICE_COUNT = 20;
 
@@ -38,6 +39,7 @@ export class BattleBoard implements OnInit {
   protected pendingDiceHits = this.store.selectSignal(CombatSelectors.pendingHitIndices);
   protected activeRole = this.store.selectSignal(CombatSelectors.activeCombatRole);
   protected lastDiceRoll = this.store.selectSignal(CombatSelectors.diceValues);
+  protected currentPhase = this.store.selectSignal(CombatSelectors.currentPhase);
 
   activeBattalion = signal<Battalion | undefined>(undefined);
 
@@ -45,16 +47,23 @@ export class BattleBoard implements OnInit {
   activeBattalionStrength = computed(() => this.activeBattalion()?.strength() ?? 100);
   liveDiceValues = computed(() => {
     const values =
-      this.activeUnits().length > 0 ? this.activeUnits().map(() => -1) : this.lastDiceRoll();
+      this.activeUnits().length > 0 && this.pendingDiceHits().length === 0
+        ? this.activeUnits().map(() => -1)
+        : this.lastDiceRoll();
     return values.length > MAX_DICE_COUNT ? values.slice(0, MAX_DICE_COUNT) : values;
   });
 
   readyForVolley = computed(() => this.activeBattalion() && this.pendingDiceHits().length === 0);
+  canRetreat = computed(() => this.currentPhase() === CombatPhase.REGROUP);
 
   @ViewChildren(Dice) diceComponents!: QueryList<Dice>;
 
   ngOnInit() {
     this.store.dispatch(new CombatActions.PreparingBattlefield());
+  }
+
+  retreat(): void {
+    this.store.dispatch(new CombatActions.Retreat());
   }
 
   rollDice(): void {
@@ -69,6 +78,10 @@ export class BattleBoard implements OnInit {
     const results = this.diceComponents.map((dc) => dc.value);
 
     // setTimeout(() => {
+    if (this.currentPhase() === CombatPhase.REGROUP) {
+      // If we roll the dice while in the regroup phase, we're starting the next round of combat
+      this.store.dispatch(new CombatActions.PressAttack());
+    }
     this.store.dispatch(
       new CombatActions.CombatantsFiring(results, selectedBattalionStrength, selectedBattalionUnits)
     );

@@ -15,6 +15,7 @@
     role="attack"
     (click)="selectBattalion(attacker)"
   />
+  <!-- TODO: The battalion component should govern when it is selected, Only the healthy garrison should trigger selection, not the casualties. The way it is working now, I can't undo casualties if I click a pending casualty in the selected battalion -->
   }
   <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
 </div>
@@ -46,6 +47,9 @@
   >
     Fire!
   </button>
+  @if (canRetreat()) {
+  <button class="battle-board__dice-tray__retreat-button" (click)="retreat()">Retreat</button>
+  }
   <div class="battle-board__dice-tray__results">
     @for (x of liveDiceValues(); track x + ($index * 10)) {
     <ww2-dice

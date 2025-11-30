@@ -1,0 +1,25 @@
+:host {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgb(49, 49, 49);
+}
+
+.wrapper {
+  background-color: rgba(141, 141, 141, 0.212);
+  height: 50%;
+  width: 80%;
+
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  direction: rtl;
+  align-content: start;
+}
+
+.military-unit-icon {
+  // display: inline-block;
+  border: 1px dotted white;
+  width: auto;
+  height: auto;
+}
