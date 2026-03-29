@@ -15,4 +15,40 @@ button {
   &:active {
     background-color: var(--color-button-active-background);
   }
+
+  &[disabled] {
+    background-color: var(--color-button-disabled-background);
+    color: var(--color-button-disabled-foreground);
+    cursor: default;
+  }
+}
+
+button.primary {
+  background-color: var(--color-primary);
+  &:hover {
+    background-color: var(--color-primary-lighter);
+  }
+
+  &:active {
+    background-color: var(--color-primary-light);
+  }
+
+  &[disabled] {
+    background-color: oklch(from var(--color-primary) calc(l + 0.4) calc(c - 0.05) h);
+  }
+}
+
+button.secondary {
+  background-color: var(--color-secondary);
+  &:hover {
+    background-color: var(--color-secondary-lighter);
+  }
+
+  &:active {
+    background-color: var(--color-secondary-light);
+  }
+
+  &[disabled] {
+    background-color: oklch(from var(--color-secondary) calc(l + 0.25) calc(c - 0.05) h);
+  }
 }

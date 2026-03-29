@@ -3,7 +3,11 @@
   --color-default-background: rgb(44, 44, 44);
   --color-default-foreground: rgba(255, 255, 255, 0.884);
   --color-primary: rgb(24, 24, 97);
+  --color-primary-light: oklch(from var(--color-primary) calc(l + 0.1) c h);
+  --color-primary-lighter: oklch(from var(--color-primary) calc(l + 0.25) c h);
   --color-secondary: rgb(134, 46, 46);
+  --color-secondary-light: oklch(from var(--color-secondary) calc(l + 0.1) c h);
+  --color-secondary-lighter: oklch(from var(--color-secondary) calc(l + 0.25) c h);
 
   // Unit colors
   --color-unit-us: #538649;
@@ -18,4 +22,10 @@
   --color-button-background: rgb(54, 54, 54);
   --color-button-hover-background: rgb(87, 87, 87);
   --color-button-active-background: rgb(65, 65, 65);
+  --color-button-disabled-background: rgb(138, 138, 138);
+  --color-button-disabled-foreground: rgba(204, 204, 204, 0.884);
+
+  // Cards
+  --color-card-background: oklch(from var(--color-default-background) calc(l + 0.05) c h);
+  --color-card-foreground: var(--color-default-foreground);
 }
