@@ -1,10 +1,11 @@
-import { Component, computed, inject, Input, input, Signal } from '@angular/core';
+import { Component, computed, inject, Input, input, signal, Signal } from '@angular/core';
 import { SquadDirection, SquadComponent } from '@ww2/shared/squad-component/squad-component';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { createSquads, MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { Store } from '@ngxs/store';
 import { CombatActions, CombatRole } from '../combat.actions';
 import { CombatSelectors } from '../combat-selectors';
+import { CombatPhase } from '../combat-phase';
 
 @Component({
   selector: 'ww2-battalion',
@@ -24,6 +25,10 @@ export class Battalion {
   set role(value: CombatRole) {
     this.roleFilter = value;
     this.readyUnits = this.store.selectSignal(CombatSelectors.battleReadyUnits(value));
+    this.pendingHitCountForRole = this.store.selectSignal(
+      CombatSelectors.pendingHitCountForRole(value),
+    );
+    this.casualtiesConfirmed = this.store.selectSignal(CombatSelectors.casualtiesConfirmed(value));
   }
   get role(): CombatRole {
     return this.roleFilter;
@@ -33,8 +38,8 @@ export class Battalion {
 
   battalionUnits = computed(() =>
     this.fromArmy().filter(
-      (unit) => (this.roleFilter == 'attack' ? unit.attack : unit.defense) == this.strength()
-    )
+      (unit) => (this.roleFilter == 'attack' ? unit.attack : unit.defense) == this.strength(),
+    ),
   );
   casualtyIds = this.store.selectSignal(CombatSelectors.allCasualtyIds);
   pendingCasualtyIds = this.store.selectSignal(CombatSelectors.pendingCasualties);
@@ -44,27 +49,41 @@ export class Battalion {
   casualtyUnits = computed(() => {
     return this.battalionUnits().filter((unit) => this.casualtyIds().includes(unit.id));
   });
+  protected reloadingUnits = computed(() => {
+    return this.battalionUnits().filter((unit) => !this.readyUnits().includes(unit));
+  });
 
-  readyUnits!: Signal<MilitaryUnit[]>;
+  readyUnits: Signal<MilitaryUnit[]> = signal<MilitaryUnit[]>([]).asReadonly();
+  pendingHitCountForRole: Signal<number> = signal(0).asReadonly();
+  casualtiesConfirmed: Signal<boolean> = signal(false).asReadonly();
+  protected phase = this.store.selectSignal(CombatSelectors.currentPhase);
 
-  protected hostClasses = computed(() => `battalion battalion__${this.roleFilter}`);
+  protected hostClasses = computed(
+    () =>
+      `battalion battalion__${this.roleFilter} ${this.healthySquads().some((s) => s.enabled) ? 'battalion__selectable' : ''}`,
+  );
   protected squadDirection = computed<SquadDirection>(() =>
-    this.roleFilter == 'defend' ? 'left-face' : 'right-face'
+    this.roleFilter == 'defend' ? 'left-face' : 'right-face',
   );
-  protected pendingHits = this.store.selectSignal(CombatSelectors.pendingHitValues);
-  protected activeRole = this.store.selectSignal(CombatSelectors.activeCombatRole);
-  protected readyToFire = computed(
-    () => this.role === this.activeRole() && this.pendingHits().length === 0
+  protected isCasualtyPhase = this.store.selectSignal(CombatSelectors.isCasualtyPhase);
+  protected canAssignCasualties = computed(
+    () =>
+      this.isCasualtyPhase() && this.pendingHitCountForRole() > 0 && !this.casualtiesConfirmed(),
   );
-  protected casualtiesPending = computed(
-    () => this.role !== this.activeRole() && this.pendingHits().length > 0
+  protected canUndoCasualties = computed(
+    () => this.isCasualtyPhase() && !this.casualtiesConfirmed(),
   );
 
   protected healthySquads = computed(() => {
     const readyUnits = this.readyUnits();
     return createSquads(this.healthyUnits(), { separateUnits: readyUnits }).map((squad) => ({
       squad,
-      enabled: this.casualtiesPending() || (this.readyToFire() && squad.isSubsetOf(readyUnits)),
+      enabled:
+        (!this.isCasualtyPhase() && !squad.isSubsetOf(this.reloadingUnits())) ||
+        this.canAssignCasualties() ||
+        (this.phase() === CombatPhase.REGROUP &&
+          this.role === 'attack' &&
+          squad.units.some((unit) => unit.attack > 0)),
     }));
   });
 
@@ -74,30 +93,25 @@ export class Battalion {
     squads.sort((a, b) => (a.id > b.id ? 1 : a.id < b.id ? -1 : 0));
     return squads.map((squad) => ({
       squad,
-      enabled: squad.intersectsWith(this.pendingCasualtyIds()),
+      enabled: this.canUndoCasualties() && squad.intersectsWith(this.pendingCasualtyIds()),
     }));
   });
 
   protected electCasualty(squad: MilitaryUnitSquad) {
-    // Squad selection is for electing casualties,
-    // so if the current role is the same role as this battalion,
-    // squad selection does nothing.
-    const currentRole = this.store.selectSnapshot(CombatSelectors.activeCombatRole);
-    if (currentRole === this.role) {
-      return;
-    }
-
-    const pendingHits = this.store.selectSnapshot(CombatSelectors.pendingHitValues);
-    if (pendingHits.length === 0) {
+    if (!this.canAssignCasualties()) {
       return;
     }
 
     const casualty = squad.units[0];
-    this.store.dispatch(new CombatActions.CasualtiesElected([casualty]));
+    this.store.dispatch(new CombatActions.CasualtiesElected([casualty], this.role));
   }
 
   protected undoCasualty(squad: MilitaryUnitSquad) {
+    if (!this.canUndoCasualties()) {
+      return;
+    }
+
     const casualty = squad.units[0];
-    this.store.dispatch(new CombatActions.UndoCasualties([casualty]));
+    this.store.dispatch(new CombatActions.UndoCasualties([casualty], this.role));
   }
 }

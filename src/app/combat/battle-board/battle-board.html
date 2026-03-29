@@ -1,40 +1,55 @@
 <div class="battle-board__army battle-board__attack">
-  <h1
-    class="battle-board__role-label"
-    [class.battle-board__role-label__active]="activeRole() === 'attack'"
-  >
-    {{ 'Attacker' | uppercase }}
-  </h1>
+  <div class="battle-board__role-label">
+    <h1>
+      {{ 'Attacker' | uppercase }}
+    </h1>
+    @if (canConfirmAttackerCasualties()) {
+      <button (click)="confirmCasualties('attack')">Confirm Casualties</button>
+    }
+    @if (canRetreat()) {
+      <button class="battle-board__dice-tray__retreat-button" (click)="retreat()">Retreat</button>
+    }
+    <h2>Pending Casualties: {{ pendingAttackerCasualtyCount() }}</h2>
+  </div>
   @for (rank of ATTACK_SQUAD_RANKS; track $index) {
-  <ww2-battalion
-    #attacker
-    [class]="`battle-board__squad-${ATTACK_SQUAD_RANKS.length - $index} battle-board__attack__${rank}`"
-    [class.battle-board__squad__active]="activeBattalion() === attacker"
-    [fromArmy]="attackers()"
-    [strength]="rank"
-    role="attack"
-    (click)="selectBattalion(attacker)"
-  />
+    <ww2-battalion
+      #attacker
+      [class]="
+        `battle-board__squad-${ATTACK_SQUAD_RANKS.length - $index} battle-board__attack__${rank}`
+      "
+      [class.battle-board__squad__active]="activeBattalion() === attacker"
+      [fromArmy]="attackers()"
+      [strength]="rank"
+      role="attack"
+      (click)="selectBattalion(attacker)"
+    />
+    <!-- TODO: The battalion component should govern when it is selected, Only the healthy garrison should trigger selection, not the casualties. The way it is working now, I can't undo casualties if I click a pending casualty in the selected battalion -->
   }
   <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
 </div>
 <div class="battle-board__army battle-board__defend">
-  <h1
-    class="battle-board__role-label"
-    [class.battle-board__role-label__active]="activeRole() === 'defend'"
-  >
-    {{ 'Defender' | uppercase }}
-  </h1>
+  <div class="battle-board__role-label">
+    <h1>
+      {{ 'Defender' | uppercase }}
+    </h1>
+    @if (canConfirmDefenderCasualties()) {
+      <button (click)="confirmCasualties('defend')">Confirm Casualties</button>
+    }
+    <h2>Pending Casualties: {{ pendingDefenderCasualtyCount() }}</h2>
+  </div>
+
   @for (rank of DEFENSE_SQUAD_RANKS; track $index) {
-  <ww2-battalion
-    #defender
-    [class]="`battle-board__squad-${DEFENSE_SQUAD_RANKS.length - $index} battle-board__defend__${rank}`"
-    [class.battle-board__squad__active]="activeBattalion() === defender"
-    [fromArmy]="defenders()"
-    [strength]="rank"
-    role="defend"
-    (click)="selectBattalion(defender)"
-  />
+    <ww2-battalion
+      #defender
+      [class]="
+        `battle-board__squad-${DEFENSE_SQUAD_RANKS.length - $index} battle-board__defend__${rank}`
+      "
+      [class.battle-board__squad__active]="activeBattalion() === defender"
+      [fromArmy]="defenders()"
+      [strength]="rank"
+      role="defend"
+      (click)="selectBattalion(defender)"
+    />
   }
   <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
 </div>
@@ -47,14 +62,15 @@
     Fire!
   </button>
   <div class="battle-board__dice-tray__results">
-    @for (x of liveDiceValues(); track x + ($index * 10)) {
-    <ww2-dice
-      [value]="x"
-      [class.battle-board__dice__miss]="
-        pendingDiceHits().length > 0 && !diceHitIndices().includes($index)
-      "
-      [class.battle-board__dice__hit-pending]="pendingDiceHits().includes($index)"
-    />
+    @for (x of liveDiceValues(); track x + $index * 10) {
+      <ww2-dice
+        #dice="dice"
+        [value]="x"
+        [class.battle-board__dice__miss]="dice.value > -1 && dice.value > activeBattalionStrength()"
+        [class.battle-board__dice__hit-pending]="
+          dice.value > -1 && dice.value <= activeBattalionStrength()
+        "
+      />
     }
   </div>
 </div>

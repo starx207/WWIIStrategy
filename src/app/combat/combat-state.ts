@@ -1,38 +1,63 @@
-import { Action, State, StateContext, UpdateState } from '@ngxs/store';
+import { Action, State, StateContext } from '@ngxs/store';
+import { Injectable } from '@angular/core';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { CombatActions, CombatRole } from './combat.actions';
 import { CombatRules } from './combat-rules';
-import { Injectable } from '@angular/core';
 import { TEST_ATTACKERS, TEST_DEFENDERS } from '../../dev-data';
 import { CombatPhase } from './combat-phase';
-import { append, compose, patch, removeItem, StateOperator } from '@ngxs/store/operators';
-import { removeAll } from '@ww2/shared/store-operators';
+
+export type CombatOutcome =
+  | 'ongoing'
+  | 'attackerVictory'
+  | 'defenderVictory';
+
+type AssignmentMap = Record<string, number>;
+
+type FirePhase = CombatPhase.OPENING_FIRE | CombatPhase.COMBAT;
+type CasualtyPhase = CombatPhase.OPENING_FIRE_CASUALTIES | CombatPhase.COMBAT_CASUALTIES;
+
+interface OutcomeResolution {
+  outcome: CombatOutcome;
+  canCaptureTerritory: boolean;
+}
 
 export interface CombatStateModel {
   territory?: string;
-  attackingArmy?: MilitaryUnit[];
-  defendingArmy?: MilitaryUnit[];
+  attackingArmy: MilitaryUnit[];
+  defendingArmy: MilitaryUnit[];
   currentPhase?: CombatPhase;
-  phaseParticipants: string[];
-  // phaseHitCount: number;
-  phaseCasualties: string[];
-  pendingCasualties: string[];
-  //phasePendingHits: string[];
-  lastDiceRoll: number[];
-  diceTarget: number;
-  phaseRole: CombatRole;
+  attackerReadyToFireIds: string[];
+  defenderReadyToFireIds: string[];
+  attackerHitsToAssign: number;
+  defenderHitsToAssign: number;
+  attackerAssignedHitsByUnitId: AssignmentMap;
+  defenderAssignedHitsByUnitId: AssignmentMap;
+  attackerCasualtiesConfirmed: boolean;
+  defenderCasualtiesConfirmed: boolean;
+  unitDamageById: AssignmentMap;
+  outcome: CombatOutcome;
+  canCaptureTerritory: boolean;
+  round: number;
 }
 
 const DEFAULT_STATE: CombatStateModel = {
   territory: 'TestTerritory',
-  phaseParticipants: [],
-  // phaseHitCount: 0,
-  phaseCasualties: [],
-  pendingCasualties: [],
-  //phasePendingHits: [],
-  lastDiceRoll: [],
-  diceTarget: 0,
-  phaseRole: 'attack',
+  attackingArmy: [],
+  defendingArmy: [],
+  currentPhase: undefined,
+  attackerReadyToFireIds: [],
+  defenderReadyToFireIds: [],
+  attackerHitsToAssign: 0,
+  defenderHitsToAssign: 0,
+  attackerAssignedHitsByUnitId: {},
+  defenderAssignedHitsByUnitId: {},
+  attackerCasualtiesConfirmed: false,
+  defenderCasualtiesConfirmed: false,
+  unitDamageById: {},
+  outcome: 'ongoing',
+  canCaptureTerritory: false,
+  round: 0,
 };
 
 type CombatStateContext = StateContext<CombatStateModel>;
@@ -44,128 +69,509 @@ type CombatStateContext = StateContext<CombatStateModel>;
 @Injectable()
 export class CombatState {
   @Action(CombatActions.PreparingBattlefield)
-  prepareBattlefield(context: StateContext<CombatStateModel>) {
-    // TODO: get the router snapshot here and pull in the attackers being moved into the territory indicated by the router.
-    //       Then set those as the attacking forces.
-    //       Then get all the defenders in the territory being attacked and set those as the defending forces
-    context.patchState({ attackingArmy: [...TEST_ATTACKERS], defendingArmy: [...TEST_DEFENDERS] });
+  prepareBattlefield(context: CombatStateContext) {
+    const attackingArmy = [...TEST_ATTACKERS];
+    const defendingArmy = [...TEST_DEFENDERS];
 
-    // TODO: We'll actually want to start opening fire at this point, but I haven't implemented that yet
-    context.dispatch(new CombatActions.CombatPhaseInitiated(CombatPhase.COMBAT));
-  }
+    const baseState: CombatStateModel = {
+      ...DEFAULT_STATE,
+      attackingArmy,
+      defendingArmy,
+      unitDamageById: this.buildInitialDamageMap(attackingArmy, defendingArmy),
+    };
 
-  @Action(CombatActions.CombatPhaseInitiated)
-  initiateCombatPhase(context: CombatStateContext, action: CombatActions.CombatPhaseInitiated) {
-    const state = context.getState();
-    const { attackers, defenders } = CombatRules.filterEligibleUnits(
-      action.phase,
-      state.attackingArmy,
-      state.defendingArmy
+    const initialOutcome = this.evaluateOutcome(attackingArmy, defendingArmy);
+    if (initialOutcome.outcome !== 'ongoing') {
+      context.setState({
+        ...baseState,
+        outcome: initialOutcome.outcome,
+        canCaptureTerritory: initialOutcome.canCaptureTerritory,
+      });
+      return;
+    }
+
+    const openingFireEligible = this.getEligibleUnitsForPhase(
+      CombatPhase.OPENING_FIRE,
+      attackingArmy,
+      defendingArmy,
     );
-    const phaseRole = attackers.length > 0 ? 'attack' : 'defend';
 
-    context.patchState({
-      currentPhase: action.phase,
-      phaseParticipants: [...(phaseRole === 'attack' ? attackers : defenders).map((a) => a.id)],
-      // phaseHitCount: 0,
-      phaseCasualties: [],
-      pendingCasualties: [],
-      // phasePendingHits: [],
-      lastDiceRoll: [],
-      phaseRole,
-    });
+    const shouldStartWithOpeningFire =
+      openingFireEligible.attackers.length > 0 || openingFireEligible.defenders.length > 0;
+    const startingPhase = shouldStartWithOpeningFire ? CombatPhase.OPENING_FIRE : CombatPhase.COMBAT;
+
+    this.startFirePhase(context, startingPhase, baseState);
   }
 
-  // TODO: This method name is cheeky. Rename it to something meaningful
   @Action(CombatActions.CombatantsFiring)
   giveThemAVolley(context: CombatStateContext, action: CombatActions.CombatantsFiring) {
-    const currentState = context.getState();
-    const participatingUnitIds = action.units
-      .map((u) => u.id)
-      .filter((id) => currentState.phaseParticipants.includes(id));
-    const firingUnitIds = participatingUnitIds.slice(0, action.shotValues.length);
-    context.setState(
-      patch<CombatStateModel>({
-        // phasePendingHits: append(hitIds),
-        phaseParticipants: removeAll(firingUnitIds), //removeItem((id) => action.units.some((u) => u.id === id)),
-        // phaseHitCount: context.getState().phaseHitCount + hits.length,
-        phaseCasualties: append(currentState.pendingCasualties),
-        pendingCasualties: [],
-        lastDiceRoll: action.shotValues,
-        diceTarget: action.targetValue,
-      })
+    const state = context.getState();
+    if (state.outcome !== 'ongoing') {
+      return;
+    }
+
+    if (state.currentPhase !== CombatPhase.OPENING_FIRE && state.currentPhase !== CombatPhase.COMBAT) {
+      return;
+    }
+
+    const readyIds =
+      action.role === 'attack' ? state.attackerReadyToFireIds : state.defenderReadyToFireIds;
+    if (readyIds.length === 0) {
+      return;
+    }
+
+    const readyIdSet = new Set(readyIds);
+    const firingUnitIds = action.units
+      .map((unit) => unit.id)
+      .filter((id) => readyIdSet.has(id))
+      .slice(0, action.shotValues.length);
+
+    if (firingUnitIds.length === 0) {
+      return;
+    }
+
+    const hitsScored = CombatRules.determineHits({
+      values: action.shotValues,
+      target: action.targetValue,
+    }).hits.length;
+    const opposingArmyRemainingHitPoints = this.getTotalRemainingHitPoints(
+      action.role === 'attack' ? state.defendingArmy : state.attackingArmy,
+      state.unitDamageById,
     );
 
-    this.checkForEndOfTurn(context);
+    let attackerReadyToFireIds = state.attackerReadyToFireIds;
+    let defenderReadyToFireIds = state.defenderReadyToFireIds;
+    let attackerHitsToAssign = state.attackerHitsToAssign;
+    let defenderHitsToAssign = state.defenderHitsToAssign;
+
+    if (action.role === 'attack') {
+      attackerReadyToFireIds = state.attackerReadyToFireIds.filter((id) => !firingUnitIds.includes(id));
+      defenderHitsToAssign = Math.min(
+        state.defenderHitsToAssign + hitsScored,
+        opposingArmyRemainingHitPoints,
+      );
+    } else {
+      defenderReadyToFireIds = state.defenderReadyToFireIds.filter((id) => !firingUnitIds.includes(id));
+      attackerHitsToAssign = Math.min(
+        state.attackerHitsToAssign + hitsScored,
+        opposingArmyRemainingHitPoints,
+      );
+    }
+
+    const updatedState: CombatStateModel = {
+      ...state,
+      attackerReadyToFireIds,
+      defenderReadyToFireIds,
+      attackerHitsToAssign,
+      defenderHitsToAssign,
+    };
+
+    context.setState(updatedState);
+
+    if (attackerReadyToFireIds.length === 0 && defenderReadyToFireIds.length === 0) {
+      this.advanceAfterFirePhase(context, updatedState);
+    }
   }
 
   @Action(CombatActions.CasualtiesElected)
   addCasualties(context: CombatStateContext, action: CombatActions.CasualtiesElected) {
-    const casualtyIds = action.casualties.map((c) => c.id);
-
-    context.setState(
-      patch<CombatStateModel>({
-        pendingCasualties: append(casualtyIds),
-      })
-    );
-
-    const updatedState = context.getState();
-    const hits = CombatRules.determineHits({
-      values: updatedState.lastDiceRoll,
-      target: updatedState.diceTarget,
-    }).hits.length;
-    const casualtyCount = updatedState.pendingCasualties.length;
-
-    if (casualtyCount < hits) {
-      return; // Still have casualties to assign
+    const state = context.getState();
+    if (!this.isCasualtyPhase(state.currentPhase)) {
+      return;
     }
 
-    this.checkForEndOfTurn(context);
+    if (action.role === 'attack' && state.attackerCasualtiesConfirmed) {
+      return;
+    }
+    if (action.role === 'defend' && state.defenderCasualtiesConfirmed) {
+      return;
+    }
+
+    const hitsToAssign = action.role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign;
+    if (hitsToAssign <= 0) {
+      return;
+    }
+
+    const assignments = {
+      ...(action.role === 'attack'
+        ? state.attackerAssignedHitsByUnitId
+        : state.defenderAssignedHitsByUnitId),
+    };
+
+    const roleArmy = action.role === 'attack' ? state.attackingArmy : state.defendingArmy;
+    const roleArmyIds = new Set(roleArmy.map((unit) => unit.id));
+
+    let remainingHits = hitsToAssign - this.totalAssignedHits(assignments);
+    if (remainingHits <= 0) {
+      return;
+    }
+
+    for (const casualty of action.casualties) {
+      if (remainingHits <= 0) {
+        break;
+      }
+
+      if (!roleArmyIds.has(casualty.id)) {
+        continue;
+      }
+
+      const remainingCapacity = this.getRemainingHitCapacityForUnit(state, action.role, casualty, assignments);
+      if (remainingCapacity <= 0) {
+        continue;
+      }
+
+      assignments[casualty.id] = (assignments[casualty.id] ?? 0) + 1;
+      remainingHits -= 1;
+    }
+
+    if (action.role === 'attack') {
+      context.patchState({
+        attackerAssignedHitsByUnitId: assignments,
+      });
+    } else {
+      context.patchState({
+        defenderAssignedHitsByUnitId: assignments,
+      });
+    }
   }
 
   @Action(CombatActions.UndoCasualties)
   undoCasualties(context: CombatStateContext, action: CombatActions.UndoCasualties) {
-    const casualtyIds = action.casualties.map((c) => c.id);
+    const state = context.getState();
+    if (!this.isCasualtyPhase(state.currentPhase)) {
+      return;
+    }
 
-    context.setState(
-      patch<CombatStateModel>({
-        pendingCasualties: removeAll(casualtyIds),
-      })
-    );
+    if (action.role === 'attack' && state.attackerCasualtiesConfirmed) {
+      return;
+    }
+    if (action.role === 'defend' && state.defenderCasualtiesConfirmed) {
+      return;
+    }
+
+    const assignments = {
+      ...(action.role === 'attack'
+        ? state.attackerAssignedHitsByUnitId
+        : state.defenderAssignedHitsByUnitId),
+    };
+
+    for (const casualty of action.casualties) {
+      const currentHits = assignments[casualty.id] ?? 0;
+      if (currentHits <= 0) {
+        continue;
+      }
+
+      if (currentHits === 1) {
+        delete assignments[casualty.id];
+      } else {
+        assignments[casualty.id] = currentHits - 1;
+      }
+    }
+
+    if (action.role === 'attack') {
+      context.patchState({
+        attackerAssignedHitsByUnitId: assignments,
+      });
+    } else {
+      context.patchState({
+        defenderAssignedHitsByUnitId: assignments,
+      });
+    }
   }
 
-  private checkForEndOfTurn(context: CombatStateContext) {
-    const updatedState = context.getState();
-    const phase = updatedState.currentPhase!;
-    const hitCount = CombatRules.determineHits({
-      values: updatedState.lastDiceRoll,
-      target: updatedState.diceTarget,
-    }).hits.length;
-    const pendingHits = hitCount - updatedState.pendingCasualties.length;
-
-    if (pendingHits <= 0 && updatedState.phaseParticipants.length === 0) {
-      // All eligible units have fired and the opponent has no hits to deal with
-      if (updatedState.phaseRole === 'attack') {
-        // Switch to the defender's turn
-        const { defenders } = CombatRules.filterEligibleUnits(
-          phase,
-          updatedState.attackingArmy,
-          updatedState.defendingArmy
-        );
-        if (defenders.length > 0) {
-          context.setState(
-            patch<CombatStateModel>({
-              phaseRole: 'defend',
-              phaseParticipants: defenders.map((d) => d.id),
-              diceTarget: undefined,
-              lastDiceRoll: [],
-            })
-          );
-          return;
-        }
-      }
-      // Start the next phase
-      context.dispatch(new CombatActions.CombatPhaseComplete(phase));
+  @Action(CombatActions.ConfirmCasualties)
+  confirmCasualties(context: CombatStateContext, action: CombatActions.ConfirmCasualties) {
+    const state = context.getState();
+    if (!this.isCasualtyPhase(state.currentPhase)) {
+      return;
     }
+
+    const hitsToAssign = action.role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign;
+    const assignments =
+      action.role === 'attack'
+        ? state.attackerAssignedHitsByUnitId
+        : state.defenderAssignedHitsByUnitId;
+
+    if (this.totalAssignedHits(assignments) !== hitsToAssign) {
+      return;
+    }
+
+    if (action.role === 'attack') {
+      context.patchState({ attackerCasualtiesConfirmed: true });
+    } else {
+      context.patchState({ defenderCasualtiesConfirmed: true });
+    }
+
+    const updatedState = context.getState();
+    if (updatedState.attackerCasualtiesConfirmed && updatedState.defenderCasualtiesConfirmed) {
+      this.resolveConfirmedCasualties(context, updatedState);
+    }
+  }
+
+  @Action(CombatActions.PressAttack)
+  pressAttack(context: CombatStateContext) {
+    const state = context.getState();
+    if (state.currentPhase !== CombatPhase.REGROUP || state.outcome !== 'ongoing') {
+      return;
+    }
+
+    this.startFirePhase(context, CombatPhase.COMBAT, state);
+  }
+
+  @Action(CombatActions.Retreat)
+  retreat(context: CombatStateContext) {
+    const state = context.getState();
+    if (state.currentPhase !== CombatPhase.REGROUP || state.outcome !== 'ongoing') {
+      return;
+    }
+
+    context.patchState({
+      currentPhase: undefined,
+      attackerReadyToFireIds: [],
+      defenderReadyToFireIds: [],
+      attackerHitsToAssign: 0,
+      defenderHitsToAssign: 0,
+      attackerAssignedHitsByUnitId: {},
+      defenderAssignedHitsByUnitId: {},
+      attackerCasualtiesConfirmed: false,
+      defenderCasualtiesConfirmed: false,
+      outcome: 'defenderVictory',
+      canCaptureTerritory: false,
+    });
+  }
+
+  private startFirePhase(context: CombatStateContext, phase: FirePhase, baseState: CombatStateModel) {
+    const nextState: CombatStateModel = {
+      ...baseState,
+      ...this.buildFirePhasePatch(baseState, phase),
+    };
+
+    if (nextState.attackerReadyToFireIds.length === 0 && nextState.defenderReadyToFireIds.length === 0) {
+      if (phase === CombatPhase.OPENING_FIRE) {
+        this.startFirePhase(context, CombatPhase.COMBAT, nextState);
+        return;
+      }
+
+      context.setState({
+        ...nextState,
+        currentPhase: CombatPhase.REGROUP,
+      });
+      return;
+    }
+
+    context.setState(nextState);
+  }
+
+  private buildFirePhasePatch(state: CombatStateModel, phase: FirePhase): Partial<CombatStateModel> {
+    const { attackers, defenders } = this.getEligibleUnitsForPhase(
+      phase,
+      state.attackingArmy,
+      state.defendingArmy,
+    );
+
+    const attackerReadyToFireIds = attackers.map((unit) => unit.id);
+    const defenderReadyToFireIds = defenders.map((unit) => unit.id);
+
+    return {
+      currentPhase: phase,
+      attackerReadyToFireIds,
+      defenderReadyToFireIds,
+      attackerHitsToAssign: 0,
+      defenderHitsToAssign: 0,
+      attackerAssignedHitsByUnitId: {},
+      defenderAssignedHitsByUnitId: {},
+      attackerCasualtiesConfirmed: false,
+      defenderCasualtiesConfirmed: false,
+      round: phase === CombatPhase.COMBAT ? state.round + 1 : state.round,
+    };
+  }
+
+  private advanceAfterFirePhase(context: CombatStateContext, state: CombatStateModel) {
+    const noHitsScoredByEitherSide = state.attackerHitsToAssign === 0 && state.defenderHitsToAssign === 0;
+
+    if (noHitsScoredByEitherSide) {
+      if (state.currentPhase === CombatPhase.OPENING_FIRE) {
+        this.startFirePhase(context, CombatPhase.COMBAT, state);
+        return;
+      }
+
+      context.setState({
+        ...state,
+        currentPhase: CombatPhase.REGROUP,
+      });
+      return;
+    }
+
+    const casualtyPhase: CasualtyPhase =
+      state.currentPhase === CombatPhase.OPENING_FIRE
+        ? CombatPhase.OPENING_FIRE_CASUALTIES
+        : CombatPhase.COMBAT_CASUALTIES;
+
+    context.setState({
+      ...state,
+      currentPhase: casualtyPhase,
+      attackerReadyToFireIds: [],
+      defenderReadyToFireIds: [],
+      attackerCasualtiesConfirmed: state.attackerHitsToAssign === 0,
+      defenderCasualtiesConfirmed: state.defenderHitsToAssign === 0,
+    });
+  }
+
+  private resolveConfirmedCasualties(context: CombatStateContext, state: CombatStateModel) {
+    if (!this.isCasualtyPhase(state.currentPhase)) {
+      return;
+    }
+
+    const nextDamageById: AssignmentMap = { ...state.unitDamageById };
+    for (const [unitId, hits] of Object.entries(state.attackerAssignedHitsByUnitId)) {
+      nextDamageById[unitId] = (nextDamageById[unitId] ?? 0) + hits;
+    }
+    for (const [unitId, hits] of Object.entries(state.defenderAssignedHitsByUnitId)) {
+      nextDamageById[unitId] = (nextDamageById[unitId] ?? 0) + hits;
+    }
+
+    const survivingAttackers = state.attackingArmy.filter(
+      (unit) => (nextDamageById[unit.id] ?? 0) < unit.hitPoints,
+    );
+    const survivingDefenders = state.defendingArmy.filter(
+      (unit) => (nextDamageById[unit.id] ?? 0) < unit.hitPoints,
+    );
+
+    const survivingDamageById = this.buildSurvivingDamageMap(
+      survivingAttackers,
+      survivingDefenders,
+      nextDamageById,
+    );
+
+    const outcome = this.evaluateOutcome(survivingAttackers, survivingDefenders);
+    const postResolutionState: CombatStateModel = {
+      ...state,
+      attackingArmy: survivingAttackers,
+      defendingArmy: survivingDefenders,
+      unitDamageById: survivingDamageById,
+      attackerReadyToFireIds: [],
+      defenderReadyToFireIds: [],
+      attackerHitsToAssign: 0,
+      defenderHitsToAssign: 0,
+      attackerAssignedHitsByUnitId: {},
+      defenderAssignedHitsByUnitId: {},
+      attackerCasualtiesConfirmed: false,
+      defenderCasualtiesConfirmed: false,
+      outcome: outcome.outcome,
+      canCaptureTerritory: outcome.canCaptureTerritory,
+    };
+
+    if (outcome.outcome !== 'ongoing') {
+      context.setState({
+        ...postResolutionState,
+        currentPhase: undefined,
+      });
+      return;
+    }
+
+    if (state.currentPhase === CombatPhase.OPENING_FIRE_CASUALTIES) {
+      this.startFirePhase(context, CombatPhase.COMBAT, postResolutionState);
+      return;
+    }
+
+    context.setState({
+      ...postResolutionState,
+      currentPhase: CombatPhase.REGROUP,
+    });
+  }
+
+  private getEligibleUnitsForPhase(
+    phase: FirePhase,
+    attackers: MilitaryUnit[],
+    defenders: MilitaryUnit[],
+  ): { attackers: MilitaryUnit[]; defenders: MilitaryUnit[] } {
+    if (phase === CombatPhase.OPENING_FIRE) {
+      // Opening fire abilities are not implemented yet.
+      return { attackers: [], defenders: [] };
+    }
+
+    return {
+      attackers: attackers.filter((unit) => unit.attack > 0),
+      defenders: defenders.filter((unit) => unit.defense > 0),
+    };
+  }
+
+  private buildInitialDamageMap(attackers: MilitaryUnit[], defenders: MilitaryUnit[]): AssignmentMap {
+    const damageById: AssignmentMap = {};
+    for (const unit of [...attackers, ...defenders]) {
+      damageById[unit.id] = 0;
+    }
+    return damageById;
+  }
+
+  private buildSurvivingDamageMap(
+    attackers: MilitaryUnit[],
+    defenders: MilitaryUnit[],
+    damageById: AssignmentMap,
+  ): AssignmentMap {
+    const map: AssignmentMap = {};
+    for (const unit of [...attackers, ...defenders]) {
+      const damage = damageById[unit.id] ?? 0;
+      if (damage > 0) {
+        map[unit.id] = damage;
+      }
+    }
+    return map;
+  }
+
+  private isCasualtyPhase(phase?: CombatPhase): phase is CasualtyPhase {
+    return phase === CombatPhase.OPENING_FIRE_CASUALTIES || phase === CombatPhase.COMBAT_CASUALTIES;
+  }
+
+  private totalAssignedHits(assignments: AssignmentMap): number {
+    return Object.values(assignments).reduce((total, hits) => total + hits, 0);
+  }
+
+  private getRemainingHitCapacityForUnit(
+    state: CombatStateModel,
+    role: CombatRole,
+    unit: MilitaryUnit,
+    assignments: AssignmentMap,
+  ): number {
+    const isExpectedRoleUnit =
+      role === 'attack'
+        ? state.attackingArmy.some((candidate) => candidate.id === unit.id)
+        : state.defendingArmy.some((candidate) => candidate.id === unit.id);
+
+    if (!isExpectedRoleUnit) {
+      return 0;
+    }
+
+    const persistentDamage = state.unitDamageById[unit.id] ?? 0;
+    const assignedDamage = assignments[unit.id] ?? 0;
+    return unit.hitPoints - persistentDamage - assignedDamage;
+  }
+
+  private getTotalRemainingHitPoints(units: MilitaryUnit[], damageById: AssignmentMap): number {
+    return units.reduce((total, unit) => {
+      return total + Math.max(0, unit.hitPoints - (damageById[unit.id] ?? 0));
+    }, 0);
+  }
+
+  private evaluateOutcome(attackers: MilitaryUnit[], defenders: MilitaryUnit[]): OutcomeResolution {
+    if (attackers.length === 0) {
+      return {
+        outcome: 'defenderVictory',
+        canCaptureTerritory: false,
+      };
+    }
+
+    if (defenders.length === 0) {
+      const hasCaptureEligibleAttacker = attackers.some((unit) => !AIR_UNIT_TYPES.includes(unit.type));
+      return {
+        outcome: 'attackerVictory',
+        canCaptureTerritory: hasCaptureEligibleAttacker,
+      };
+    }
+
+    return {
+      outcome: 'ongoing',
+      canCaptureTerritory: false,
+    };
   }
 }

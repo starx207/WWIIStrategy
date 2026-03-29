@@ -3,6 +3,7 @@ import { Component, computed, Input, input, signal } from '@angular/core';
 // TODO: We'll need dice for other things in the game, so move it to the "shared" folder
 @Component({
   selector: 'ww2-dice',
+  exportAs: 'dice',
   imports: [],
   templateUrl: './dice.html',
   styleUrl: './dice.scss',

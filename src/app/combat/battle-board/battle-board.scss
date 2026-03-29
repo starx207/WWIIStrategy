@@ -62,13 +62,17 @@
 
 .battle-board__role-label {
   grid-area: label;
-  text-align: right;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row-reverse;
 }
 
 .battle-board__role-label__active {
   // TODO: These colors should come from our theme files
   color: #ffeb3b; // Bright yellow
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 235, 59, 0.6),
+  text-shadow:
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 8px rgba(255, 235, 59, 0.6),
     0 0 12px rgba(255, 235, 59, 0.4);
   font-weight: bold;
 }
@@ -126,7 +130,7 @@
     / var(--battle-board-army-col-2) var(--battle-board-army-col-1);
 
   .battle-board__role-label {
-    text-align: left;
+    flex-direction: row;
   }
 
   .battle-board__casualties__label {

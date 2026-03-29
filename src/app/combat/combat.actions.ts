@@ -1,5 +1,6 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { CombatPhase } from './combat-phase';
+
+// TODO: Clean up this file later. Lots of verbose comments.
 
 // TOOD: Determine the best place to put this so we don't have circular dependencies
 export type CombatRole = 'attack' | 'defend';
@@ -40,11 +41,22 @@ export namespace CombatActions {
     press              >> end phase
     retreat            >> end phase
   */
-  export class CombatPhaseInitiated {
-    static readonly type = `${ACTION_SOURCE} Combat Phase Initiated`;
+  // /**
+  //  * @deprecated Use phase-specific actions instead.
+  //  */
+  // export class CombatPhaseInitiated {
+  //   static readonly type = `${ACTION_SOURCE} Combat Phase Initiated`;
 
-    constructor(public phase: CombatPhase) {}
-  }
+  //   constructor(public phase: CombatPhase) {}
+  // }
+
+  // export class OpeningFireInitiated {
+  //   static readonly type = `${ACTION_SOURCE} Opening Fire Initiated`;
+  // }
+
+  // export class CombatRoundInitiated {
+  //   static readonly type = `${ACTION_SOURCE} Combat Round Initiated`;
+  // }
 
   // Might not need this - just initiate the next phase
   /*
@@ -57,11 +69,11 @@ export namespace CombatActions {
     press              >> initiate combat phase
     retreat            >> raise end of combat
   */
-  export class CombatPhaseComplete {
-    static readonly type = `${ACTION_SOURCE} Combat Phase Completed`;
+  // export class CombatPhaseComplete {
+  //   static readonly type = `${ACTION_SOURCE} Combat Phase Completed`;
 
-    constructor(public phase: CombatPhase) {}
-  }
+  //   constructor(public phase: CombatPhase) {}
+  // }
 
   // // during opening-fire and combat, this action will denote which units are eligible to participate
   // // in combat (attacking units with attack > 0 and defending units with defense > 0)
@@ -81,7 +93,8 @@ export namespace CombatActions {
     constructor(
       public shotValues: number[],
       public targetValue: number,
-      public units: MilitaryUnit[] // public role: CombatRole, // public phase: CombatPhase
+      public units: MilitaryUnit[],
+      public role: CombatRole, // public phase: CombatPhase
     ) {}
   }
 
@@ -91,16 +104,36 @@ export namespace CombatActions {
   export class CasualtiesElected {
     static readonly type = `${ACTION_SOURCE} Casualties Elected`;
 
-    constructor(public casualties: MilitaryUnit[]) {}
+    constructor(
+      public casualties: MilitaryUnit[],
+      public role: CombatRole,
+    ) {}
   }
 
   export class UndoCasualties {
     static readonly type = `${ACTION_SOURCE} Undo Casualty`;
 
-    constructor(public casualties: MilitaryUnit[]) {}
+    constructor(
+      public casualties: MilitaryUnit[],
+      public role: CombatRole,
+    ) {}
   }
 
-  export class CombatEnded {
-    static readonly type = `${ACTION_SOURCE} Combat Ended`;
+  export class ConfirmCasualties {
+    static readonly type = `${ACTION_SOURCE} Casualties Confirmed`;
+
+    constructor(public role: CombatRole) {}
   }
+
+  export class PressAttack {
+    static readonly type = `${ACTION_SOURCE} Press Attack`;
+  }
+
+  export class Retreat {
+    static readonly type = `${ACTION_SOURCE} Retreat`;
+  }
+
+  // export class CombatEnded {
+  //   static readonly type = `${ACTION_SOURCE} Combat Ended`;
+  // }
 }

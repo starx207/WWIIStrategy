@@ -4,6 +4,10 @@
   grid-template: 'casualties garrison';
   grid-template-rows: 1fr;
   grid-template-columns: subgrid;
+
+  &.battalion__selectable {
+    cursor: pointer;
+  }
 }
 
 .battalion__garrison {
