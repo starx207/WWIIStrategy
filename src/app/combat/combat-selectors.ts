@@ -41,6 +41,11 @@ export class CombatSelectors {
     return state.canCaptureTerritory;
   }
 
+  @Selector([CombatState])
+  static resolutionSummary(state: CombatStateModel) {
+    return state.resolutionSummary;
+  }
+
   static combatForce(role: CombatRole) {
     return createSelector([CombatState], (state: CombatStateModel) => {
       return role === 'attack' ? state.attackingArmy : state.defendingArmy;

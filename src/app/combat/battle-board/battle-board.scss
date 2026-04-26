@@ -153,3 +153,58 @@
   position: relative;
   z-index: 1;
 }
+
+.battle-result-dialog {
+  min-width: min(32rem, calc(100vw - 3rem));
+  max-width: 40rem;
+}
+
+.battle-result-dialog__eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.battle-result-dialog__title {
+  margin: 0 0 0.75rem;
+}
+
+.battle-result-dialog__description,
+.battle-result-dialog__territory {
+  margin: 0 0 0.75rem;
+}
+
+.battle-result-dialog__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 1.5rem 0;
+}
+
+.battle-result-dialog__facts div {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.battle-result-dialog__facts dt {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.battle-result-dialog__facts dd {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.battle-result-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+}

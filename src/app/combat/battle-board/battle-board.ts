@@ -6,6 +6,8 @@ import {
   computed,
   inject,
   OnInit,
+  effect,
+  viewChild,
 } from '@angular/core';
 import { Battalion } from '../battalion/battalion';
 import { UpperCasePipe } from '@angular/common';
@@ -14,12 +16,13 @@ import { CombatActions, CombatRole } from '../combat.actions';
 import { CombatSelectors } from '../combat-selectors';
 import { Dice } from '@ww2/shared/dice/dice';
 import { CombatPhase } from '../combat-phase';
+import { ModalDialog } from '@ww2/shared/modal-dialog/modal-dialog';
 
 const MAX_DICE_COUNT = 20;
 
 @Component({
   selector: 'ww2-battle-board',
-  imports: [Battalion, UpperCasePipe, Dice],
+  imports: [Battalion, UpperCasePipe, Dice, ModalDialog],
   templateUrl: './battle-board.html',
   styleUrl: './battle-board.scss',
   host: {
@@ -50,8 +53,10 @@ export class BattleBoard implements OnInit {
   protected canConfirmDefenderCasualties = this.store.selectSignal(
     CombatSelectors.canConfirmCasualties('defend'),
   );
+  protected resolutionSummary = this.store.selectSignal(CombatSelectors.resolutionSummary);
 
   activeBattalion = signal<Battalion | undefined>(undefined);
+  protected outcomeDialog = viewChild(ModalDialog);
 
   activeUnits = computed(() => this.activeBattalion()?.battalionUnits() ?? []);
   activeBattalionStrength = computed(() => this.activeBattalion()?.strength() ?? 100);
@@ -69,11 +74,72 @@ export class BattleBoard implements OnInit {
     return this.outcome() === 'ongoing' && canFire && !!activeBattalion;
   });
   canRetreat = computed(() => this.currentPhase() === CombatPhase.REGROUP);
+  outcomeTitle = computed(() => {
+    const summary = this.resolutionSummary();
+    if (!summary) {
+      return '';
+    }
+
+    return summary.outcome === 'attackerVictory' ? 'Attacker Victory' : 'Defender Victory';
+  });
+  outcomeDescription = computed(() => {
+    const summary = this.resolutionSummary();
+    if (!summary) {
+      return '';
+    }
+
+    switch (summary.resolutionReason) {
+      case 'retreat':
+        return 'The attacker broke off the battle and withdrew.';
+      case 'attackersEliminated':
+        return 'All attacking units were destroyed.';
+      case 'defendersEliminated':
+        return 'All defending units were destroyed.';
+    }
+  });
+  territoryOutcome = computed(() => {
+    const summary = this.resolutionSummary();
+    if (!summary || !summary.territory) {
+      return '';
+    }
+
+    if (summary.territoryCaptured) {
+      return `${summary.territory} was captured by the attacker.`;
+    }
+
+    if (summary.outcome === 'attackerVictory') {
+      return `${summary.territory} was cleared but could not be captured.`;
+    }
+
+    return `${summary.territory} remains under defender control.`;
+  });
+  roundsLabel = computed(() => {
+    const rounds = this.resolutionSummary()?.rounds ?? 0;
+    return `${rounds} ${rounds === 1 ? 'round' : 'rounds'}`;
+  });
+  private readonly outcomeDialogEffect = effect(() => {
+    const dialog = this.outcomeDialog();
+    const summary = this.resolutionSummary();
+    if (!dialog) {
+      return;
+    }
+
+    if (summary) {
+      dialog.open();
+      return;
+    }
+
+    dialog.close();
+  });
 
   @ViewChildren(Dice) diceComponents!: QueryList<Dice>;
 
   ngOnInit() {
     this.store.dispatch(new CombatActions.PreparingBattlefield());
+  }
+
+  closeOutcomeDialog(): void {
+    this.outcomeDialog()?.close();
   }
 
   retreat(): void {

@@ -74,3 +74,47 @@
     }
   </div>
 </div>
+
+<ww2-modal-dialog>
+  @if (resolutionSummary(); as summary) {
+    <section class="battle-result-dialog">
+      <p class="battle-result-dialog__eyebrow">Battle Resolved</p>
+      <h2 class="battle-result-dialog__title">{{ outcomeTitle() }}</h2>
+      <p class="battle-result-dialog__description">{{ outcomeDescription() }}</p>
+      @if (territoryOutcome(); as territoryOutcomeText) {
+        <p class="battle-result-dialog__territory">{{ territoryOutcomeText }}</p>
+      }
+
+      <dl class="battle-result-dialog__facts">
+        <div>
+          <dt>Winner</dt>
+          <dd>{{ summary.winner === 'attack' ? 'Attacker' : 'Defender' }}</dd>
+        </div>
+        <div>
+          <dt>Attacker Retreated</dt>
+          <dd>{{ summary.attackerRetreated ? 'Yes' : 'No' }}</dd>
+        </div>
+        <div>
+          <dt>Territory Captured</dt>
+          <dd>{{ summary.territoryCaptured ? 'Yes' : 'No' }}</dd>
+        </div>
+        <div>
+          <dt>Rounds Fought</dt>
+          <dd>{{ roundsLabel() }}</dd>
+        </div>
+        <div>
+          <dt>Attackers Remaining</dt>
+          <dd>{{ summary.attackingUnitsRemaining }}</dd>
+        </div>
+        <div>
+          <dt>Defenders Remaining</dt>
+          <dd>{{ summary.defendingUnitsRemaining }}</dd>
+        </div>
+      </dl>
+
+      <div class="battle-result-dialog__actions">
+        <button type="button" (click)="closeOutcomeDialog()">Continue</button>
+      </div>
+    </section>
+  }
+</ww2-modal-dialog>

@@ -12,6 +12,11 @@ export type CombatOutcome =
   | 'attackerVictory'
   | 'defenderVictory';
 
+export type CombatResolutionReason =
+  | 'retreat'
+  | 'attackersEliminated'
+  | 'defendersEliminated';
+
 type AssignmentMap = Record<string, number>;
 
 type FirePhase = CombatPhase.OPENING_FIRE | CombatPhase.COMBAT;
@@ -20,6 +25,20 @@ type CasualtyPhase = CombatPhase.OPENING_FIRE_CASUALTIES | CombatPhase.COMBAT_CA
 interface OutcomeResolution {
   outcome: CombatOutcome;
   canCaptureTerritory: boolean;
+  resolutionReason?: CombatResolutionReason;
+}
+
+export interface BattleResolutionSummary {
+  outcome: Exclude<CombatOutcome, 'ongoing'>;
+  winner: CombatRole;
+  resolutionReason: CombatResolutionReason;
+  territory?: string;
+  territoryCaptured: boolean;
+  canCaptureTerritory: boolean;
+  attackerRetreated: boolean;
+  rounds: number;
+  attackingUnitsRemaining: number;
+  defendingUnitsRemaining: number;
 }
 
 export interface CombatStateModel {
@@ -38,6 +57,7 @@ export interface CombatStateModel {
   unitDamageById: AssignmentMap;
   outcome: CombatOutcome;
   canCaptureTerritory: boolean;
+  resolutionSummary: BattleResolutionSummary | null;
   round: number;
 }
 
@@ -57,6 +77,7 @@ const DEFAULT_STATE: CombatStateModel = {
   unitDamageById: {},
   outcome: 'ongoing',
   canCaptureTerritory: false,
+  resolutionSummary: null,
   round: 0,
 };
 
@@ -86,6 +107,12 @@ export class CombatState {
         ...baseState,
         outcome: initialOutcome.outcome,
         canCaptureTerritory: initialOutcome.canCaptureTerritory,
+        resolutionSummary: this.buildResolutionSummary(
+          baseState,
+          attackingArmy,
+          defendingArmy,
+          initialOutcome,
+        ),
       });
       return;
     }
@@ -337,6 +364,16 @@ export class CombatState {
       defenderCasualtiesConfirmed: false,
       outcome: 'defenderVictory',
       canCaptureTerritory: false,
+      resolutionSummary: this.buildResolutionSummary(
+        state,
+        state.attackingArmy,
+        state.defendingArmy,
+        {
+          outcome: 'defenderVictory',
+          canCaptureTerritory: false,
+          resolutionReason: 'retreat',
+        },
+      ),
     });
   }
 
@@ -459,6 +496,12 @@ export class CombatState {
       defenderCasualtiesConfirmed: false,
       outcome: outcome.outcome,
       canCaptureTerritory: outcome.canCaptureTerritory,
+      resolutionSummary: this.buildResolutionSummary(
+        state,
+        survivingAttackers,
+        survivingDefenders,
+        outcome,
+      ),
     };
 
     if (outcome.outcome !== 'ongoing') {
@@ -558,6 +601,7 @@ export class CombatState {
       return {
         outcome: 'defenderVictory',
         canCaptureTerritory: false,
+        resolutionReason: 'attackersEliminated',
       };
     }
 
@@ -566,12 +610,37 @@ export class CombatState {
       return {
         outcome: 'attackerVictory',
         canCaptureTerritory: hasCaptureEligibleAttacker,
+        resolutionReason: 'defendersEliminated',
       };
     }
 
     return {
       outcome: 'ongoing',
       canCaptureTerritory: false,
+    };
+  }
+
+  private buildResolutionSummary(
+    state: Pick<CombatStateModel, 'territory' | 'round'>,
+    attackers: MilitaryUnit[],
+    defenders: MilitaryUnit[],
+    outcome: OutcomeResolution,
+  ): BattleResolutionSummary | null {
+    if (outcome.outcome === 'ongoing' || !outcome.resolutionReason) {
+      return null;
+    }
+
+    return {
+      outcome: outcome.outcome,
+      winner: outcome.outcome === 'attackerVictory' ? 'attack' : 'defend',
+      resolutionReason: outcome.resolutionReason,
+      territory: state.territory,
+      territoryCaptured: outcome.outcome === 'attackerVictory' && outcome.canCaptureTerritory,
+      canCaptureTerritory: outcome.canCaptureTerritory,
+      attackerRetreated: outcome.resolutionReason === 'retreat',
+      rounds: state.round,
+      attackingUnitsRemaining: attackers.length,
+      defendingUnitsRemaining: defenders.length,
     };
   }
 }
