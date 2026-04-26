@@ -1,3 +1,3 @@
-<dialog #innerDialog>
+<dialog #innerDialog (close)="handleNativeClose()" (cancel)="handleNativeClose()">
   <ng-content></ng-content>
 </dialog>

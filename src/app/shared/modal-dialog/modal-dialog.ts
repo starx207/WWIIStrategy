@@ -16,12 +16,30 @@ export class ModalDialog {
   @ViewChild('innerDialog') innerDialog!: ElementRef<HTMLDialogElement>;
 
   open(): void {
+    if (this.visible) {
+      return;
+    }
+
     this.visible = true;
-    this.innerDialog.nativeElement.showModal();
+    if (!this.innerDialog.nativeElement.open) {
+      this.innerDialog.nativeElement.showModal();
+    }
   }
 
   close(): void {
-    this.innerDialog.nativeElement.close();
+    if (!this.visible) {
+      return;
+    }
+
+    if (this.innerDialog.nativeElement.open) {
+      this.innerDialog.nativeElement.close();
+    }
+    this.visible = false;
+  }
+
+  // Keep the host backdrop state aligned when the native dialog closes itself,
+  // such as on Escape or any other direct close event.
+  handleNativeClose(): void {
     this.visible = false;
   }
 }
