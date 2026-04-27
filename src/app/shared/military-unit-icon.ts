@@ -11,14 +11,14 @@ import { NATIONALITIES, Nationality } from './nationality';
   imports: [],
   template: ` <div class="graphics-container" [innerHTML]="graphics()"></div> `,
   styles: `
-  :host {
-    display: block;
-    // TODO: These other settings I can classify so I can adjust based on the state of the component (selected, non-selected, etc.)
-    stroke: black;
-    stroke-width: 0.1;// 0.3125;
-    stroke-opacity: 0.5;
-    fill-opacity: 1;
-  }
+    :host {
+      display: block;
+      // TODO: These other settings I can classify so I can adjust based on the state of the component (selected, non-selected, etc.)
+      stroke: black;
+      stroke-width: 0.1; // 0.3125;
+      stroke-opacity: 0.5;
+      fill-opacity: 1;
+    }
   `,
   host: {
     '[class]': '"military-unit-icon " + nationalityClass()',
@@ -30,28 +30,36 @@ export class MilitaryUnitIcon {
 
   nationality = input.required<Nationality>();
   unitType = input.required<UnitType>();
+  unitHp = input<number | undefined>();
+  hpRemaining = input<number | undefined>();
 
   private readonly isNeutral = computed(() => NEUTRAL_UNIT_TYPES.includes(this.unitType()));
 
-  private readonly imageSrc = computed(() =>
-    UNIT_TYPES.includes(this.unitType()) && NATIONALITIES.includes(this.nationality())
-      ? this.isNeutral()
-        ? `images/${this.unitType()}.svg`
-        : `images/${this.nationality()}/${this.unitType()}.svg`
-      : ''
-  );
+  private readonly imageSrc = computed(() => {
+    const isValid =
+      UNIT_TYPES.includes(this.unitType()) && NATIONALITIES.includes(this.nationality());
+    if (!isValid) {
+      return '';
+    }
+    const hpLeft = this.hpRemaining() ?? 0;
+    const hpMax = this.unitHp() ?? hpLeft;
+    const hpIndicator = hpLeft > 0 && hpMax > hpLeft ? `-hp-${this.hpRemaining()}` : '';
+    return this.isNeutral()
+      ? `images/${this.unitType()}.svg`
+      : `images/${this.nationality()}/${this.unitType()}${hpIndicator}.svg`;
+  });
 
   protected readonly nationalityClass = computed(() =>
     NEUTRAL_UNIT_TYPES.includes(this.unitType())
       ? 'nationality-neutral'
-      : `nationality-${this.nationality()}`
+      : `nationality-${this.nationality()}`,
   );
 
   protected readonly graphics = toSignal(
     toObservable(this.imageSrc).pipe(
       filter((src) => !!src),
       switchMap((src) => this.http.get(src, { responseType: 'text' })),
-      map((svg) => this.sanitizer.bypassSecurityTrustHtml(svg))
-    )
+      map((svg) => this.sanitizer.bypassSecurityTrustHtml(svg)),
+    ),
   );
 }

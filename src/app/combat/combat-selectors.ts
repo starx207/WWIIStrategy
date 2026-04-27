@@ -184,6 +184,26 @@ export class CombatSelectors {
   }
 
   @Selector([CombatState])
+  static damageMap(state: CombatStateModel) {
+    const persistedDamage = state.unitDamageById;
+    const attackerDamage = state.attackerAssignedHitsByUnitId;
+    const defenderDamage = state.defenderAssignedHitsByUnitId;
+
+    const damageMap: Record<string, number> = {};
+    const allMultiHpUnits = [...state.attackingArmy, ...state.defendingArmy]
+      .filter((unit) => unit.hitPoints > 1)
+      .map((unit) => unit.id);
+    for (const unitId of allMultiHpUnits) {
+      damageMap[unitId] =
+        (persistedDamage[unitId] ?? 0) +
+        (attackerDamage[unitId] ?? 0) +
+        (defenderDamage[unitId] ?? 0);
+    }
+
+    return damageMap;
+  }
+
+  @Selector([CombatState])
   static activeCombatRole(state: CombatStateModel) {
     if (
       state.currentPhase !== CombatPhase.OPENING_FIRE &&

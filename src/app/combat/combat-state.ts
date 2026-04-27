@@ -288,11 +288,7 @@ export class CombatState {
         continue;
       }
 
-      if (currentHits === 1) {
-        delete assignments[casualty.id];
-      } else {
-        assignments[casualty.id] = currentHits - 1;
-      }
+      delete assignments[casualty.id];
     }
 
     if (action.role === 'attack') {

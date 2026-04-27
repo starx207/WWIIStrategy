@@ -12,7 +12,7 @@ export abstract class MilitaryUnit {
   constructor(
     public type: UnitType,
     public nationality: Nationality,
-    options?: MilitaryUnitInitOptions
+    options?: MilitaryUnitInitOptions,
   ) {
     this.id = uuid();
     this.attack = options?.attack ?? 1;
@@ -75,7 +75,7 @@ export class BattleshipUnit extends MilitaryUnit {
     super(UnitType.BATTLESHIP, nationality, {
       attack: 4,
       defense: 4,
-      hitPoints: 1 /* TODO: This should be 2, but I want to get basic combat going first */,
+      hitPoints: 2,
     });
   }
 }

@@ -23,6 +23,8 @@ export class SquadComponent {
   });
 
   protected unitType = computed(() => this.squad().type);
+  protected hpRemaining = computed(() => this.squad().hpRemaining);
+  protected hpMax = computed(() => this.squad().units[0]?.hitPoints);
   protected nationality = computed(() => this.squad().nationality);
   protected unitCount = computed(() => this.squad().count);
 
@@ -30,7 +32,7 @@ export class SquadComponent {
     () =>
       `military-unit-squad military-unit-squad__${this.direction()} ${
         this.disabled() ? 'military-unit-squad__disabled' : ''
-      }`
+      }`,
   );
 
   protected selectSquad() {

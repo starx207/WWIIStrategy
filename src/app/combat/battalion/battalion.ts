@@ -54,6 +54,7 @@ export class Battalion {
   });
 
   readyUnits: Signal<MilitaryUnit[]> = signal<MilitaryUnit[]>([]).asReadonly();
+  damageMap = this.store.selectSignal(CombatSelectors.damageMap);
   pendingHitCountForRole: Signal<number> = signal(0).asReadonly();
   casualtiesConfirmed: Signal<boolean> = signal(false).asReadonly();
   protected phase = this.store.selectSignal(CombatSelectors.currentPhase);
@@ -76,7 +77,10 @@ export class Battalion {
 
   protected healthySquads = computed(() => {
     const readyUnits = this.readyUnits();
-    return createSquads(this.healthyUnits(), { separateUnits: readyUnits }).map((squad) => ({
+    return createSquads(this.healthyUnits(), {
+      separateUnits: readyUnits,
+      damageMap: this.damageMap(),
+    }).map((squad) => ({
       squad,
       enabled:
         (!this.isCasualtyPhase() && !squad.isSubsetOf(this.reloadingUnits())) ||

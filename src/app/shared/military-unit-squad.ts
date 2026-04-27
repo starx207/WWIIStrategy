@@ -5,33 +5,42 @@ import { v4 as uuid } from 'uuid';
 
 export interface CreateSquadOptions {
   separateUnits?: MilitaryUnit[];
+  damageMap?: Record<string, number>;
 }
 
 export function createSquads(
   army: MilitaryUnit[],
-  options?: CreateSquadOptions
+  options?: CreateSquadOptions,
 ): MilitaryUnitSquad[] {
-  const groups: Record<string, MilitaryUnit[]> = {};
+  const groups: Record<string, (MilitaryUnit & { hpRemaining: number })[]> = {};
   const separatePrefix = options?.separateUnits !== undefined;
 
   army.forEach((unit) => {
     // This "prefix" logic is to separate the grouping of units if some have fired in the current combat round and some have not
     const prefix = separatePrefix && options.separateUnits?.includes(unit) ? 'g2' : 'g1';
-    const groupKey = `${prefix}-${unit.type}-${unit.nationality}`;
+    const damage = options?.damageMap?.[unit.id] ?? 0;
+    const damageIndicator = damage > 0 && damage < unit.hitPoints ? `-dmg${damage}` : '';
+    const groupKey = `${prefix}-${unit.type}-${unit.nationality}${damageIndicator}`;
     if (!groups[groupKey]) {
       groups[groupKey] = [];
     }
-    groups[groupKey].push(unit);
+    groups[groupKey].push({ ...unit, hpRemaining: unit.hitPoints - damage });
   });
 
-  const squads = Object.entries(groups).map(([key, units]) => new MilitaryUnitSquad(units, key));
+  const squads = Object.entries(groups).map(
+    ([key, units]) => new MilitaryUnitSquad(units, key, units[0].hpRemaining),
+  );
   return squads;
 }
 
 export class MilitaryUnitSquad {
   readonly id: string;
 
-  constructor(public units: MilitaryUnit[], id?: string) {
+  constructor(
+    public units: MilitaryUnit[],
+    id?: string,
+    public hpRemaining?: number,
+  ) {
     this.id = id ?? uuid();
   }
 
