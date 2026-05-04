@@ -20,13 +20,19 @@ export namespace CombatRules {
   export function filterEligibleUnits(
     phase: CombatPhase,
     attackers?: MilitaryUnit[],
-    defenders?: MilitaryUnit[]
+    defenders?: MilitaryUnit[],
   ) {
+    if (phase === CombatPhase.OPENING_FIRE) {
+      return {
+        attackers: attackers?.filter((unit) => unit.openingFire && unit.attack > 0) ?? [],
+        defenders: defenders?.filter((unit) => unit.openingFire && unit.defense > 0) ?? [],
+      };
+    }
+
     if (phase === CombatPhase.COMBAT) {
-      // TODO: This will need to filter to the units eligible to participate in the current combat phase
       return {
         attackers: attackers?.filter((x) => x.attack > 0) ?? [],
-        defenders: defenders ?? [],
+        defenders: defenders?.filter((x) => x.defense > 0) ?? [],
       };
     }
 

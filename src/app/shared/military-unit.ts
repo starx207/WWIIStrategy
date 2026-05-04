@@ -6,6 +6,7 @@ export interface MilitaryUnitInitOptions {
   attack?: number;
   defense?: number;
   hitPoints?: number;
+  openingFire?: boolean;
 }
 
 export abstract class MilitaryUnit {
@@ -18,11 +19,13 @@ export abstract class MilitaryUnit {
     this.attack = options?.attack ?? 1;
     this.defense = options?.defense ?? 1;
     this.hitPoints = options?.hitPoints ?? 1;
+    this.openingFire = options?.openingFire ?? false;
   }
 
   readonly id: string;
   readonly attack: number;
   readonly defense: number;
+  readonly openingFire: boolean;
   hitPoints: number;
   // canTarget: UnitType[];
   // movement: number;
@@ -48,7 +51,7 @@ export class TankUnit extends MilitaryUnit {
 
 export class AntiAirUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.ANTI_AIR_GUN, nationality, { attack: 0 });
+    super(UnitType.ANTI_AIR_GUN, nationality, { attack: 0, openingFire: true });
   }
 }
 
@@ -100,6 +103,6 @@ export class TransportUnit extends MilitaryUnit {
 
 export class SubmarineUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.SUBMARINE, nationality, { attack: 2, defense: 2 });
+    super(UnitType.SUBMARINE, nationality, { attack: 2, defense: 2, openingFire: true });
   }
 }

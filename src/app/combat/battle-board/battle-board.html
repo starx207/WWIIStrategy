@@ -54,6 +54,9 @@
   <h1 class="battle-board__casualties__label">{{ 'Casualties' | uppercase }}</h1>
 </div>
 <div class="battle-board__dice-tray">
+  @if (currentPhase() === CombatPhase.OPENING_FIRE) {
+    <div class="battle-board__opening-fire-banner">Opening Fire</div>
+  }
   <button
     class="battle-board__dice-tray__fire-button"
     (click)="rollDice()"

@@ -32,6 +32,7 @@ const MAX_DICE_COUNT = 20;
 export class BattleBoard implements OnInit {
   private store = inject(Store);
 
+  protected readonly CombatPhase = CombatPhase;
   readonly ATTACK_SQUAD_RANKS = [4, 3, 2, 1, 0];
   readonly DEFENSE_SQUAD_RANKS = [5, 4, 3, 2, 1];
 

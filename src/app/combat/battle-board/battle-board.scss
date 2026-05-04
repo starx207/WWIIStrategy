@@ -47,6 +47,20 @@
   gap: 10px;
 }
 
+/* TODO: I don't care for the placement or styling of this banner. Come back to this later */
+.battle-board__opening-fire-banner {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #b27a00;
+  border-radius: 0.25rem;
+  background: #ffe7a8;
+  color: #513500;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .battle-board__dice-tray__results {
   display: flex;
   gap: 3px;

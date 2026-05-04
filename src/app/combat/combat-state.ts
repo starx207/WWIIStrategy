@@ -524,15 +524,7 @@ export class CombatState {
     attackers: MilitaryUnit[],
     defenders: MilitaryUnit[],
   ): { attackers: MilitaryUnit[]; defenders: MilitaryUnit[] } {
-    if (phase === CombatPhase.OPENING_FIRE) {
-      // Opening fire abilities are not implemented yet.
-      return { attackers: [], defenders: [] };
-    }
-
-    return {
-      attackers: attackers.filter((unit) => unit.attack > 0),
-      defenders: defenders.filter((unit) => unit.defense > 0),
-    };
+    return CombatRules.filterEligibleUnits(phase, attackers, defenders);
   }
 
   private buildInitialDamageMap(attackers: MilitaryUnit[], defenders: MilitaryUnit[]): AssignmentMap {
