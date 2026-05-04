@@ -57,11 +57,9 @@ export class MilitaryUnitSquad {
   }
 
   isSubsetOf(armyOrIds: MilitaryUnit[] | string[]): boolean {
-    if (this.isStringArray(armyOrIds)) {
-      return this.units.every((unit) => armyOrIds.includes(unit.id));
-    } else {
-      return this.units.every((unit) => armyOrIds.includes(unit));
-    }
+    const incomingIds = this.isStringArray(armyOrIds) ? armyOrIds : armyOrIds.map((a) => a.id);
+    const squadIds = this.units.map((u) => u.id);
+    return squadIds.every((id) => incomingIds.includes(id));
   }
 
   intersectsWith(armyOrIds: MilitaryUnit[] | string[]): boolean {
