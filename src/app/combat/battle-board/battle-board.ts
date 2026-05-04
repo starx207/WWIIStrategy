@@ -58,7 +58,15 @@ export class BattleBoard implements OnInit {
   activeBattalion = signal<Battalion | undefined>(undefined);
   protected outcomeDialog = viewChild(ModalDialog);
 
-  activeUnits = computed(() => this.activeBattalion()?.battalionUnits() ?? []);
+  activeUnits = computed(() => {
+    const battalion = this.activeBattalion();
+    const units = battalion?.battalionUnits() ?? [];
+    if (units.length === 0) {
+      return units;
+    }
+
+    return units.filter((unit) => battalion!.readyUnits().includes(unit));
+  });
   activeBattalionStrength = computed(() => this.activeBattalion()?.strength() ?? 100);
   liveDiceValues = computed(() => {
     const values = this.activeUnits().length > 0 ? this.activeUnits().map(() => -1) : [];
