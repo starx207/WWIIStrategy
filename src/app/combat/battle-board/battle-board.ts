@@ -17,6 +17,7 @@ import { CombatSelectors } from '../combat-selectors';
 import { Dice } from '@ww2/shared/dice/dice';
 import { CombatPhase } from '../combat-phase';
 import { ModalDialog } from '@ww2/shared/modal-dialog/modal-dialog';
+import { MilitaryUnit } from '@ww2/shared/military-unit';
 
 const MAX_DICE_COUNT = 20;
 
@@ -57,17 +58,9 @@ export class BattleBoard implements OnInit {
   protected resolutionSummary = this.store.selectSignal(CombatSelectors.resolutionSummary);
 
   activeBattalion = signal<Battalion | undefined>(undefined);
+  activeUnits = signal<MilitaryUnit[]>([]);
   protected outcomeDialog = viewChild(ModalDialog);
 
-  activeUnits = computed(() => {
-    const battalion = this.activeBattalion();
-    const units = battalion?.battalionUnits() ?? [];
-    if (units.length === 0) {
-      return units;
-    }
-
-    return units.filter((unit) => battalion!.readyUnits().includes(unit));
-  });
   activeBattalionStrength = computed(() => this.activeBattalion()?.strength() ?? 100);
   liveDiceValues = computed(() => {
     const values = this.activeUnits().length > 0 ? this.activeUnits().map(() => -1) : [];
@@ -153,6 +146,7 @@ export class BattleBoard implements OnInit {
 
   retreat(): void {
     this.activeBattalion.set(undefined);
+    this.activeUnits.set([]);
     this.store.dispatch(new CombatActions.Retreat());
   }
 
@@ -173,7 +167,7 @@ export class BattleBoard implements OnInit {
       this.store.dispatch(new CombatActions.PressAttack());
     }
     const selectedBattalionStrength = battalion.strength();
-    const selectedBattalionUnits = battalion.battalionUnits();
+    const selectedBattalionUnits = this.activeUnits();
 
     this.diceComponents.forEach((dice) => dice.roll());
     const results = this.diceComponents.map((dc) => dc.value);
@@ -206,7 +200,17 @@ export class BattleBoard implements OnInit {
         : battalion.readyUnits().some((unit) => battalion.battalionUnits().includes(unit));
     if (hasReadyUnits) {
       this.diceComponents.forEach((dice) => (dice.value = -1)); // Reset any dice we already rolled previously
+      this.activeUnits.set(this.getSelectableUnits(battalion, phase));
       this.activeBattalion.set(battalion);
     }
+  }
+
+  private getSelectableUnits(battalion: Battalion, phase: CombatPhase): MilitaryUnit[] {
+    const battalionUnits = battalion.battalionUnits();
+    if (phase === CombatPhase.REGROUP) {
+      return battalionUnits.filter((unit) => unit.attack > 0);
+    }
+
+    return battalion.readyUnits().filter((unit) => battalionUnits.includes(unit));
   }
 }
