@@ -1,10 +1,13 @@
 import { UnitType } from './unit-type';
 
+export type TargetKind = 'unit' | 'air-unit' | 'sea-unit' | 'factory';
+
 export interface BaseUnitProfile {
   attack: number;
   defense: number;
   hitPoints: number;
   openingFire: boolean;
+  targetKind?: TargetKind;
 }
 
 export const UNIT_PROFILES: Record<UnitType, BaseUnitProfile> = {
@@ -31,6 +34,7 @@ export const UNIT_PROFILES: Record<UnitType, BaseUnitProfile> = {
     defense: 1,
     hitPoints: 1,
     openingFire: true,
+    targetKind: 'air-unit',
   },
   [UnitType.FACTORY]: {
     attack: 0,
@@ -67,6 +71,7 @@ export const UNIT_PROFILES: Record<UnitType, BaseUnitProfile> = {
     defense: 2,
     hitPoints: 1,
     openingFire: true,
+    targetKind: 'sea-unit',
   },
   [UnitType.BATTLESHIP]: {
     attack: 4,

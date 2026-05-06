@@ -19,6 +19,7 @@ import { CombatPhase } from '../combat-phase';
 import { ModalDialog } from '@ww2/shared/modal-dialog/modal-dialog';
 import { CombatProfileId } from '@ww2/shared/effective-unit';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { HitPool } from '@ww2/shared/hit-pool';
 
 const MAX_DICE_COUNT = 20;
 
@@ -49,6 +50,12 @@ export class BattleBoard implements OnInit {
   protected pendingDefenderCasualtyCount = this.store.selectSignal(
     CombatSelectors.pendingHitCountForRole('defend'),
   );
+  protected pendingAttackerHitPool = this.store.selectSignal(
+    CombatSelectors.pendingHitPoolForRole('attack'),
+  );
+  protected pendingDefenderHitPool = this.store.selectSignal(
+    CombatSelectors.pendingHitPoolForRole('defend'),
+  );
   protected outcome = this.store.selectSignal(CombatSelectors.outcome);
   protected canConfirmAttackerCasualties = this.store.selectSignal(
     CombatSelectors.canConfirmCasualties('attack'),
@@ -65,6 +72,12 @@ export class BattleBoard implements OnInit {
   protected outcomeDialog = viewChild(ModalDialog);
 
   activeBattalionStrength = computed(() => this.activeBattalion()?.strength() ?? 100);
+  pendingAttackerCasualtyLabel = computed(() =>
+    this.formatPendingHitLabel(this.pendingAttackerCasualtyCount(), this.pendingAttackerHitPool()),
+  );
+  pendingDefenderCasualtyLabel = computed(() =>
+    this.formatPendingHitLabel(this.pendingDefenderCasualtyCount(), this.pendingDefenderHitPool()),
+  );
   liveDiceValues = computed(() => {
     const diceCount = this.activeShotCount();
     const values = diceCount > 0 ? Array.from({ length: diceCount }, () => -1) : [];
@@ -212,5 +225,19 @@ export class BattleBoard implements OnInit {
       this.activeShotCount.set(battalion.selectedShotCount());
       this.activeBattalion.set(battalion);
     }
+  }
+
+  private formatPendingHitLabel(totalHits: number, hitPool: HitPool): string {
+    const restrictedHits = [
+      { label: 'sea', count: hitPool['sea-unit'] ?? 0 },
+      { label: 'air', count: hitPool['air-unit'] ?? 0 },
+    ].filter((item) => item.count > 0);
+
+    if (restrictedHits.length === 0) {
+      return `${totalHits}`;
+    }
+
+    const restrictedLabel = restrictedHits.map((item) => `${item.count} ${item.label}`).join(', ');
+    return `${totalHits} - ${restrictedLabel}`;
   }
 }

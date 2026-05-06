@@ -12,6 +12,7 @@ import {
   getDefaultCombatTarget,
   getPrimaryCombatProfile,
 } from '@ww2/shared/effective-unit';
+import { HitPool, unitCanConsumeHit } from '@ww2/shared/hit-pool';
 
 @Component({
   selector: 'ww2-battalion',
@@ -34,6 +35,7 @@ export class Battalion {
     this.pendingHitCountForRole = this.store.selectSignal(
       CombatSelectors.pendingHitCountForRole(value),
     );
+    this.pendingHitPoolForRole = this.store.selectSignal(CombatSelectors.pendingHitPoolForRole(value));
     this.casualtiesConfirmed = this.store.selectSignal(CombatSelectors.casualtiesConfirmed(value));
   }
   get role(): CombatRole {
@@ -116,6 +118,7 @@ export class Battalion {
   readyUnits: Signal<MilitaryUnit[]> = signal<MilitaryUnit[]>([]).asReadonly();
   damageMap = this.store.selectSignal(CombatSelectors.damageMap);
   pendingHitCountForRole: Signal<number> = signal(0).asReadonly();
+  pendingHitPoolForRole: Signal<HitPool> = signal<HitPool>({}).asReadonly();
   casualtiesConfirmed: Signal<boolean> = signal(false).asReadonly();
 
   protected hostClasses = computed(
@@ -146,7 +149,8 @@ export class Battalion {
         (!this.isCasualtyPhase() &&
           this.canFire() &&
           !squad.isSubsetOf(this.reloadingUnits())) ||
-        this.canAssignCasualties() ||
+        (this.canAssignCasualties() &&
+          squad.units.some((unit) => unitCanConsumeHit(this.pendingHitPoolForRole(), unit))) ||
         (this.phase() === CombatPhase.REGROUP &&
           this.role === 'attack' &&
           squad.units.some(

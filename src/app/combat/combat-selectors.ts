@@ -4,11 +4,34 @@ import { CombatPhase } from './combat-phase';
 import { CombatRole } from './combat.actions';
 import { CombatState, CombatStateModel } from './combat-state';
 import { getHitPoints } from '@ww2/shared/effective-unit';
+import { consumeHitForUnit, HitPool, totalHitPool } from '@ww2/shared/hit-pool';
 
 type AssignmentMap = Record<string, number>;
 
-function totalAssignedHits(assignments: AssignmentMap): number {
-  return Object.values(assignments).reduce((total, hits) => total + hits, 0);
+function pendingHitPool(
+  hitsToAssign: HitPool,
+  assignments: AssignmentMap,
+  roleArmy: MilitaryUnit[],
+): HitPool {
+  let pendingPool = { ...hitsToAssign };
+  const unitById = new Map(roleArmy.map((unit) => [unit.id, unit]));
+
+  for (const [unitId, hits] of Object.entries(assignments)) {
+    const unit = unitById.get(unitId);
+    if (!unit) {
+      continue;
+    }
+
+    for (let i = 0; i < hits; i++) {
+      const nextPool = consumeHitForUnit(pendingPool, unit);
+      if (!nextPool) {
+        return pendingPool;
+      }
+      pendingPool = nextPool;
+    }
+  }
+
+  return pendingPool;
 }
 
 export class CombatSelectors {
@@ -90,10 +113,21 @@ export class CombatSelectors {
     return createSelector([CombatState], (state: CombatStateModel) => {
       const hitsToAssign =
         role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign;
-      const assignedHits = totalAssignedHits(
+      const assignments =
+        role === 'attack' ? state.attackerAssignedHitsByUnitId : state.defenderAssignedHitsByUnitId;
+      const roleArmy = role === 'attack' ? state.attackingArmy : state.defendingArmy;
+
+      return totalHitPool(pendingHitPool(hitsToAssign, assignments, roleArmy));
+    });
+  }
+
+  static pendingHitPoolForRole(role: CombatRole) {
+    return createSelector([CombatState], (state: CombatStateModel) => {
+      return pendingHitPool(
+        role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign,
         role === 'attack' ? state.attackerAssignedHitsByUnitId : state.defenderAssignedHitsByUnitId,
+        role === 'attack' ? state.attackingArmy : state.defendingArmy,
       );
-      return Math.max(0, hitsToAssign - assignedHits);
     });
   }
 
@@ -122,11 +156,13 @@ export class CombatSelectors {
 
       const hitsToAssign =
         role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign;
-      const assignedHits = totalAssignedHits(
+      const pendingHits = pendingHitPool(
+        hitsToAssign,
         role === 'attack' ? state.attackerAssignedHitsByUnitId : state.defenderAssignedHitsByUnitId,
+        role === 'attack' ? state.attackingArmy : state.defendingArmy,
       );
 
-      return assignedHits === hitsToAssign;
+      return totalHitPool(pendingHits) === 0 && totalHitPool(hitsToAssign) > 0;
     });
   }
 

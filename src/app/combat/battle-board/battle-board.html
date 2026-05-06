@@ -9,7 +9,7 @@
     @if (canRetreat()) {
       <button class="battle-board__dice-tray__retreat-button" (click)="retreat()">Retreat</button>
     }
-    <h2>Pending Casualties: {{ pendingAttackerCasualtyCount() }}</h2>
+    <h2>Pending Casualties: {{ pendingAttackerCasualtyLabel() }}</h2>
   </div>
   @for (rank of ATTACK_SQUAD_RANKS; track $index) {
     <ww2-battalion
@@ -35,7 +35,7 @@
     @if (canConfirmDefenderCasualties()) {
       <button (click)="confirmCasualties('defend')">Confirm Casualties</button>
     }
-    <h2>Pending Casualties: {{ pendingDefenderCasualtyCount() }}</h2>
+    <h2>Pending Casualties: {{ pendingDefenderCasualtyLabel() }}</h2>
   </div>
 
   @for (rank of DEFENSE_SQUAD_RANKS; track $index) {

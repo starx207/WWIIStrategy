@@ -2,12 +2,11 @@ import { CombatPhase } from '@ww2/combat/combat-phase';
 import type { CombatRole } from '@ww2/combat/combat.actions';
 import { MilitaryUnit } from './military-unit';
 import { Nationality } from './nationality';
-import { BaseUnitProfile, UNIT_PROFILES } from './unit-profile';
+import { BaseUnitProfile, TargetKind, UNIT_PROFILES } from './unit-profile';
 import { UnitType } from './unit-type';
 
 export type CombatProfileId = 'standard-combat';
 export type CombatProfileKind = 'standard-combat' | 'special-attack';
-export type TargetKind = 'unit' | 'air-unit' | 'sea-unit' | 'land-unit' | 'factory';
 export type IncomeLossFormula = 'full-roll' | 'half-roll-rounded-down';
 export type DamageEffect =
   | { type: 'unit-hit' }
@@ -75,7 +74,7 @@ const buildStandardCombatProfiles = (stats: BaseUnitProfile): CombatProfile[] =>
       phases,
       target: stats.attack,
       shotsPerRound: 1,
-      targetKind: 'unit',
+      targetKind: stats.targetKind ?? 'unit',
       damage: { type: 'unit-hit' },
     });
   }
@@ -88,7 +87,7 @@ const buildStandardCombatProfiles = (stats: BaseUnitProfile): CombatProfile[] =>
       phases,
       target: stats.defense,
       shotsPerRound: 1,
-      targetKind: 'unit',
+      targetKind: stats.targetKind ?? 'unit',
       damage: { type: 'unit-hit' },
     });
   }
