@@ -1,6 +1,7 @@
 import { CombatPhase } from './combat-phase';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { CombatRole } from './combat.actions';
+import { canParticipateInCombatPhase, getHitPoints } from '@ww2/shared/effective-unit';
 
 export namespace CombatRules {
   export interface FiringInput {
@@ -24,15 +25,19 @@ export namespace CombatRules {
   ) {
     if (phase === CombatPhase.OPENING_FIRE) {
       return {
-        attackers: attackers?.filter((unit) => unit.openingFire && unit.attack > 0) ?? [],
-        defenders: defenders?.filter((unit) => unit.openingFire && unit.defense > 0) ?? [],
+        attackers:
+          attackers?.filter((unit) => canParticipateInCombatPhase(unit, phase, 'attack')) ?? [],
+        defenders:
+          defenders?.filter((unit) => canParticipateInCombatPhase(unit, phase, 'defend')) ?? [],
       };
     }
 
     if (phase === CombatPhase.COMBAT) {
       return {
-        attackers: attackers?.filter((x) => x.attack > 0) ?? [],
-        defenders: defenders?.filter((x) => x.defense > 0) ?? [],
+        attackers:
+          attackers?.filter((unit) => canParticipateInCombatPhase(unit, phase, 'attack')) ?? [],
+        defenders:
+          defenders?.filter((unit) => canParticipateInCombatPhase(unit, phase, 'defend')) ?? [],
       };
     }
 
@@ -63,7 +68,7 @@ export namespace CombatRules {
   export function checkForVictory(input: VictoryCheckInput) {
     const remainingHitPoints = (input.role === 'attack' ? input.attackers : input.defenders)
       .filter((unit) => !input.casualtyIds.includes(unit.id))
-      .reduce((totalHp, unit) => totalHp + unit.hitPoints, 0);
+      .reduce((totalHp, unit) => totalHp + getHitPoints(unit), 0);
 
     return input.hitCount >= remainingHitPoints;
   }

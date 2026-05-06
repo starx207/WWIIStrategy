@@ -3,6 +3,7 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { CombatPhase } from './combat-phase';
 import { CombatRole } from './combat.actions';
 import { CombatState, CombatStateModel } from './combat-state';
+import { getHitPoints } from '@ww2/shared/effective-unit';
 
 type AssignmentMap = Record<string, number>;
 
@@ -175,7 +176,7 @@ export class CombatSelectors {
     for (const unit of [...state.attackingArmy, ...state.defendingArmy]) {
       const persistentDamage = state.unitDamageById[unit.id] ?? 0;
       const assignedDamage = (attackerAssigned[unit.id] ?? 0) + (defenderAssigned[unit.id] ?? 0);
-      if (persistentDamage + assignedDamage >= unit.hitPoints) {
+      if (persistentDamage + assignedDamage >= getHitPoints(unit)) {
         casualtyIds.push(unit.id);
       }
     }
@@ -191,7 +192,7 @@ export class CombatSelectors {
 
     const damageMap: Record<string, number> = {};
     const allMultiHpUnits = [...state.attackingArmy, ...state.defendingArmy]
-      .filter((unit) => unit.hitPoints > 1)
+      .filter((unit) => getHitPoints(unit) > 1)
       .map((unit) => unit.id);
     for (const unitId of allMultiHpUnits) {
       damageMap[unitId] =

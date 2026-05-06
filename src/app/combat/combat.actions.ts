@@ -1,4 +1,5 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
+import type { CombatProfileId } from '@ww2/shared/effective-unit';
 
 // TODO: Clean up this file later. Lots of verbose comments.
 
@@ -92,9 +93,9 @@ export namespace CombatActions {
     // constructor(public hits: MilitaryUnit[], public misses: MilitaryUnit[]) {}
     constructor(
       public shotValues: number[],
-      public targetValue: number,
       public units: MilitaryUnit[],
-      public role: CombatRole, // public phase: CombatPhase
+      public role: CombatRole,
+      public profileId: CombatProfileId, // public phase: CombatPhase
     ) {}
   }
 

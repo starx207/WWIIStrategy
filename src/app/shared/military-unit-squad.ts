@@ -2,6 +2,7 @@ import { MilitaryUnit } from './military-unit';
 import { Nationality } from './nationality';
 import { UnitType } from './unit-type';
 import { v4 as uuid } from 'uuid';
+import { getHitPoints } from './effective-unit';
 
 export interface CreateSquadOptions {
   separateUnits?: MilitaryUnit[];
@@ -19,12 +20,13 @@ export function createSquads(
     // This "prefix" logic is to separate the grouping of units if some have fired in the current combat round and some have not
     const prefix = separatePrefix && options.separateUnits?.includes(unit) ? 'g2' : 'g1';
     const damage = options?.damageMap?.[unit.id] ?? 0;
-    const damageIndicator = damage > 0 && damage < unit.hitPoints ? `-dmg${damage}` : '';
+    const hitPoints = getHitPoints(unit);
+    const damageIndicator = damage > 0 && damage < hitPoints ? `-dmg${damage}` : '';
     const groupKey = `${prefix}-${unit.type}-${unit.nationality}${damageIndicator}`;
     if (!groups[groupKey]) {
       groups[groupKey] = [];
     }
-    groups[groupKey].push({ ...unit, hpRemaining: unit.hitPoints - damage });
+    groups[groupKey].push({ ...unit, hpRemaining: hitPoints - damage });
   });
 
   const squads = Object.entries(groups).map(

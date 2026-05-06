@@ -6,6 +6,12 @@ import { Store } from '@ngxs/store';
 import { CombatActions, CombatRole } from '../combat.actions';
 import { CombatSelectors } from '../combat-selectors';
 import { CombatPhase } from '../combat-phase';
+import {
+  CombatProfile,
+  getCombatTarget,
+  getDefaultCombatTarget,
+  getPrimaryCombatProfile,
+} from '@ww2/shared/effective-unit';
 
 @Component({
   selector: 'ww2-battalion',
@@ -35,12 +41,13 @@ export class Battalion {
   }
 
   fromArmy = input<MilitaryUnit[]>([]);
+  protected phase = this.store.selectSignal(CombatSelectors.currentPhase);
 
-  battalionUnits = computed(() =>
-    this.fromArmy().filter(
-      (unit) => (this.roleFilter == 'attack' ? unit.attack : unit.defense) == this.strength(),
-    ),
-  );
+  battalionUnits = computed(() => {
+    return this.fromArmy().filter(
+      (unit) => getDefaultCombatTarget(unit, this.roleFilter) == this.strength(),
+    );
+  });
   casualtyIds = this.store.selectSignal(CombatSelectors.allCasualtyIds);
   pendingCasualtyIds = this.store.selectSignal(CombatSelectors.pendingCasualties);
   healthyUnits = computed(() => {
@@ -52,12 +59,64 @@ export class Battalion {
   protected reloadingUnits = computed(() => {
     return this.battalionUnits().filter((unit) => !this.readyUnits().includes(unit));
   });
+  selectableUnits = computed(() => {
+    const phase = this.phase();
+    const battalionUnits = this.battalionUnits();
+    if (phase === CombatPhase.REGROUP) {
+      return battalionUnits.filter(
+        (unit) => getCombatTarget(unit, 'attack', { phase: CombatPhase.COMBAT }) > 0,
+      );
+    }
+
+    if (this.isFirePhase()) {
+      return this.readyUnits().filter((unit) => battalionUnits.includes(unit));
+    }
+
+    return [];
+  });
+  selectedProfile = computed<CombatProfile | undefined>(() => {
+    const firstUnit = this.selectableUnits()[0];
+    const profilePhase = this.getProfilePhase(this.phase());
+    if (!firstUnit || !profilePhase) {
+      return undefined;
+    }
+
+    return getPrimaryCombatProfile(firstUnit, this.role, { phase: profilePhase });
+  });
+  selectedShotCount = computed(() => {
+    const profilePhase = this.getProfilePhase(this.phase());
+    const profileId = this.selectedProfile()?.id;
+    if (!profilePhase || !profileId) {
+      return 0;
+    }
+
+    return this.selectableUnits().reduce((total, unit) => {
+      const profile = getPrimaryCombatProfile(unit, this.role, { phase: profilePhase });
+      if (!profile || profile.id !== profileId || profile.target !== this.strength()) {
+        return total;
+      }
+
+      return total + profile.shotsPerRound;
+    }, 0);
+  });
+  canFire = computed(() => {
+    if (this.phase() === CombatPhase.REGROUP && this.role !== 'attack') {
+      return false;
+    }
+
+    const selectedProfile = this.selectedProfile();
+    return (
+      this.selectableUnits().length > 0 &&
+      this.selectedShotCount() > 0 &&
+      selectedProfile !== undefined &&
+      selectedProfile.target === this.strength()
+    );
+  });
 
   readyUnits: Signal<MilitaryUnit[]> = signal<MilitaryUnit[]>([]).asReadonly();
   damageMap = this.store.selectSignal(CombatSelectors.damageMap);
   pendingHitCountForRole: Signal<number> = signal(0).asReadonly();
   casualtiesConfirmed: Signal<boolean> = signal(false).asReadonly();
-  protected phase = this.store.selectSignal(CombatSelectors.currentPhase);
 
   protected hostClasses = computed(
     () =>
@@ -67,6 +126,7 @@ export class Battalion {
     this.roleFilter == 'defend' ? 'left-face' : 'right-face',
   );
   protected isCasualtyPhase = this.store.selectSignal(CombatSelectors.isCasualtyPhase);
+  protected isFirePhase = this.store.selectSignal(CombatSelectors.isFirePhase);
   protected canAssignCasualties = computed(
     () =>
       this.isCasualtyPhase() && this.pendingHitCountForRole() > 0 && !this.casualtiesConfirmed(),
@@ -83,11 +143,15 @@ export class Battalion {
     }).map((squad) => ({
       squad,
       enabled:
-        (!this.isCasualtyPhase() && !squad.isSubsetOf(this.reloadingUnits())) ||
+        (!this.isCasualtyPhase() &&
+          this.canFire() &&
+          !squad.isSubsetOf(this.reloadingUnits())) ||
         this.canAssignCasualties() ||
         (this.phase() === CombatPhase.REGROUP &&
           this.role === 'attack' &&
-          squad.units.some((unit) => unit.attack > 0)),
+          squad.units.some(
+            (unit) => getCombatTarget(unit, 'attack', { phase: CombatPhase.COMBAT }) > 0,
+          )),
     }));
   });
 
@@ -117,5 +181,17 @@ export class Battalion {
 
     const casualty = squad.units[0];
     this.store.dispatch(new CombatActions.UndoCasualties([casualty], this.role));
+  }
+
+  private getProfilePhase(phase?: CombatPhase): CombatPhase | undefined {
+    if (phase === CombatPhase.REGROUP) {
+      return CombatPhase.COMBAT;
+    }
+
+    if (phase === CombatPhase.OPENING_FIRE || phase === CombatPhase.COMBAT) {
+      return phase;
+    }
+
+    return undefined;
   }
 }

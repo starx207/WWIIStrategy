@@ -1,6 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import { MilitaryUnitIcon } from '../military-unit-icon';
 import { MilitaryUnitSquad } from '../military-unit-squad';
+import { getHitPoints } from '../effective-unit';
 
 export type SquadDirection = 'left-face' | 'right-face';
 
@@ -24,7 +25,10 @@ export class SquadComponent {
 
   protected unitType = computed(() => this.squad().type);
   protected hpRemaining = computed(() => this.squad().hpRemaining);
-  protected hpMax = computed(() => this.squad().units[0]?.hitPoints);
+  protected hpMax = computed(() => {
+    const unit = this.squad().units[0];
+    return unit ? getHitPoints(unit) : undefined;
+  });
   protected nationality = computed(() => this.squad().nationality);
   protected unitCount = computed(() => this.squad().count);
 

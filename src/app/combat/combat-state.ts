@@ -6,6 +6,7 @@ import { CombatActions, CombatRole } from './combat.actions';
 import { CombatRules } from './combat-rules';
 import { TEST_ATTACKERS, TEST_DEFENDERS } from '../../dev-data';
 import { CombatPhase } from './combat-phase';
+import { getCombatProfiles, getHitPoints } from '@ww2/shared/effective-unit';
 
 export type CombatOutcome =
   | 'ongoing'
@@ -148,18 +149,54 @@ export class CombatState {
     }
 
     const readyIdSet = new Set(readyIds);
+    const targetByFiringUnitId: Record<string, number> = {};
+    const shotsByFiringUnitId: Record<string, number> = {};
+    let availableShotCount = action.shotValues.length;
     const firingUnitIds = action.units
-      .map((unit) => unit.id)
-      .filter((id) => readyIdSet.has(id))
-      .slice(0, action.shotValues.length);
+      .filter((unit) => readyIdSet.has(unit.id))
+      .filter((unit) => {
+        const profile = getCombatProfiles(unit, {
+          phase: state.currentPhase,
+          role: action.role,
+        }).find((candidate) => candidate.id === action.profileId);
+        if (!profile) {
+          return false;
+        }
+        if (profile.targetKind !== 'unit' || profile.damage.type !== 'unit-hit') {
+          return false;
+        }
+
+        targetByFiringUnitId[unit.id] = profile.target;
+        shotsByFiringUnitId[unit.id] = profile.shotsPerRound;
+        return true;
+      })
+      .filter((unit) => {
+        const shotsPerRound = shotsByFiringUnitId[unit.id] ?? 0;
+        if (shotsPerRound <= 0 || shotsPerRound > availableShotCount) {
+          return false;
+        }
+
+        availableShotCount -= shotsPerRound;
+        return true;
+      })
+      .map((unit) => unit.id);
 
     if (firingUnitIds.length === 0) {
       return;
     }
 
+    const targetValue = targetByFiringUnitId[firingUnitIds[0]];
+    if (targetValue === undefined) {
+      return;
+    }
+    const shotCount = firingUnitIds.reduce(
+      (total, unitId) => total + (shotsByFiringUnitId[unitId] ?? 0),
+      0,
+    );
+
     const hitsScored = CombatRules.determineHits({
-      values: action.shotValues,
-      target: action.targetValue,
+      values: action.shotValues.slice(0, shotCount),
+      target: targetValue,
     }).hits.length;
     const opposingArmyRemainingHitPoints = this.getTotalRemainingHitPoints(
       action.role === 'attack' ? state.defendingArmy : state.attackingArmy,
@@ -464,10 +501,10 @@ export class CombatState {
     }
 
     const survivingAttackers = state.attackingArmy.filter(
-      (unit) => (nextDamageById[unit.id] ?? 0) < unit.hitPoints,
+      (unit) => (nextDamageById[unit.id] ?? 0) < getHitPoints(unit),
     );
     const survivingDefenders = state.defendingArmy.filter(
-      (unit) => (nextDamageById[unit.id] ?? 0) < unit.hitPoints,
+      (unit) => (nextDamageById[unit.id] ?? 0) < getHitPoints(unit),
     );
 
     const survivingDamageById = this.buildSurvivingDamageMap(
@@ -575,12 +612,12 @@ export class CombatState {
 
     const persistentDamage = state.unitDamageById[unit.id] ?? 0;
     const assignedDamage = assignments[unit.id] ?? 0;
-    return unit.hitPoints - persistentDamage - assignedDamage;
+    return getHitPoints(unit) - persistentDamage - assignedDamage;
   }
 
   private getTotalRemainingHitPoints(units: MilitaryUnit[], damageById: AssignmentMap): number {
     return units.reduce((total, unit) => {
-      return total + Math.max(0, unit.hitPoints - (damageById[unit.id] ?? 0));
+      return total + Math.max(0, getHitPoints(unit) - (damageById[unit.id] ?? 0));
     }, 0);
   }
 

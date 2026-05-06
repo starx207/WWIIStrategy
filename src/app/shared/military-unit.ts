@@ -2,107 +2,85 @@ import { Nationality } from './nationality';
 import { UnitType } from './unit-type';
 import { v4 as uuid } from 'uuid';
 
-export interface MilitaryUnitInitOptions {
-  attack?: number;
-  defense?: number;
-  hitPoints?: number;
-  openingFire?: boolean;
-}
-
 export abstract class MilitaryUnit {
   constructor(
     public type: UnitType,
     public nationality: Nationality,
-    options?: MilitaryUnitInitOptions,
   ) {
     this.id = uuid();
-    this.attack = options?.attack ?? 1;
-    this.defense = options?.defense ?? 1;
-    this.hitPoints = options?.hitPoints ?? 1;
-    this.openingFire = options?.openingFire ?? false;
   }
 
   readonly id: string;
-  readonly attack: number;
-  readonly defense: number;
-  readonly openingFire: boolean;
-  hitPoints: number;
-  // canTarget: UnitType[];
-  // movement: number;
 }
 
 export class InfantryUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.INFANTRY, nationality, { defense: 2 });
+    super(UnitType.INFANTRY, nationality);
   }
 }
 
 export class ArtilleryUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.ARTILLERY, nationality, { attack: 2, defense: 2 });
+    super(UnitType.ARTILLERY, nationality);
   }
 }
 
 export class TankUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.TANK, nationality, { attack: 3, defense: 3 });
+    super(UnitType.TANK, nationality);
   }
 }
 
 export class AntiAirUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.ANTI_AIR_GUN, nationality, { attack: 0, openingFire: true });
+    super(UnitType.ANTI_AIR_GUN, nationality);
   }
 }
 
 export class FactoryUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.FACTORY, nationality, { attack: 0, defense: 0 });
+    super(UnitType.FACTORY, nationality);
   }
 }
 
 export class FighterJetUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.FIGHTER_JET, nationality, { attack: 3, defense: 4 });
+    super(UnitType.FIGHTER_JET, nationality);
   }
 }
 
 export class BomberUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.BOMBER, nationality, { attack: 4 });
+    super(UnitType.BOMBER, nationality);
   }
 }
 
 export class BattleshipUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.BATTLESHIP, nationality, {
-      attack: 4,
-      defense: 4,
-      hitPoints: 2,
-    });
+    super(UnitType.BATTLESHIP, nationality);
   }
 }
 
 export class DestroyerUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.DESTROYER, nationality, { attack: 3, defense: 3 });
+    super(UnitType.DESTROYER, nationality);
   }
 }
 
 export class AircraftCarrierUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.AIRCRAFT_CARRIER, nationality, { defense: 3 });
+    super(UnitType.AIRCRAFT_CARRIER, nationality);
   }
 }
 
 export class TransportUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.TRANSPORT, nationality, { attack: 0 });
+    super(UnitType.TRANSPORT, nationality);
   }
 }
 
 export class SubmarineUnit extends MilitaryUnit {
   constructor(nationality: Nationality) {
-    super(UnitType.SUBMARINE, nationality, { attack: 2, defense: 2, openingFire: true });
+    super(UnitType.SUBMARINE, nationality);
   }
 }
