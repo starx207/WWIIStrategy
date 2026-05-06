@@ -622,7 +622,10 @@ export class CombatState {
   }
 
   private evaluateOutcome(attackers: MilitaryUnit[], defenders: MilitaryUnit[]): OutcomeResolution {
-    if (attackers.length === 0) {
+    const attackingCombatants = attackers.filter((unit) => !NEUTRAL_UNIT_TYPES.includes(unit.type));
+    const defendingCombatants = defenders.filter((unit) => !NEUTRAL_UNIT_TYPES.includes(unit.type));
+
+    if (attackingCombatants.length === 0) {
       return {
         outcome: 'defenderVictory',
         canCaptureTerritory: false,
@@ -630,8 +633,10 @@ export class CombatState {
       };
     }
 
-    if (defenders.length === 0) {
-      const hasCaptureEligibleAttacker = attackers.some((unit) => !AIR_UNIT_TYPES.includes(unit.type));
+    if (defendingCombatants.length === 0) {
+      const hasCaptureEligibleAttacker = attackingCombatants.some(
+        (unit) => !AIR_UNIT_TYPES.includes(unit.type),
+      );
       return {
         outcome: 'attackerVictory',
         canCaptureTerritory: hasCaptureEligibleAttacker,
