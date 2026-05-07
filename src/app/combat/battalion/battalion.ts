@@ -1,5 +1,9 @@
 import { Component, computed, inject, Input, input, signal, Signal } from '@angular/core';
-import { SquadDirection, SquadComponent } from '@ww2/shared/squad-component/squad-component';
+import {
+  SquadContextAction,
+  SquadDirection,
+  SquadComponent,
+} from '@ww2/shared/squad-component/squad-component';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { createSquads, MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { Store } from '@ngxs/store';
@@ -13,6 +17,9 @@ import {
   getPrimaryCombatProfile,
 } from '@ww2/shared/effective-unit';
 import { HitPool, unitCanConsumeHit } from '@ww2/shared/hit-pool';
+import { UnitType } from '@ww2/shared/unit-type';
+
+type AssignmentMap = Record<string, number>;
 
 @Component({
   selector: 'ww2-battalion',
@@ -37,6 +44,7 @@ export class Battalion {
     );
     this.pendingHitPoolForRole = this.store.selectSignal(CombatSelectors.pendingHitPoolForRole(value));
     this.casualtiesConfirmed = this.store.selectSignal(CombatSelectors.casualtiesConfirmed(value));
+    this.assignedHitsByUnitId = this.store.selectSignal(CombatSelectors.assignedHitsByUnitId(value));
   }
   get role(): CombatRole {
     return this.roleFilter;
@@ -120,6 +128,7 @@ export class Battalion {
   pendingHitCountForRole: Signal<number> = signal(0).asReadonly();
   pendingHitPoolForRole: Signal<HitPool> = signal<HitPool>({}).asReadonly();
   casualtiesConfirmed: Signal<boolean> = signal(false).asReadonly();
+  assignedHitsByUnitId: Signal<AssignmentMap> = signal<AssignmentMap>({}).asReadonly();
 
   protected hostClasses = computed(
     () =>
@@ -137,6 +146,19 @@ export class Battalion {
   protected canUndoCasualties = computed(
     () => this.isCasualtyPhase() && !this.casualtiesConfirmed(),
   );
+  private readonly repairBattleshipAction: SquadContextAction = {
+    id: 'repair-battleship',
+    label: 'Repair',
+    isEnabled: (squad) => this.getRepairTarget(squad) !== undefined,
+    execute: (squad) => {
+      const repairTarget = this.getRepairTarget(squad);
+      if (!repairTarget) {
+        return;
+      }
+
+      this.store.dispatch(new CombatActions.UndoCasualties([repairTarget], this.role));
+    },
+  };
 
   protected healthySquads = computed(() => {
     const readyUnits = this.readyUnits();
@@ -185,6 +207,25 @@ export class Battalion {
 
     const casualty = squad.units[0];
     this.store.dispatch(new CombatActions.UndoCasualties([casualty], this.role));
+  }
+
+  protected contextActionsForSquad(squad: MilitaryUnitSquad): SquadContextAction[] {
+    if (squad.type === UnitType.BATTLESHIP) {
+      return [this.repairBattleshipAction];
+    }
+
+    return [];
+  }
+
+  private getRepairTarget(squad: MilitaryUnitSquad): MilitaryUnit | undefined {
+    if (!this.canUndoCasualties()) {
+      return undefined;
+    }
+
+    const assignedHits = this.assignedHitsByUnitId();
+    return squad.units.find(
+      (unit) => unit.type === UnitType.BATTLESHIP && (assignedHits[unit.id] ?? 0) > 0,
+    );
   }
 
   private getProfilePhase(phase?: CombatPhase): CombatPhase | undefined {

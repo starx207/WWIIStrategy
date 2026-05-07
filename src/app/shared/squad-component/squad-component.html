@@ -1,11 +1,26 @@
-@if (unitCount() > 0) {
-  <ww2-military-unit-icon
-    [nationality]="nationality()"
-    [unitType]="unitType()"
-    [hpRemaining]="hpRemaining()"
-    [unitHp]="hpMax()"
+<div
+  class="military-unit-squad__content"
+  [cdkContextMenuTriggerFor]="contextMenu"
+  [cdkContextMenuTriggerData]="{ squad: squad() }"
+  [cdkContextMenuDisabled]="contextMenuActions().length === 0"
+>
+  @if (unitCount() > 0) {
+    <ww2-military-unit-icon
+      [nationality]="nationality()"
+      [unitType]="unitType()"
+      [hpRemaining]="hpRemaining()"
+      [unitHp]="hpMax()"
+    />
+  }
+  @if (unitCount() > 1) {
+    <span class="unit-count-badge ww2-badge">{{ unitCount() }}</span>
+  }
+</div>
+
+<ng-template #contextMenu let-squadContext="squad">
+  <ww2-context-menu
+    [actions]="contextMenuActions()"
+    [context]="squadContext"
+    (actionSelected)="onContextMenuActionSelected($event)"
   />
-}
-@if (unitCount() > 1) {
-  <span class="unit-count-badge ww2-badge">{{ unitCount() }}</span>
-}
+</ng-template>
