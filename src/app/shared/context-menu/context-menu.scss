@@ -1,0 +1,34 @@
+/* TODO: I need to tweak these styles. Centralize color themes */
+.context-menu {
+  min-width: 7rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+  background: #f8f5ec;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.context-menu__action {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 2px;
+  padding: 0.35rem 0.55rem;
+  background: transparent;
+  color: #1f1b16;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu__action:hover:not(:disabled),
+.context-menu__action:focus-visible:not(:disabled) {
+  background: #d7ceb9;
+  outline: none;
+}
+
+.context-menu__action:disabled {
+  color: rgba(31, 27, 22, 0.45);
+  text-decoration: line-through;
+  cursor: default;
+}

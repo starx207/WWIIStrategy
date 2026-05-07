@@ -1,0 +1,17 @@
+<div
+  cdkMenu
+  class="context-menu"
+>
+  @for (action of actions(); track action.id) {
+    <button
+      cdkMenuItem
+      type="button"
+      class="context-menu__action"
+      [disabled]="!action.isEnabled(context())"
+      [cdkMenuItemDisabled]="!action.isEnabled(context())"
+      (cdkMenuItemTriggered)="selectAction(action)"
+    >
+      {{ action.label }}
+    </button>
+  }
+</div>
