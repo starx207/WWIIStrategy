@@ -43,3 +43,6 @@ Thumbs.db
 
 # Direnv
 .envrc
+
+# AI Artifacts
+.codex
