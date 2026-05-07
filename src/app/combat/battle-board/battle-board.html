@@ -6,7 +6,10 @@
     @if (canConfirmAttackerCasualties()) {
       <button (click)="confirmCasualties('attack')">Confirm Casualties</button>
     }
-    @if (canRetreat()) {
+    @if (isRegroup()) {
+      <button class="battle-board__dice-tray__press-button" (click)="pressAttack()">
+        Press Attack
+      </button>
       <button class="battle-board__dice-tray__retreat-button" (click)="retreat()">Retreat</button>
     }
     <h2>Pending Casualties: {{ pendingAttackerCasualtyLabel() }}</h2>

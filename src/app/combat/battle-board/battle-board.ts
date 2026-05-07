@@ -86,13 +86,9 @@ export class BattleBoard implements OnInit {
 
   readyForVolley = computed(() => {
     const activeBattalion = this.activeBattalion();
-    const activeRole = activeBattalion?.role;
-    const phase = this.currentPhase();
-    const isCombat = this.isCombatPhase();
-    const canFire = isCombat || (phase === CombatPhase.REGROUP && activeRole === 'attack');
-    return this.outcome() === 'ongoing' && canFire && !!activeBattalion;
+    return this.outcome() === 'ongoing' && this.isCombatPhase() && !!activeBattalion;
   });
-  canRetreat = computed(() => this.currentPhase() === CombatPhase.REGROUP);
+  isRegroup = computed(() => this.currentPhase() === CombatPhase.REGROUP);
   outcomeTitle = computed(() => {
     const summary = this.resolutionSummary();
     if (!summary) {
@@ -162,11 +158,17 @@ export class BattleBoard implements OnInit {
   }
 
   retreat(): void {
-    this.activeBattalion.set(undefined);
-    this.activeUnits.set([]);
-    this.activeProfileId.set(undefined);
-    this.activeShotCount.set(0);
+    this.clearActiveVolley();
     this.store.dispatch(new CombatActions.Retreat());
+  }
+
+  pressAttack(): void {
+    if (!this.isRegroup()) {
+      return;
+    }
+
+    this.clearActiveVolley();
+    this.store.dispatch(new CombatActions.PressAttack());
   }
 
   confirmCasualties(role: CombatRole): void {
@@ -181,9 +183,6 @@ export class BattleBoard implements OnInit {
     const battalion = this.activeBattalion();
     if (!battalion) {
       return;
-    }
-    if (battalion.role === 'attack' && this.currentPhase() === CombatPhase.REGROUP) {
-      this.store.dispatch(new CombatActions.PressAttack());
     }
     const selectedBattalionUnits = this.activeUnits();
     const selectedProfileId = this.activeProfileId();
@@ -212,8 +211,8 @@ export class BattleBoard implements OnInit {
     if (this.isCasualtyPhase()) {
       return;
     }
-    if (phase === CombatPhase.REGROUP && battalion.role !== 'attack') {
-      return; // Only attacker can choose to continue the battle from regroup
+    if (phase === CombatPhase.REGROUP) {
+      return;
     }
 
     const selectableUnits = battalion.selectableUnits();
@@ -239,5 +238,12 @@ export class BattleBoard implements OnInit {
 
     const restrictedLabel = restrictedHits.map((item) => `${item.count} ${item.label}`).join(', ');
     return `${totalHits} - ${restrictedLabel}`;
+  }
+
+  private clearActiveVolley(): void {
+    this.activeBattalion.set(undefined);
+    this.activeUnits.set([]);
+    this.activeProfileId.set(undefined);
+    this.activeShotCount.set(0);
   }
 }

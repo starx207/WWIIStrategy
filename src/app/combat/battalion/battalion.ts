@@ -12,7 +12,6 @@ import { CombatSelectors } from '../combat-selectors';
 import { CombatPhase } from '../combat-phase';
 import {
   CombatProfile,
-  getCombatTarget,
   getDefaultCombatTarget,
   getPrimaryCombatProfile,
 } from '@ww2/shared/effective-unit';
@@ -42,9 +41,13 @@ export class Battalion {
     this.pendingHitCountForRole = this.store.selectSignal(
       CombatSelectors.pendingHitCountForRole(value),
     );
-    this.pendingHitPoolForRole = this.store.selectSignal(CombatSelectors.pendingHitPoolForRole(value));
+    this.pendingHitPoolForRole = this.store.selectSignal(
+      CombatSelectors.pendingHitPoolForRole(value),
+    );
     this.casualtiesConfirmed = this.store.selectSignal(CombatSelectors.casualtiesConfirmed(value));
-    this.assignedHitsByUnitId = this.store.selectSignal(CombatSelectors.assignedHitsByUnitId(value));
+    this.assignedHitsByUnitId = this.store.selectSignal(
+      CombatSelectors.assignedHitsByUnitId(value),
+    );
   }
   get role(): CombatRole {
     return this.roleFilter;
@@ -70,14 +73,7 @@ export class Battalion {
     return this.battalionUnits().filter((unit) => !this.readyUnits().includes(unit));
   });
   selectableUnits = computed(() => {
-    const phase = this.phase();
     const battalionUnits = this.battalionUnits();
-    if (phase === CombatPhase.REGROUP) {
-      return battalionUnits.filter(
-        (unit) => getCombatTarget(unit, 'attack', { phase: CombatPhase.COMBAT }) > 0,
-      );
-    }
-
     if (this.isFirePhase()) {
       return this.readyUnits().filter((unit) => battalionUnits.includes(unit));
     }
@@ -110,10 +106,6 @@ export class Battalion {
     }, 0);
   });
   canFire = computed(() => {
-    if (this.phase() === CombatPhase.REGROUP && this.role !== 'attack') {
-      return false;
-    }
-
     const selectedProfile = this.selectedProfile();
     return (
       this.selectableUnits().length > 0 &&
@@ -168,16 +160,9 @@ export class Battalion {
     }).map((squad) => ({
       squad,
       enabled:
-        (!this.isCasualtyPhase() &&
-          this.canFire() &&
-          !squad.isSubsetOf(this.reloadingUnits())) ||
+        (!this.isCasualtyPhase() && this.canFire() && !squad.isSubsetOf(this.reloadingUnits())) ||
         (this.canAssignCasualties() &&
-          squad.units.some((unit) => unitCanConsumeHit(this.pendingHitPoolForRole(), unit))) ||
-        (this.phase() === CombatPhase.REGROUP &&
-          this.role === 'attack' &&
-          squad.units.some(
-            (unit) => getCombatTarget(unit, 'attack', { phase: CombatPhase.COMBAT }) > 0,
-          )),
+          squad.units.some((unit) => unitCanConsumeHit(this.pendingHitPoolForRole(), unit))),
     }));
   });
 
@@ -229,10 +214,6 @@ export class Battalion {
   }
 
   private getProfilePhase(phase?: CombatPhase): CombatPhase | undefined {
-    if (phase === CombatPhase.REGROUP) {
-      return CombatPhase.COMBAT;
-    }
-
     if (phase === CombatPhase.OPENING_FIRE || phase === CombatPhase.COMBAT) {
       return phase;
     }

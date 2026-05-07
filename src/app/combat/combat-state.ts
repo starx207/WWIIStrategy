@@ -130,18 +130,7 @@ export class CombatState {
       return;
     }
 
-    const openingFireEligible = this.getEligibleUnitsForPhase(
-      CombatPhase.OPENING_FIRE,
-      attackingArmy,
-      defendingArmy,
-      baseState.unitDamageById,
-    );
-
-    const shouldStartWithOpeningFire =
-      openingFireEligible.attackers.length > 0 || openingFireEligible.defenders.length > 0;
-    const startingPhase = shouldStartWithOpeningFire ? CombatPhase.OPENING_FIRE : CombatPhase.COMBAT;
-
-    this.startFirePhase(context, startingPhase, baseState);
+    this.startCombatCycle(context, baseState);
   }
 
   @Action(CombatActions.CombatantsFiring)
@@ -384,7 +373,7 @@ export class CombatState {
       return;
     }
 
-    this.startFirePhase(context, CombatPhase.COMBAT, state);
+    this.startCombatCycle(context, state);
   }
 
   @Action(CombatActions.Retreat)
@@ -416,6 +405,13 @@ export class CombatState {
           resolutionReason: 'retreat',
         },
       ),
+    });
+  }
+
+  private startCombatCycle(context: CombatStateContext, baseState: CombatStateModel) {
+    this.startFirePhase(context, CombatPhase.OPENING_FIRE, {
+      ...baseState,
+      round: baseState.round + 1,
     });
   }
 
@@ -462,7 +458,7 @@ export class CombatState {
       defenderAssignedHitsByUnitId: {},
       attackerCasualtiesConfirmed: false,
       defenderCasualtiesConfirmed: false,
-      round: phase === CombatPhase.COMBAT ? state.round + 1 : state.round,
+      round: state.round,
     };
   }
 
