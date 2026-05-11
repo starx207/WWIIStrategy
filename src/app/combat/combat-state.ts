@@ -5,14 +5,14 @@ import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { CombatActions, CombatRole } from './combat.actions';
 import { CombatRules } from './combat-rules';
 import { TEST_ATTACKERS, TEST_DEFENDERS } from '../../dev-data';
-import { CombatPhase } from './combat-phase';
+import { CasualtyPhase, CombatPhase } from './combat-phase';
 import { CombatProfile, RuleContext } from '@ww2/shared/effective-unit';
 import { getCombatProfiles, getHitPoints } from '@ww2/shared/effective-unit.reducer';
 import {
   addHitsToPool,
-  consumeHitForUnit,
   createEmptyHitPool,
   HitPool,
+  targetKindPriorityForUnit,
   totalHitPool,
   totalRemainingHitCapacityForTargetKind,
   unitCanConsumeHit,
@@ -26,10 +26,16 @@ export type CombatOutcome = 'ongoing' | 'attackerVictory' | 'defenderVictory';
 export type CombatResolutionReason = 'retreat' | 'attackersEliminated' | 'defendersEliminated';
 
 type AssignmentMap = Record<string, number>;
-type ShotDescriptor = Pick<CombatProfile, 'target' | 'targetKind'>;
+export interface CombatHit {
+  targetKind: TargetKind;
+  casualtyClearPhases: CasualtyPhase[];
+}
+
+type HitAssignmentMap = Record<string, CombatHit[]>;
+type DelayedCasualtyMap = Record<string, CombatHit[]>;
+type ShotDescriptor = Pick<CombatProfile, 'target' | 'targetKind' | 'casualtyClearPhases'>;
 
 type FirePhase = CombatPhase.OPENING_FIRE | CombatPhase.COMBAT;
-type CasualtyPhase = CombatPhase.OPENING_FIRE_CASUALTIES | CombatPhase.COMBAT_CASUALTIES;
 
 interface OutcomeResolution {
   outcome: CombatOutcome;
@@ -57,13 +63,14 @@ export interface CombatStateModel {
   currentPhase?: CombatPhase;
   attackerReadyToFireIds: string[];
   defenderReadyToFireIds: string[];
-  attackerHitsToAssign: HitPool;
-  defenderHitsToAssign: HitPool;
-  attackerAssignedHitsByUnitId: AssignmentMap;
-  defenderAssignedHitsByUnitId: AssignmentMap;
+  attackerHitsToAssign: CombatHit[];
+  defenderHitsToAssign: CombatHit[];
+  attackerAssignedHitsByUnitId: HitAssignmentMap;
+  defenderAssignedHitsByUnitId: HitAssignmentMap;
   attackerCasualtiesConfirmed: boolean;
   defenderCasualtiesConfirmed: boolean;
   unitDamageById: AssignmentMap;
+  delayedCasualtyHitsByUnitId: DelayedCasualtyMap;
   outcome: CombatOutcome;
   canCaptureTerritory: boolean;
   resolutionSummary: BattleResolutionSummary | null;
@@ -77,13 +84,14 @@ const DEFAULT_STATE: CombatStateModel = {
   currentPhase: undefined,
   attackerReadyToFireIds: [],
   defenderReadyToFireIds: [],
-  attackerHitsToAssign: createEmptyHitPool(),
-  defenderHitsToAssign: createEmptyHitPool(),
+  attackerHitsToAssign: [],
+  defenderHitsToAssign: [],
   attackerAssignedHitsByUnitId: {},
   defenderAssignedHitsByUnitId: {},
   attackerCasualtiesConfirmed: false,
   defenderCasualtiesConfirmed: false,
   unitDamageById: {},
+  delayedCasualtyHitsByUnitId: {},
   outcome: 'ongoing',
   canCaptureTerritory: false,
   resolutionSummary: null,
@@ -180,6 +188,7 @@ export class CombatState {
       Array.from({ length: profile.shotsPerRound }, () => ({
         target: profile.target,
         targetKind: profile.targetKind,
+        casualtyClearPhases: profile.casualtyClearPhases,
       })),
     );
 
@@ -192,7 +201,7 @@ export class CombatState {
     let attackerHitsToAssign = state.attackerHitsToAssign;
     let defenderHitsToAssign = state.defenderHitsToAssign;
     const opposingArmy = action.role === 'attack' ? state.defendingArmy : state.attackingArmy;
-    const hitsScored = this.determineHitsByTargetKind(
+    const hitsScored = this.determineCombatHits(
       action.shotValues.slice(0, shotDescriptors.length),
       shotDescriptors,
     );
@@ -201,7 +210,7 @@ export class CombatState {
       attackerReadyToFireIds = state.attackerReadyToFireIds.filter(
         (id) => !firingUnitIds.includes(id),
       );
-      defenderHitsToAssign = this.addClampedHitsToPool(
+      defenderHitsToAssign = this.addClampedHits(
         state.defenderHitsToAssign,
         hitsScored,
         opposingArmy,
@@ -212,7 +221,7 @@ export class CombatState {
       defenderReadyToFireIds = state.defenderReadyToFireIds.filter(
         (id) => !firingUnitIds.includes(id),
       );
-      attackerHitsToAssign = this.addClampedHitsToPool(
+      attackerHitsToAssign = this.addClampedHits(
         state.attackerHitsToAssign,
         hitsScored,
         opposingArmy,
@@ -252,7 +261,7 @@ export class CombatState {
 
     const hitsToAssign =
       action.role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign;
-    if (totalHitPool(hitsToAssign) <= 0) {
+    if (hitsToAssign.length <= 0) {
       return;
     }
 
@@ -266,13 +275,13 @@ export class CombatState {
     const roleArmyIds = new Set(roleArmy.map((unit) => unit.id));
     const ruleContext = createResolvedRuleContext(state);
 
-    let pendingHits = this.getPendingHitPool(state, action.role, assignments);
-    if (totalHitPool(pendingHits) <= 0) {
+    let pendingHits = this.getPendingHits(state, action.role, assignments);
+    if (pendingHits.length <= 0) {
       return;
     }
 
     for (const casualty of action.casualties) {
-      if (totalHitPool(pendingHits) <= 0) {
+      if (pendingHits.length <= 0) {
         break;
       }
 
@@ -291,13 +300,13 @@ export class CombatState {
         continue;
       }
 
-      const nextPendingHits = consumeHitForUnit(pendingHits, casualty);
-      if (!nextPendingHits) {
+      const consumedHit = this.consumeHitForUnit(pendingHits, casualty);
+      if (!consumedHit) {
         continue;
       }
 
-      assignments[casualty.id] = (assignments[casualty.id] ?? 0) + 1;
-      pendingHits = nextPendingHits;
+      assignments[casualty.id] = [...(assignments[casualty.id] ?? []), consumedHit.hit];
+      pendingHits = consumedHit.remainingHits;
     }
 
     if (action.role === 'attack') {
@@ -332,8 +341,8 @@ export class CombatState {
     };
 
     for (const casualty of action.casualties) {
-      const currentHits = assignments[casualty.id] ?? 0;
-      if (currentHits <= 0) {
+      const currentHits = assignments[casualty.id] ?? [];
+      if (currentHits.length <= 0) {
         continue;
       }
 
@@ -365,8 +374,8 @@ export class CombatState {
         ? state.attackerAssignedHitsByUnitId
         : state.defenderAssignedHitsByUnitId;
 
-    const pendingHits = this.getPendingHitPool(state, action.role, assignments);
-    if (totalHitPool(hitsToAssign) === 0 || totalHitPool(pendingHits) > 0) {
+    const pendingHits = this.getPendingHits(state, action.role, assignments);
+    if (hitsToAssign.length === 0 || pendingHits.length > 0) {
       return;
     }
 
@@ -403,8 +412,8 @@ export class CombatState {
       currentPhase: undefined,
       attackerReadyToFireIds: [],
       defenderReadyToFireIds: [],
-      attackerHitsToAssign: createEmptyHitPool(),
-      defenderHitsToAssign: createEmptyHitPool(),
+      attackerHitsToAssign: [],
+      defenderHitsToAssign: [],
       attackerAssignedHitsByUnitId: {},
       defenderAssignedHitsByUnitId: {},
       attackerCasualtiesConfirmed: false,
@@ -450,6 +459,16 @@ export class CombatState {
         return;
       }
 
+      if (this.hasClearableDelayedCasualties(nextState, CombatPhase.COMBAT_CASUALTIES)) {
+        this.resolveConfirmedCasualties(context, {
+          ...nextState,
+          currentPhase: CombatPhase.COMBAT_CASUALTIES,
+          attackerCasualtiesConfirmed: true,
+          defenderCasualtiesConfirmed: true,
+        });
+        return;
+      }
+
       context.setState({
         ...nextState,
         currentPhase: CombatPhase.REGROUP,
@@ -480,8 +499,8 @@ export class CombatState {
       currentPhase: phase,
       attackerReadyToFireIds,
       defenderReadyToFireIds,
-      attackerHitsToAssign: createEmptyHitPool(),
-      defenderHitsToAssign: createEmptyHitPool(),
+      attackerHitsToAssign: [],
+      defenderHitsToAssign: [],
       attackerAssignedHitsByUnitId: {},
       defenderAssignedHitsByUnitId: {},
       attackerCasualtiesConfirmed: false,
@@ -492,10 +511,26 @@ export class CombatState {
 
   private advanceAfterFirePhase(context: CombatStateContext, state: CombatStateModel) {
     const noHitsScoredByEitherSide =
-      totalHitPool(state.attackerHitsToAssign) === 0 &&
-      totalHitPool(state.defenderHitsToAssign) === 0;
+      state.attackerHitsToAssign.length === 0 && state.defenderHitsToAssign.length === 0;
 
     if (noHitsScoredByEitherSide) {
+      const casualtyPhase: CasualtyPhase =
+        state.currentPhase === CombatPhase.OPENING_FIRE
+          ? CombatPhase.OPENING_FIRE_CASUALTIES
+          : CombatPhase.COMBAT_CASUALTIES;
+
+      if (this.hasClearableDelayedCasualties(state, casualtyPhase)) {
+        this.resolveConfirmedCasualties(context, {
+          ...state,
+          currentPhase: casualtyPhase,
+          attackerReadyToFireIds: [],
+          defenderReadyToFireIds: [],
+          attackerCasualtiesConfirmed: true,
+          defenderCasualtiesConfirmed: true,
+        });
+        return;
+      }
+
       if (state.currentPhase === CombatPhase.OPENING_FIRE) {
         this.startFirePhase(context, CombatPhase.COMBAT, state);
         return;
@@ -518,8 +553,8 @@ export class CombatState {
       currentPhase: casualtyPhase,
       attackerReadyToFireIds: [],
       defenderReadyToFireIds: [],
-      attackerCasualtiesConfirmed: totalHitPool(state.attackerHitsToAssign) === 0,
-      defenderCasualtiesConfirmed: totalHitPool(state.defenderHitsToAssign) === 0,
+      attackerCasualtiesConfirmed: state.attackerHitsToAssign.length === 0,
+      defenderCasualtiesConfirmed: state.defenderHitsToAssign.length === 0,
     });
   }
 
@@ -527,22 +562,43 @@ export class CombatState {
     if (!this.isCasualtyPhase(state.currentPhase)) {
       return;
     }
+    const currentPhase = state.currentPhase;
 
     const ruleContext = createResolvedRuleContext(state);
 
     const nextDamageById: AssignmentMap = { ...state.unitDamageById };
     for (const [unitId, hits] of Object.entries(state.attackerAssignedHitsByUnitId)) {
-      nextDamageById[unitId] = (nextDamageById[unitId] ?? 0) + hits;
+      nextDamageById[unitId] = (nextDamageById[unitId] ?? 0) + hits.length;
     }
     for (const [unitId, hits] of Object.entries(state.defenderAssignedHitsByUnitId)) {
-      nextDamageById[unitId] = (nextDamageById[unitId] ?? 0) + hits;
+      nextDamageById[unitId] = (nextDamageById[unitId] ?? 0) + hits.length;
     }
 
+    const nextDelayedCasualtyHitsByUnitId = this.buildNextDelayedCasualtyMap(
+      state,
+      nextDamageById,
+      ruleContext,
+    );
+
     const survivingAttackers = state.attackingArmy.filter(
-      (unit) => (nextDamageById[unit.id] ?? 0) < getHitPoints(unit, ruleContext),
+      (unit) =>
+        !this.shouldClearCasualty(
+          unit,
+          currentPhase,
+          nextDamageById,
+          nextDelayedCasualtyHitsByUnitId,
+          ruleContext,
+        ),
     );
     const survivingDefenders = state.defendingArmy.filter(
-      (unit) => (nextDamageById[unit.id] ?? 0) < getHitPoints(unit, ruleContext),
+      (unit) =>
+        !this.shouldClearCasualty(
+          unit,
+          currentPhase,
+          nextDamageById,
+          nextDelayedCasualtyHitsByUnitId,
+          ruleContext,
+        ),
     );
 
     const survivingDamageById = this.buildSurvivingDamageMap(
@@ -550,6 +606,15 @@ export class CombatState {
       survivingDefenders,
       nextDamageById,
     );
+    const survivingUnitIds = new Set(
+      [...survivingAttackers, ...survivingDefenders].map((unit) => unit.id),
+    );
+    const survivingDelayedCasualtyHitsByUnitId: DelayedCasualtyMap = {};
+    for (const [unitId, hits] of Object.entries(nextDelayedCasualtyHitsByUnitId)) {
+      if (survivingUnitIds.has(unitId)) {
+        survivingDelayedCasualtyHitsByUnitId[unitId] = hits;
+      }
+    }
 
     const outcome = this.evaluateOutcome(survivingAttackers, survivingDefenders);
     const postResolutionState: CombatStateModel = {
@@ -559,12 +624,13 @@ export class CombatState {
       unitDamageById: survivingDamageById,
       attackerReadyToFireIds: [],
       defenderReadyToFireIds: [],
-      attackerHitsToAssign: createEmptyHitPool(),
-      defenderHitsToAssign: createEmptyHitPool(),
+      attackerHitsToAssign: [],
+      defenderHitsToAssign: [],
       attackerAssignedHitsByUnitId: {},
       defenderAssignedHitsByUnitId: {},
       attackerCasualtiesConfirmed: false,
       defenderCasualtiesConfirmed: false,
+      delayedCasualtyHitsByUnitId: survivingDelayedCasualtyHitsByUnitId,
       outcome: outcome.outcome,
       canCaptureTerritory: outcome.canCaptureTerritory,
       resolutionSummary: this.buildResolutionSummary(
@@ -638,12 +704,71 @@ export class CombatState {
     return map;
   }
 
+  private buildNextDelayedCasualtyMap(
+    state: CombatStateModel,
+    damageById: AssignmentMap,
+    ruleContext: RuleContext,
+  ): DelayedCasualtyMap {
+    const delayed: DelayedCasualtyMap = { ...state.delayedCasualtyHitsByUnitId };
+    const assignedHitsByUnitId = {
+      ...state.attackerAssignedHitsByUnitId,
+      ...state.defenderAssignedHitsByUnitId,
+    };
+
+    for (const unit of [...state.attackingArmy, ...state.defendingArmy]) {
+      if ((damageById[unit.id] ?? 0) < getHitPoints(unit, ruleContext)) {
+        delete delayed[unit.id];
+        continue;
+      }
+
+      if (delayed[unit.id]?.length) {
+        continue;
+      }
+
+      const assignedHits = assignedHitsByUnitId[unit.id] ?? [];
+      if (assignedHits.length === 0) {
+        continue;
+      }
+
+      const damageBeforeThisCasualtyPhase = state.unitDamageById[unit.id] ?? 0;
+      const remainingHitPointsBeforeAssignment =
+        getHitPoints(unit, ruleContext) - damageBeforeThisCasualtyPhase;
+      const lethalHitIndex = Math.max(0, remainingHitPointsBeforeAssignment - 1);
+      const lethalHit = assignedHits[lethalHitIndex] ?? assignedHits[assignedHits.length - 1];
+      delayed[unit.id] = lethalHit ? [lethalHit] : [];
+    }
+
+    return delayed;
+  }
+
+  private shouldClearCasualty(
+    unit: MilitaryUnit,
+    phase: CasualtyPhase,
+    damageById: AssignmentMap,
+    delayedCasualtyHitsByUnitId: DelayedCasualtyMap,
+    ruleContext: RuleContext,
+  ): boolean {
+    if ((damageById[unit.id] ?? 0) < getHitPoints(unit, ruleContext)) {
+      return false;
+    }
+
+    return (delayedCasualtyHitsByUnitId[unit.id] ?? []).some((hit) =>
+      hit.casualtyClearPhases.includes(phase),
+    );
+  }
+
+  private hasClearableDelayedCasualties(state: CombatStateModel, phase: CasualtyPhase): boolean {
+    return Object.values(state.delayedCasualtyHitsByUnitId).some((hits) =>
+      hits.some((hit) => hit.casualtyClearPhases.includes(phase)),
+    );
+  }
+
   private isCasualtyPhase(phase?: CombatPhase): phase is CasualtyPhase {
     return phase === CombatPhase.OPENING_FIRE_CASUALTIES || phase === CombatPhase.COMBAT_CASUALTIES;
   }
 
-  private determineHitsByTargetKind(values: number[], shotDescriptors: ShotDescriptor[]): HitPool {
-    let hits: HitPool = createEmptyHitPool();
+  private determineCombatHits(values: number[], shotDescriptors: ShotDescriptor[]): CombatHit[] {
+    const hits: CombatHit[] = [];
     for (const [index, shot] of shotDescriptors.entries()) {
       const value = values[index];
       if (value === undefined) {
@@ -654,22 +779,29 @@ export class CombatState {
         values: [value],
         target: shot.target,
       }).hits.length;
-      hits = addHitsToPool(hits, shot.targetKind, hitCount);
+      if (hitCount > 0) {
+        hits.push({
+          targetKind: shot.targetKind,
+          casualtyClearPhases: shot.casualtyClearPhases,
+        });
+      }
     }
 
     return hits;
   }
 
-  private addClampedHitsToPool(
-    currentPool: HitPool,
-    hitsScored: HitPool,
+  private addClampedHits(
+    currentHits: CombatHit[],
+    hitsScored: CombatHit[],
     opposingArmy: MilitaryUnit[],
     damageById: AssignmentMap,
     ruleContext: RuleContext,
-  ): HitPool {
-    let nextPool = { ...currentPool };
+  ): CombatHit[] {
+    const nextHits = [...currentHits];
 
-    for (const [targetKind, hitCount] of Object.entries(hitsScored) as [TargetKind, number][]) {
+    for (const hit of hitsScored) {
+      const currentPool = this.toHitPool(nextHits);
+      const targetKind = hit.targetKind;
       const maxCapacity =
         targetKind === 'unit'
           ? this.getTotalRemainingHitPoints(opposingArmy, damageById, ruleContext)
@@ -680,31 +812,29 @@ export class CombatState {
               ruleContext,
             );
       const alreadyPending =
-        targetKind === 'unit' ? totalHitPool(nextPool) : (nextPool[targetKind] ?? 0);
+        targetKind === 'unit' ? totalHitPool(currentPool) : (currentPool[targetKind] ?? 0);
       const remainingTargetCapacity = maxCapacity - alreadyPending;
       const remainingTotalCapacity =
         targetKind === 'factory'
           ? remainingTargetCapacity
           : this.getTotalRemainingHitPoints(opposingArmy, damageById, ruleContext) -
-            totalHitPool(nextPool);
-      const addableHits = Math.max(
-        0,
-        Math.min(hitCount, remainingTargetCapacity, remainingTotalCapacity),
-      );
-      nextPool = addHitsToPool(nextPool, targetKind, addableHits);
+            totalHitPool(currentPool);
+      if (remainingTargetCapacity > 0 && remainingTotalCapacity > 0) {
+        nextHits.push(hit);
+      }
     }
 
-    return nextPool;
+    return nextHits;
   }
 
-  private getPendingHitPool(
+  private getPendingHits(
     state: CombatStateModel,
     role: CombatRole,
-    assignments: AssignmentMap,
-  ): HitPool {
-    let pendingPool = {
+    assignments: HitAssignmentMap,
+  ): CombatHit[] {
+    let pendingHits = [
       ...(role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign),
-    };
+    ];
     const roleArmy = role === 'attack' ? state.attackingArmy : state.defendingArmy;
     const unitById = new Map(roleArmy.map((unit) => [unit.id, unit]));
 
@@ -714,16 +844,51 @@ export class CombatState {
         continue;
       }
 
-      for (let i = 0; i < hits; i++) {
-        const nextPool = consumeHitForUnit(pendingPool, unit);
-        if (!nextPool) {
-          return pendingPool;
+      for (const _hit of hits) {
+        const consumedHit = this.consumeHitForUnit(pendingHits, unit);
+        if (!consumedHit) {
+          return pendingHits;
         }
-        pendingPool = nextPool;
+        pendingHits = consumedHit.remainingHits;
       }
     }
 
-    return pendingPool;
+    return pendingHits;
+  }
+
+  private getPendingHitPool(
+    state: CombatStateModel,
+    role: CombatRole,
+    assignments: HitAssignmentMap,
+  ): HitPool {
+    return this.toHitPool(this.getPendingHits(state, role, assignments));
+  }
+
+  private consumeHitForUnit(
+    hits: CombatHit[],
+    unit: MilitaryUnit,
+  ): { hit: CombatHit; remainingHits: CombatHit[] } | undefined {
+    for (const targetKind of targetKindPriorityForUnit(unit)) {
+      const hitIndex = hits.findIndex((hit) => hit.targetKind === targetKind);
+      if (hitIndex < 0) {
+        continue;
+      }
+
+      const hit = hits[hitIndex];
+      return {
+        hit,
+        remainingHits: hits.filter((_, index) => index !== hitIndex),
+      };
+    }
+
+    return undefined;
+  }
+
+  private toHitPool(hits: CombatHit[]): HitPool {
+    return hits.reduce(
+      (pool, hit) => addHitsToPool(pool, hit.targetKind, 1),
+      createEmptyHitPool(),
+    );
   }
 
   private hasEligibleTarget(
@@ -756,7 +921,7 @@ export class CombatState {
     state: CombatStateModel,
     role: CombatRole,
     unit: MilitaryUnit,
-    assignments: AssignmentMap,
+    assignments: HitAssignmentMap,
     ruleContext: RuleContext,
   ): number {
     const isExpectedRoleUnit =
@@ -769,7 +934,7 @@ export class CombatState {
     }
 
     const persistentDamage = state.unitDamageById[unit.id] ?? 0;
-    const assignedDamage = assignments[unit.id] ?? 0;
+    const assignedDamage = assignments[unit.id]?.length ?? 0;
     return getHitPoints(unit, ruleContext) - persistentDamage - assignedDamage;
   }
 
@@ -778,7 +943,7 @@ export class CombatState {
     role: CombatRole,
     unit: MilitaryUnit,
     ruleContext: RuleContext,
-    assignments?: AssignmentMap,
+    assignments?: HitAssignmentMap,
   ): boolean {
     const effectiveAssignments = assignments ?? {
       ...(role === 'attack'

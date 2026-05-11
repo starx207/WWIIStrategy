@@ -1,4 +1,4 @@
-import { CombatPhase } from '@ww2/combat/combat-phase';
+import { CasualtyPhase, CombatPhase } from '@ww2/combat/combat-phase';
 import type { CombatRole } from '@ww2/combat/combat.actions';
 import { MilitaryUnit } from './military-unit';
 import { Nationality } from './nationality';
@@ -20,6 +20,7 @@ export interface CombatProfile {
   target: number;
   shotsPerRound: number;
   targetKind: TargetKind;
+  casualtyClearPhases: CasualtyPhase[];
   damage: DamageEffect;
 }
 

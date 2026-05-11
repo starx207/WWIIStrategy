@@ -17,8 +17,9 @@ import {
 import { HitPool, unitCanConsumeHit } from '@ww2/shared/hit-pool';
 import { UnitType } from '@ww2/shared/unit-type';
 import { CombatProfile, EffectiveUnit } from '@ww2/shared/effective-unit';
+import { CombatHit } from '../combat-state';
 
-type AssignmentMap = Record<string, number>;
+type AssignmentMap = Record<string, CombatHit[]>;
 
 @Component({
   selector: 'ww2-battalion',
@@ -124,7 +125,11 @@ export class Battalion {
 
   protected hostClasses = computed(
     () =>
-      `battalion battalion__${this.roleFilter} ${this.healthySquads().some((s) => s.enabled) ? 'battalion__selectable' : ''}`,
+      `battalion battalion__${this.roleFilter} ${
+        this.healthySquads().some((s) => s.enabled) || this.casualtySquads().some((s) => s.enabled)
+          ? 'battalion__selectable'
+          : ''
+      }`,
   );
   protected squadDirection = computed<SquadDirection>(() =>
     this.roleFilter == 'defend' ? 'left-face' : 'right-face',
@@ -172,7 +177,9 @@ export class Battalion {
     squads.sort((a, b) => (a.id > b.id ? 1 : a.id < b.id ? -1 : 0));
     return squads.map((squad) => ({
       squad,
-      enabled: this.canUndoCasualties() && squad.intersectsWith(this.pendingCasualtyIds()),
+      enabled:
+        (this.canUndoCasualties() && squad.intersectsWith(this.pendingCasualtyIds())) ||
+        (this.isFirePhase() && this.canFire() && !squad.isSubsetOf(this.reloadingUnits())),
     }));
   });
 
@@ -209,7 +216,7 @@ export class Battalion {
 
     const assignedHits = this.assignedHitsByUnitId();
     return squad.units.find(
-      (unit) => unit.type === UnitType.BATTLESHIP && (assignedHits[unit.id] ?? 0) > 0,
+      (unit) => unit.type === UnitType.BATTLESHIP && (assignedHits[unit.id]?.length ?? 0) > 0,
     );
   }
 

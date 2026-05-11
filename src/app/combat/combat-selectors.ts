@@ -2,19 +2,51 @@ import { createSelector, Selector } from '@ngxs/store';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { CombatPhase } from './combat-phase';
 import { CombatRole } from './combat.actions';
-import { CombatState, CombatStateModel } from './combat-state';
+import { CombatHit, CombatState, CombatStateModel } from './combat-state';
 import { getEffectiveArmy, getHitPoints } from '@ww2/shared/effective-unit.reducer';
-import { consumeHitForUnit, HitPool, totalHitPool } from '@ww2/shared/hit-pool';
+import {
+  addHitsToPool,
+  createEmptyHitPool,
+  HitPool,
+  targetKindPriorityForUnit,
+  totalHitPool,
+} from '@ww2/shared/hit-pool';
 import { createResolvedRuleContext } from './rule-context.factory';
 
-type AssignmentMap = Record<string, number>;
+type AssignmentMap = Record<string, CombatHit[]>;
+
+function hitPoolFromHits(hits: CombatHit[]): HitPool {
+  return hits.reduce(
+    (pool, hit) => addHitsToPool(pool, hit.targetKind, 1),
+    createEmptyHitPool(),
+  );
+}
+
+function consumeHitForUnit(
+  hits: CombatHit[],
+  unit: MilitaryUnit,
+): { hit: CombatHit; remainingHits: CombatHit[] } | undefined {
+  for (const targetKind of targetKindPriorityForUnit(unit)) {
+    const hitIndex = hits.findIndex((hit) => hit.targetKind === targetKind);
+    if (hitIndex < 0) {
+      continue;
+    }
+
+    return {
+      hit: hits[hitIndex],
+      remainingHits: hits.filter((_, index) => index !== hitIndex),
+    };
+  }
+
+  return undefined;
+}
 
 function pendingHitPool(
-  hitsToAssign: HitPool,
+  hitsToAssign: CombatHit[],
   assignments: AssignmentMap,
   roleArmy: MilitaryUnit[],
 ): HitPool {
-  let pendingPool = { ...hitsToAssign };
+  let pendingHits = [...hitsToAssign];
   const unitById = new Map(roleArmy.map((unit) => [unit.id, unit]));
 
   for (const [unitId, hits] of Object.entries(assignments)) {
@@ -23,16 +55,16 @@ function pendingHitPool(
       continue;
     }
 
-    for (let i = 0; i < hits; i++) {
-      const nextPool = consumeHitForUnit(pendingPool, unit);
-      if (!nextPool) {
-        return pendingPool;
+    for (const _hit of hits) {
+      const consumedHit = consumeHitForUnit(pendingHits, unit);
+      if (!consumedHit) {
+        return hitPoolFromHits(pendingHits);
       }
-      pendingPool = nextPool;
+      pendingHits = consumedHit.remainingHits;
     }
   }
 
-  return pendingPool;
+  return hitPoolFromHits(pendingHits);
 }
 
 export class CombatSelectors {
@@ -90,7 +122,9 @@ export class CombatSelectors {
 
   static hitsToAssign(role: CombatRole) {
     return createSelector([CombatState], (state: CombatStateModel) => {
-      return role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign;
+      return hitPoolFromHits(
+        role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign,
+      );
     });
   }
 
@@ -155,7 +189,7 @@ export class CombatSelectors {
         role === 'attack' ? state.attackingArmy : state.defendingArmy,
       );
 
-      return totalHitPool(pendingHits) === 0 && totalHitPool(hitsToAssign) > 0;
+      return totalHitPool(pendingHits) === 0 && hitsToAssign.length > 0;
     });
   }
 
@@ -182,13 +216,13 @@ export class CombatSelectors {
     const pendingIds = new Set<string>();
 
     for (const [unitId, hits] of Object.entries(state.attackerAssignedHitsByUnitId)) {
-      if (hits > 0) {
+      if (hits.length > 0) {
         pendingIds.add(unitId);
       }
     }
 
     for (const [unitId, hits] of Object.entries(state.defenderAssignedHitsByUnitId)) {
-      if (hits > 0) {
+      if (hits.length > 0) {
         pendingIds.add(unitId);
       }
     }
@@ -205,7 +239,8 @@ export class CombatSelectors {
 
     for (const unit of [...state.attackingArmy, ...state.defendingArmy]) {
       const persistentDamage = state.unitDamageById[unit.id] ?? 0;
-      const assignedDamage = (attackerAssigned[unit.id] ?? 0) + (defenderAssigned[unit.id] ?? 0);
+      const assignedDamage =
+        (attackerAssigned[unit.id]?.length ?? 0) + (defenderAssigned[unit.id]?.length ?? 0);
       if (persistentDamage + assignedDamage >= getHitPoints(unit, ruleState)) {
         casualtyIds.push(unit.id);
       }
@@ -228,8 +263,8 @@ export class CombatSelectors {
     for (const unitId of allMultiHpUnits) {
       damageMap[unitId] =
         (persistedDamage[unitId] ?? 0) +
-        (attackerDamage[unitId] ?? 0) +
-        (defenderDamage[unitId] ?? 0);
+        (attackerDamage[unitId]?.length ?? 0) +
+        (defenderDamage[unitId]?.length ?? 0);
     }
 
     return damageMap;

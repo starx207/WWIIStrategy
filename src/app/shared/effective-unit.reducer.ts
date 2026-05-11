@@ -1,4 +1,4 @@
-import { CombatPhase } from '@ww2/combat/combat-phase';
+import { CasualtyPhase, CombatPhase } from '@ww2/combat/combat-phase';
 import {
   CombatProfile,
   DEFAULT_RULE_STATE,
@@ -24,6 +24,10 @@ const buildStandardCombatProfiles = (stats: BaseUnitProfile): CombatProfile[] =>
       : stats.openingFire === true
         ? [CombatPhase.OPENING_FIRE, CombatPhase.COMBAT]
         : [CombatPhase.COMBAT];
+  const casualtyClearPhases: CasualtyPhase[] = [
+    CombatPhase.OPENING_FIRE_CASUALTIES,
+    CombatPhase.COMBAT_CASUALTIES,
+  ];
 
   const profiles: CombatProfile[] = [];
   if (stats.attack > 0) {
@@ -35,6 +39,7 @@ const buildStandardCombatProfiles = (stats: BaseUnitProfile): CombatProfile[] =>
       target: stats.attack,
       shotsPerRound: 1,
       targetKind: stats.targetKind ?? 'unit',
+      casualtyClearPhases,
       damage: { type: 'unit-hit' },
     });
   }
@@ -48,6 +53,7 @@ const buildStandardCombatProfiles = (stats: BaseUnitProfile): CombatProfile[] =>
       target: stats.defense,
       shotsPerRound: 1,
       targetKind: stats.targetKind ?? 'unit',
+      casualtyClearPhases,
       damage: { type: 'unit-hit' },
     });
   }

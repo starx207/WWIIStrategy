@@ -6,4 +6,8 @@ export enum CombatPhase {
   REGROUP = 'regroup',
 }
 
+export type CasualtyPhase =
+  | CombatPhase.OPENING_FIRE_CASUALTIES
+  | CombatPhase.COMBAT_CASUALTIES;
+
 export const COMBAT_PHASES = Object.values(CombatPhase);
