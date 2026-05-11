@@ -48,6 +48,8 @@ export const DEFAULT_RULE_STATE: RuleState = {
 export interface RuleContext {
   phase?: CombatPhase;
   role?: CombatRole;
+  attackingArmy: MilitaryUnit[];
+  defendingArmy: MilitaryUnit[];
   ruleState: RuleState;
 }
 

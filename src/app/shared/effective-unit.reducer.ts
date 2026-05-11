@@ -54,6 +54,8 @@ const buildStandardCombatProfiles = (stats: BaseUnitProfile): CombatProfile[] =>
 const resolveRuleContext = (context: RuleContextInput): RuleContext => {
   return {
     ...context,
+    attackingArmy: context.attackingArmy ?? [],
+    defendingArmy: context.defendingArmy ?? [],
     ruleState: context.ruleState ?? DEFAULT_RULE_STATE,
   };
 };

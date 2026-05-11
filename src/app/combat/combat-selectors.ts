@@ -73,7 +73,11 @@ export class CombatSelectors {
   static combatForce(role: CombatRole) {
     return createSelector([CombatState], (state: CombatStateModel) => {
       const army = role === 'attack' ? state.attackingArmy : state.defendingArmy;
-      return getEffectiveArmy(army, { role: role });
+      return getEffectiveArmy(army, {
+        role: role,
+        attackingArmy: state.attackingArmy,
+        defendingArmy: state.defendingArmy,
+      });
     });
   }
 
