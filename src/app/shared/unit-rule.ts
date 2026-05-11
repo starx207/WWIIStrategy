@@ -1,3 +1,4 @@
+import { CombatPhase } from '@ww2/combat/combat-phase';
 import { UnitRule, UnitRuleModifier } from './effective-unit';
 import { AIR_UNIT_TYPES, UnitType } from './unit-type';
 
@@ -24,9 +25,30 @@ const standardAAGunRule: UnitRuleModifier = (effectiveUnit, context) => {
   return effectiveUnit;
 };
 
+const submarineVsDestroyerRule: UnitRuleModifier = (effectiveUnit, context) => {
+  if (effectiveUnit.type !== UnitType.SUBMARINE) {
+    return effectiveUnit;
+  }
+
+  const opposingArmy = context.role === 'attack' ? context.defendingArmy : context.attackingArmy;
+  const hasDestroyer = opposingArmy.some((unit) => unit.type === UnitType.DESTROYER);
+  if (hasDestroyer) {
+    effectiveUnit.combatProfiles.forEach((profile) => {
+      if (profile.id === 'standard-combat') {
+        profile.casualtyClearPhases = [CombatPhase.COMBAT_CASUALTIES];
+      }
+    });
+  }
+  return effectiveUnit;
+};
+
 export const UNIT_RULES: UnitRule[] = [
   {
     id: 'aa-gun-fires-per-aircraft',
     modify: standardAAGunRule,
+  },
+  {
+    id: 'submarine-vs-destroyer',
+    modify: submarineVsDestroyerRule,
   },
 ];
