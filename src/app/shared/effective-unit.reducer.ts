@@ -12,9 +12,12 @@ import { UNIT_RULES } from './unit-rule';
 import { CombatRole } from '@ww2/combat/combat.actions';
 
 const buildStandardCombatProfiles = (stats: BaseUnitProfile): CombatProfile[] => {
-  const phases = stats.openingFire
-    ? [CombatPhase.OPENING_FIRE, CombatPhase.COMBAT]
-    : [CombatPhase.COMBAT];
+  const phases =
+    stats.openingFire === 'exclusive'
+      ? [CombatPhase.OPENING_FIRE]
+      : stats.openingFire === true
+        ? [CombatPhase.OPENING_FIRE, CombatPhase.COMBAT]
+        : [CombatPhase.COMBAT];
 
   const profiles: CombatProfile[] = [];
   if (stats.attack > 0) {

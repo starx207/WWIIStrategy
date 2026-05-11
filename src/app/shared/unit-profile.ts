@@ -6,7 +6,7 @@ export interface BaseUnitProfile {
   attack: number;
   defense: number;
   hitPoints: number;
-  openingFire: boolean;
+  openingFire: boolean | 'exclusive';
   targetKind?: TargetKind;
 }
 
@@ -33,7 +33,7 @@ export const UNIT_PROFILES: Record<UnitType, BaseUnitProfile> = {
     attack: 0,
     defense: 1,
     hitPoints: 1,
-    openingFire: true,
+    openingFire: 'exclusive',
     targetKind: 'air-unit',
   },
   [UnitType.FACTORY]: {
