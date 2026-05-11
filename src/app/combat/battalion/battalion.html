@@ -3,25 +3,25 @@
 
   <div class="battalion__squads">
     @for (item of healthySquads(); track item.squad.id) {
-    <ww2-squad
-      [squad]="item.squad"
-      [direction]="squadDirection()"
-      [disabled]="!item.enabled"
-      [contextMenuActions]="contextActionsForSquad(item.squad)"
-      (selected)="electCasualty(item.squad)"
-    />
+      <ww2-squad
+        [squad]="item.squad"
+        [direction]="squadDirection()"
+        [disabled]="!item.enabled"
+        [contextMenuActions]="contextActionsForSquad(item.squad)"
+        (selected)="electCasualty(item.squad)"
+      />
     }
   </div>
 </div>
 
 <div class="battalion__casualties">
   @for (item of casualtySquads(); track item.squad.id) {
-  <ww2-squad
-    [squad]="item.squad"
-    [direction]="squadDirection()"
-    [disabled]="!item.enabled"
-    [contextMenuActions]="contextActionsForSquad(item.squad)"
-    (selected)="undoCasualty(item.squad)"
-  />
+    <ww2-squad
+      [squad]="item.squad"
+      [direction]="squadDirection()"
+      [disabled]="!item.enabled"
+      [contextMenuActions]="contextActionsForSquad(item.squad)"
+      (selected)="undoCasualty(item.squad)"
+    />
   }
 </div>
