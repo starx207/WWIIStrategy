@@ -2,7 +2,7 @@ import { MilitaryUnit } from './military-unit';
 import { Nationality } from './nationality';
 import { UnitType } from './unit-type';
 import { v4 as uuid } from 'uuid';
-import { getHitPoints } from './effective-unit';
+import { getHitPoints } from './effective-unit.reducer';
 
 export interface CreateSquadOptions {
   separateUnits?: MilitaryUnit[];

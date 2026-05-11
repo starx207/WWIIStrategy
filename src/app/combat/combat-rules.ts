@@ -1,7 +1,7 @@
 import { CombatPhase } from './combat-phase';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { CombatRole } from './combat.actions';
-import { canParticipateInCombatPhase, getHitPoints } from '@ww2/shared/effective-unit';
+import { canParticipateInCombatPhase, getHitPoints } from '@ww2/shared/effective-unit.reducer';
 
 export namespace CombatRules {
   export interface FiringInput {

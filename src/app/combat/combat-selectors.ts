@@ -3,7 +3,7 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { CombatPhase } from './combat-phase';
 import { CombatRole } from './combat.actions';
 import { CombatState, CombatStateModel } from './combat-state';
-import { getHitPoints } from '@ww2/shared/effective-unit';
+import { getHitPoints } from '@ww2/shared/effective-unit.reducer';
 import { consumeHitForUnit, HitPool, totalHitPool } from '@ww2/shared/hit-pool';
 
 type AssignmentMap = Record<string, number>;

@@ -1,12 +1,7 @@
-import { getHitPoints } from './effective-unit';
+import { getHitPoints } from './effective-unit.reducer';
 import { MilitaryUnit } from './military-unit';
 import { TargetKind } from './unit-profile';
-import {
-  AIR_UNIT_TYPES,
-  NEUTRAL_UNIT_TYPES,
-  SEA_UNIT_TYPES,
-  UnitType,
-} from './unit-type';
+import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES, SEA_UNIT_TYPES, UnitType } from './unit-type';
 
 export type HitPool = Partial<Record<TargetKind, number>>;
 

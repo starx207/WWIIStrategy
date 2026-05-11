@@ -11,12 +11,12 @@ import { CombatActions, CombatRole } from '../combat.actions';
 import { CombatSelectors } from '../combat-selectors';
 import { CombatPhase } from '../combat-phase';
 import {
-  CombatProfile,
   getDefaultCombatTarget,
   getPrimaryCombatProfile,
-} from '@ww2/shared/effective-unit';
+} from '@ww2/shared/effective-unit.reducer';
 import { HitPool, unitCanConsumeHit } from '@ww2/shared/hit-pool';
 import { UnitType } from '@ww2/shared/unit-type';
+import { CombatProfile } from '@ww2/shared/effective-unit';
 
 type AssignmentMap = Record<string, number>;
 

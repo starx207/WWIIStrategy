@@ -2,7 +2,7 @@ import { CdkMenuModule } from '@angular/cdk/menu';
 import { Component, computed, input, output } from '@angular/core';
 import { MilitaryUnitIcon } from '../military-unit-icon';
 import { MilitaryUnitSquad } from '../military-unit-squad';
-import { getHitPoints } from '../effective-unit';
+import { getHitPoints } from '../effective-unit.reducer';
 import {
   ContextMenuAction,
   ContextMenuActionSelected,
