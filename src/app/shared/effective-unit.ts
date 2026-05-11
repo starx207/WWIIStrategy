@@ -55,7 +55,12 @@ export interface RuleContext {
 
 export type RuleContextInput = Partial<RuleContext>;
 
+export type UnitRuleModifier = (
+  effectiveUnit: EffectiveUnit,
+  context: RuleContext,
+) => EffectiveUnit;
+
 export interface UnitRule {
   id: string;
-  modify?: (effectiveUnit: EffectiveUnit, context: RuleContext) => EffectiveUnit;
+  modify?: UnitRuleModifier;
 }

@@ -159,6 +159,8 @@ export class CombatState {
       const profile = getCombatProfiles(unit, {
         phase: state.currentPhase,
         role: action.role,
+        attackingArmy: state.attackingArmy,
+        defendingArmy: state.defendingArmy,
       }).find((candidate) => candidate.id === action.profileId);
       if (!profile || profile.damage.type !== 'unit-hit' || profile.shotsPerRound <= 0) {
         continue;
@@ -462,6 +464,7 @@ export class CombatState {
       state.attackingArmy,
       state.defendingArmy,
       state.unitDamageById,
+      state,
     );
 
     const attackerReadyToFireIds = attackers.map((unit) => unit.id);
@@ -588,14 +591,15 @@ export class CombatState {
     attackers: MilitaryUnit[],
     defenders: MilitaryUnit[],
     damageById: AssignmentMap,
+    state: CombatStateModel,
   ): { attackers: MilitaryUnit[]; defenders: MilitaryUnit[] } {
     const eligibleUnits = CombatRules.filterEligibleUnits(phase, attackers, defenders);
     return {
       attackers: eligibleUnits.attackers.filter((unit) =>
-        this.hasEligibleTarget(unit, phase, 'attack', defenders, damageById),
+        this.hasEligibleTarget(unit, phase, 'attack', defenders, damageById, state),
       ),
       defenders: eligibleUnits.defenders.filter((unit) =>
-        this.hasEligibleTarget(unit, phase, 'defend', attackers, damageById),
+        this.hasEligibleTarget(unit, phase, 'defend', attackers, damageById, state),
       ),
     };
   }
@@ -713,9 +717,15 @@ export class CombatState {
     role: CombatRole,
     opposingArmy: MilitaryUnit[],
     damageById: AssignmentMap,
+    state: CombatStateModel,
   ): boolean {
-    return getCombatProfiles(unit, { phase, role }).some((profile) => {
-      if (profile.damage.type !== 'unit-hit' || profile.target <= 0) {
+    return getCombatProfiles(unit, {
+      phase,
+      role,
+      attackingArmy: state.attackingArmy,
+      defendingArmy: state.defendingArmy,
+    }).some((profile) => {
+      if (profile.damage.type !== 'unit-hit' || profile.target <= 0 || profile.shotsPerRound <= 0) {
         return false;
       }
 
