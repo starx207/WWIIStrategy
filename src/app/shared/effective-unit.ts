@@ -53,7 +53,7 @@ export interface RuleContext {
   ruleState: RuleState;
 }
 
-export type RuleContextInput = Partial<RuleContext>;
+export type RuleContextInput = Partial<Pick<RuleContext, 'phase' | 'role' | 'ruleState'>>;
 
 export type UnitRuleModifier = (
   effectiveUnit: EffectiveUnit,

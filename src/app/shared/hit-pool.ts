@@ -1,3 +1,4 @@
+import { RuleContext } from './effective-unit';
 import { getHitPoints } from './effective-unit.reducer';
 import { MilitaryUnit } from './military-unit';
 import { TargetKind } from './unit-profile';
@@ -88,10 +89,11 @@ export function totalRemainingHitCapacityForTargetKind(
   units: MilitaryUnit[],
   damageById: Record<string, number>,
   targetKind: TargetKind,
+  ruleContext: RuleContext,
 ): number {
   return units
     .filter((unit) => unitMatchesTargetKind(unit, targetKind))
     .reduce((total, unit) => {
-      return total + Math.max(0, getHitPoints(unit) - (damageById[unit.id] ?? 0));
+      return total + Math.max(0, getHitPoints(unit, ruleContext) - (damageById[unit.id] ?? 0));
     }, 0);
 }

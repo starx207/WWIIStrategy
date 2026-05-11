@@ -3,19 +3,32 @@ import { Nationality } from './nationality';
 import { UnitType } from './unit-type';
 import { v4 as uuid } from 'uuid';
 import { getHitPoints } from './effective-unit.reducer';
-import { EffectiveUnit } from './effective-unit';
-import { isString, isStringArray } from './utility';
+import { EffectiveUnit, RuleContext } from './effective-unit';
+import { isEffectiveUnit, isString, isStringArray } from './utility';
 
 export interface CreateSquadOptions {
   separateUnits?: EffectiveUnit[] | MilitaryUnit[] | string[];
   damageMap?: Record<string, number>;
+  ruleContext?: RuleContext;
+}
+
+interface RequiredContextCreateSquadOptions extends CreateSquadOptions {
+  ruleContext: RuleContext;
 }
 
 export function createSquads(
-  army: EffectiveUnit[] | MilitaryUnit[],
+  army: MilitaryUnit[],
+  options: RequiredContextCreateSquadOptions,
+): MilitaryUnitSquad<MilitaryUnit>[];
+export function createSquads(
+  army: EffectiveUnit[],
   options?: CreateSquadOptions,
-): MilitaryUnitSquad[] {
-  const groups: Record<string, (MilitaryUnit & { hpRemaining: number })[]> = {};
+): MilitaryUnitSquad<EffectiveUnit>[];
+export function createSquads<T extends EffectiveUnit | MilitaryUnit = MilitaryUnit>(
+  army: T[],
+  options?: CreateSquadOptions,
+): MilitaryUnitSquad<T>[] {
+  const groups: Record<string, (T & { hpRemaining: number })[]> = {};
   const separatePrefix = options?.separateUnits !== undefined;
   const separateUnitIds = options?.separateUnits?.map((u) => (isString(u) ? u : u.id));
 
@@ -23,7 +36,9 @@ export function createSquads(
     // This "prefix" logic is to separate the grouping of units if some have fired in the current combat round and some have not
     const prefix = separatePrefix && separateUnitIds?.includes(unit.id) ? 'g2' : 'g1';
     const damage = options?.damageMap?.[unit.id] ?? 0;
-    const hitPoints = getHitPoints(unit);
+    const hitPoints = isEffectiveUnit(unit)
+      ? getHitPoints(unit)
+      : getHitPoints(unit, options!.ruleContext!);
     const damageIndicator = damage > 0 && damage < hitPoints ? `-dmg${damage}` : '';
     const groupKey = `${prefix}-${unit.type}-${unit.nationality}${damageIndicator}`;
     if (!groups[groupKey]) {
@@ -38,11 +53,11 @@ export function createSquads(
   return squads;
 }
 
-export class MilitaryUnitSquad {
+export class MilitaryUnitSquad<T extends EffectiveUnit | MilitaryUnit = MilitaryUnit> {
   readonly id: string;
 
   constructor(
-    public units: MilitaryUnit[] | EffectiveUnit[],
+    public units: T[],
     id?: string,
     public hpRemaining?: number,
   ) {
@@ -61,13 +76,13 @@ export class MilitaryUnitSquad {
     return this.count == 0 ? UnitType.INFANTRY : this.units[0].type;
   }
 
-  isSubsetOf(armyOrIds: EffectiveUnit[] | MilitaryUnit[] | string[]): boolean {
+  isSubsetOf(armyOrIds: T[] | string[]): boolean {
     const incomingIds = isStringArray(armyOrIds) ? armyOrIds : armyOrIds.map((a) => a.id);
     const squadIds = this.units.map((u) => u.id);
     return squadIds.every((id) => incomingIds.includes(id));
   }
 
-  intersectsWith(armyOrIds: EffectiveUnit[] | MilitaryUnit[] | string[]): boolean {
+  intersectsWith(armyOrIds: T[] | string[]): boolean {
     const incomingIds = isStringArray(armyOrIds) ? armyOrIds : armyOrIds.map((a) => a.id);
     const squadIds = this.units.map((u) => u.id);
     return squadIds.some((id) => incomingIds.includes(id));

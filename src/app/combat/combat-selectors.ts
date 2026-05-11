@@ -5,6 +5,7 @@ import { CombatRole } from './combat.actions';
 import { CombatState, CombatStateModel } from './combat-state';
 import { getEffectiveArmy, getHitPoints } from '@ww2/shared/effective-unit.reducer';
 import { consumeHitForUnit, HitPool, totalHitPool } from '@ww2/shared/hit-pool';
+import { createResolvedRuleContext } from './rule-context.factory';
 
 type AssignmentMap = Record<string, number>;
 
@@ -73,10 +74,10 @@ export class CombatSelectors {
   static combatForce(role: CombatRole) {
     return createSelector([CombatState], (state: CombatStateModel) => {
       const army = role === 'attack' ? state.attackingArmy : state.defendingArmy;
+      const ruleState = createResolvedRuleContext(state);
       return getEffectiveArmy(army, {
+        ...ruleState,
         role: role,
-        attackingArmy: state.attackingArmy,
-        defendingArmy: state.defendingArmy,
       });
     });
   }
@@ -200,11 +201,12 @@ export class CombatSelectors {
     const casualtyIds: string[] = [];
     const attackerAssigned = state.attackerAssignedHitsByUnitId;
     const defenderAssigned = state.defenderAssignedHitsByUnitId;
+    const ruleState = createResolvedRuleContext(state);
 
     for (const unit of [...state.attackingArmy, ...state.defendingArmy]) {
       const persistentDamage = state.unitDamageById[unit.id] ?? 0;
       const assignedDamage = (attackerAssigned[unit.id] ?? 0) + (defenderAssigned[unit.id] ?? 0);
-      if (persistentDamage + assignedDamage >= getHitPoints(unit)) {
+      if (persistentDamage + assignedDamage >= getHitPoints(unit, ruleState)) {
         casualtyIds.push(unit.id);
       }
     }
@@ -217,10 +219,11 @@ export class CombatSelectors {
     const persistedDamage = state.unitDamageById;
     const attackerDamage = state.attackerAssignedHitsByUnitId;
     const defenderDamage = state.defenderAssignedHitsByUnitId;
+    const ruleState = createResolvedRuleContext(state);
 
     const damageMap: Record<string, number> = {};
     const allMultiHpUnits = [...state.attackingArmy, ...state.defendingArmy]
-      .filter((unit) => getHitPoints(unit) > 1)
+      .filter((unit) => getHitPoints(unit, ruleState) > 1)
       .map((unit) => unit.id);
     for (const unitId of allMultiHpUnits) {
       damageMap[unitId] =

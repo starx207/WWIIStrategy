@@ -8,6 +8,7 @@ import {
   ContextMenuActionSelected,
   ContextMenuComponent,
 } from '../context-menu/context-menu';
+import { EffectiveUnit } from '../effective-unit';
 
 export type SquadDirection = 'left-face' | 'right-face';
 
@@ -28,7 +29,7 @@ export interface SquadContextActionSelected {
   },
 })
 export class SquadComponent {
-  squad = input.required<MilitaryUnitSquad>();
+  squad = input.required<MilitaryUnitSquad<EffectiveUnit>>();
   selected = output();
   contextMenuActionSelected = output<SquadContextActionSelected>();
   direction = input<SquadDirection>('left-face');
