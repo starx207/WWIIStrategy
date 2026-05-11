@@ -16,7 +16,7 @@ import {
 } from '@ww2/shared/effective-unit.reducer';
 import { HitPool, unitCanConsumeHit } from '@ww2/shared/hit-pool';
 import { UnitType } from '@ww2/shared/unit-type';
-import { CombatProfile } from '@ww2/shared/effective-unit';
+import { CombatProfile, EffectiveUnit } from '@ww2/shared/effective-unit';
 
 type AssignmentMap = Record<string, number>;
 
@@ -37,7 +37,7 @@ export class Battalion {
   @Input({ required: true })
   set role(value: CombatRole) {
     this.roleFilter = value;
-    this.readyUnits = this.store.selectSignal(CombatSelectors.battleReadyUnits(value));
+    this.readyUnitIds = this.store.selectSignal(CombatSelectors.battleReadyIds(value));
     this.pendingHitCountForRole = this.store.selectSignal(
       CombatSelectors.pendingHitCountForRole(value),
     );
@@ -53,7 +53,7 @@ export class Battalion {
     return this.roleFilter;
   }
 
-  fromArmy = input<MilitaryUnit[]>([]);
+  fromArmy = input<EffectiveUnit[]>([]);
   protected phase = this.store.selectSignal(CombatSelectors.currentPhase);
 
   battalionUnits = computed(() => {
@@ -70,12 +70,12 @@ export class Battalion {
     return this.battalionUnits().filter((unit) => this.casualtyIds().includes(unit.id));
   });
   protected reloadingUnits = computed(() => {
-    return this.battalionUnits().filter((unit) => !this.readyUnits().includes(unit));
+    return this.battalionUnits().filter((unit) => !this.readyUnitIds().includes(unit.id));
   });
   selectableUnits = computed(() => {
     const battalionUnits = this.battalionUnits();
     if (this.isFirePhase()) {
-      return this.readyUnits().filter((unit) => battalionUnits.includes(unit));
+      return battalionUnits.filter((unit) => this.readyUnitIds().includes(unit.id));
     }
 
     return [];
@@ -115,7 +115,7 @@ export class Battalion {
     );
   });
 
-  readyUnits: Signal<MilitaryUnit[]> = signal<MilitaryUnit[]>([]).asReadonly();
+  readyUnitIds: Signal<string[]> = signal<string[]>([]).asReadonly();
   damageMap = this.store.selectSignal(CombatSelectors.damageMap);
   pendingHitCountForRole: Signal<number> = signal(0).asReadonly();
   pendingHitPoolForRole: Signal<HitPool> = signal<HitPool>({}).asReadonly();
@@ -153,7 +153,7 @@ export class Battalion {
   };
 
   protected healthySquads = computed(() => {
-    const readyUnits = this.readyUnits();
+    const readyUnits = this.readyUnitIds();
     return createSquads(this.healthyUnits(), {
       separateUnits: readyUnits,
       damageMap: this.damageMap(),
@@ -167,7 +167,7 @@ export class Battalion {
   });
 
   protected casualtySquads = computed(() => {
-    const readyUnits = this.readyUnits();
+    const readyUnits = this.readyUnitIds();
     const squads = createSquads(this.casualtyUnits(), { separateUnits: readyUnits });
     squads.sort((a, b) => (a.id > b.id ? 1 : a.id < b.id ? -1 : 0));
     return squads.map((squad) => ({

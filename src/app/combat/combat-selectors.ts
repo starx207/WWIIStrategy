@@ -3,7 +3,7 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { CombatPhase } from './combat-phase';
 import { CombatRole } from './combat.actions';
 import { CombatState, CombatStateModel } from './combat-state';
-import { getHitPoints } from '@ww2/shared/effective-unit.reducer';
+import { getEffectiveArmy, getHitPoints } from '@ww2/shared/effective-unit.reducer';
 import { consumeHitForUnit, HitPool, totalHitPool } from '@ww2/shared/hit-pool';
 
 type AssignmentMap = Record<string, number>;
@@ -72,7 +72,8 @@ export class CombatSelectors {
 
   static combatForce(role: CombatRole) {
     return createSelector([CombatState], (state: CombatStateModel) => {
-      return role === 'attack' ? state.attackingArmy : state.defendingArmy;
+      const army = role === 'attack' ? state.attackingArmy : state.defendingArmy;
+      return getEffectiveArmy(army, { role: role });
     });
   }
 
@@ -80,19 +81,6 @@ export class CombatSelectors {
     return createSelector([CombatState], (state: CombatStateModel) => {
       return role === 'attack' ? state.attackerReadyToFireIds : state.defenderReadyToFireIds;
     });
-  }
-
-  static battleReadyUnits(role: CombatRole) {
-    return createSelector(
-      [CombatSelectors.combatForce(role), CombatSelectors.battleReadyIds(role)],
-      (units: MilitaryUnit[], readyIds: string[]) => {
-        if (readyIds.length === 0) {
-          return [];
-        }
-        const readyIdSet = new Set(readyIds);
-        return units.filter((unit) => readyIdSet.has(unit.id));
-      },
-    );
   }
 
   static hitsToAssign(role: CombatRole) {
