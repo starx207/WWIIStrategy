@@ -1,6 +1,6 @@
 import { UnitType } from './unit-type';
 
-export type TargetKind = 'unit' | 'air-unit' | 'sea-unit' | 'factory';
+export type TargetKind = 'unit' | 'air-unit' | 'aa-vulnerable-air-unit' | 'sea-unit' | 'factory';
 
 export interface BaseUnitProfile {
   attack: number;

@@ -33,17 +33,37 @@ export interface EffectiveUnit {
   combatProfiles: CombatProfile[];
 }
 
-export type OptionalRuleId = never;
 export type TechnologyId = 'jet-fighters' | 'heavy-bombers' | 'super-submarines';
+export type NationalAdvantageState = 'enabled' | 'disabled' | 'active' | 'expired';
 
 export interface RuleState {
-  enabledOptionalRules: OptionalRuleId[];
   technologiesByNationality: Partial<Record<Nationality, TechnologyId[]>>;
+  nationalAdvantages: {
+    [Nationality.SOVIET_UNION]: {
+      russianWinter: NationalAdvantageState;
+    };
+    [Nationality.GERMANY]: {
+      wolfPacks: NationalAdvantageState;
+    };
+    [Nationality.UNITED_STATES]: {
+      superfortresses: NationalAdvantageState;
+    };
+  };
 }
 
 export const DEFAULT_RULE_STATE: RuleState = {
-  enabledOptionalRules: [],
   technologiesByNationality: {},
+  nationalAdvantages: {
+    [Nationality.SOVIET_UNION]: {
+      russianWinter: 'active',
+    },
+    [Nationality.GERMANY]: {
+      wolfPacks: 'enabled',
+    },
+    [Nationality.UNITED_STATES]: {
+      superfortresses: 'enabled',
+    },
+  },
 };
 
 export interface RuleContext {

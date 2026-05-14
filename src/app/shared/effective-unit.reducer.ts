@@ -12,6 +12,7 @@ import { UNIT_RULES } from './unit-rule';
 import { CombatRole } from '@ww2/combat/combat.actions';
 import { isEffectiveUnit } from './utility';
 import { UnitType } from './unit-type';
+import { Nationality } from './nationality';
 
 type EffectiveUnitInput = MilitaryUnit | EffectiveUnit;
 
@@ -111,6 +112,73 @@ const applyTechnologyEffects = (
   return effectiveUnit;
 };
 
+const applyNationalAdvantages = (
+  effectiveUnit: EffectiveUnit,
+  context: RuleContext,
+): EffectiveUnit => {
+  if (effectiveUnit.nationality === Nationality.SOVIET_UNION) {
+    const sovietAdvantages = context.ruleState.nationalAdvantages[Nationality.SOVIET_UNION];
+    if (
+      effectiveUnit.type === UnitType.INFANTRY &&
+      context.role === 'defend' &&
+      sovietAdvantages.russianWinter === 'active'
+    ) {
+      const defenseProfile = effectiveUnit.combatProfiles.find(
+        (p) => p.role === 'defend' && p.id === 'standard-combat',
+      );
+      if (defenseProfile) {
+        defenseProfile.target = 3;
+      }
+    }
+  }
+
+  if (effectiveUnit.nationality === Nationality.GERMANY) {
+    const germanAdvantages = context.ruleState.nationalAdvantages[Nationality.GERMANY];
+    if (
+      effectiveUnit.type === UnitType.SUBMARINE &&
+      context.role === 'attack' &&
+      (germanAdvantages.wolfPacks === 'active' || germanAdvantages.wolfPacks === 'enabled')
+    ) {
+      const submarineCount = context.attackingArmy.filter(
+        (unit) =>
+          unit.type === UnitType.SUBMARINE && unit.nationality === effectiveUnit.nationality,
+      ).length;
+      if (submarineCount >= 3) {
+        const attackProfile = effectiveUnit.combatProfiles.find(
+          (p) => p.role === 'attack' && p.id === 'standard-combat',
+        );
+        if (attackProfile) {
+          attackProfile.target += 1;
+        }
+      }
+    }
+  }
+
+  const usAdvantages = context.ruleState.nationalAdvantages[Nationality.UNITED_STATES];
+  if (
+    effectiveUnit.type === UnitType.ANTI_AIR_GUN &&
+    context.role === 'defend' &&
+    (usAdvantages.superfortresses === 'active' || usAdvantages.superfortresses === 'enabled')
+  ) {
+    const usBomberCount = context.attackingArmy.filter(
+      (unit) => unit.type === UnitType.BOMBER && unit.nationality === Nationality.UNITED_STATES,
+    ).length;
+    if (usBomberCount > 0) {
+      const defenseProfile = effectiveUnit.combatProfiles.find(
+        (p) => p.role === 'defend' && p.id === 'standard-combat' && p.shotsPerRound > 0,
+      );
+      if (defenseProfile) {
+        defenseProfile.targetKind = 'aa-vulnerable-air-unit';
+        defenseProfile.shotsPerRound -= usBomberCount;
+        if (defenseProfile.shotsPerRound < 0) {
+          defenseProfile.shotsPerRound = 0;
+        }
+      }
+    }
+  }
+  return effectiveUnit;
+};
+
 const getEffectiveUnit = (unit: EffectiveUnitInput, context?: RuleContext): EffectiveUnit => {
   if (isEffectiveUnit(unit)) {
     return unit;
@@ -132,7 +200,9 @@ const getEffectiveUnit = (unit: EffectiveUnitInput, context?: RuleContext): Effe
     baseEffectiveUnit,
   );
 
-  return applyTechnologyEffects(effectiveUnitWithUnitRules, resolvedContext);
+  const techAdvancedUnit = applyTechnologyEffects(effectiveUnitWithUnitRules, resolvedContext);
+
+  return applyNationalAdvantages(techAdvancedUnit, resolvedContext);
 };
 
 const getEffectiveStats = (unit: EffectiveUnitInput, context?: RuleContext): BaseUnitProfile => {

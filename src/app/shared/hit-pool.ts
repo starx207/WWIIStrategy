@@ -1,6 +1,7 @@
 import { RuleContext } from './effective-unit';
 import { getHitPoints } from './effective-unit.reducer';
 import { MilitaryUnit } from './military-unit';
+import { Nationality } from './nationality';
 import { TargetKind } from './unit-profile';
 import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES, SEA_UNIT_TYPES, UnitType } from './unit-type';
 
@@ -46,6 +47,11 @@ export function unitMatchesTargetKind(unit: MilitaryUnit, targetKind: TargetKind
       return !NEUTRAL_UNIT_TYPES.includes(unit.type);
     case 'air-unit':
       return AIR_UNIT_TYPES.includes(unit.type);
+    case 'aa-vulnerable-air-unit':
+      return (
+        AIR_UNIT_TYPES.includes(unit.type) &&
+        !(unit.type === UnitType.BOMBER && unit.nationality === Nationality.UNITED_STATES)
+      );
     case 'sea-unit':
       return SEA_UNIT_TYPES.includes(unit.type);
     case 'factory':
@@ -55,6 +61,9 @@ export function unitMatchesTargetKind(unit: MilitaryUnit, targetKind: TargetKind
 
 export function targetKindPriorityForUnit(unit: MilitaryUnit): TargetKind[] {
   const targetKinds: TargetKind[] = [];
+  if (unitMatchesTargetKind(unit, 'aa-vulnerable-air-unit')) {
+    targetKinds.push('aa-vulnerable-air-unit');
+  }
   if (unitMatchesTargetKind(unit, 'air-unit')) {
     targetKinds.push('air-unit');
   }

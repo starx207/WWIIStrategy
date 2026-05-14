@@ -229,7 +229,10 @@ export class BattleBoard implements OnInit {
   private formatPendingHitLabel(totalHits: number, hitPool: HitPool): string {
     const restrictedHits = [
       { label: 'sea', count: hitPool['sea-unit'] ?? 0 },
-      { label: 'air', count: hitPool['air-unit'] ?? 0 },
+      {
+        label: 'air',
+        count: (hitPool['air-unit'] ?? 0) + (hitPool['aa-vulnerable-air-unit'] ?? 0),
+      },
     ].filter((item) => item.count > 0);
 
     if (restrictedHits.length === 0) {
