@@ -9,6 +9,8 @@
   right: 0;
   bottom: 0;
   z-index: 1;
+  user-select: none;
+  -webkit-user-select: none;
 
   font-size: 0.8em;
   height: 1em;

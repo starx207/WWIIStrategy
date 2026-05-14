@@ -44,6 +44,8 @@
   padding-left: 0.25em;
   padding-top: 0.1em;
   border: 1px solid red;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .battalion__squads {
