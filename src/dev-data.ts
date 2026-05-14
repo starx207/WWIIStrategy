@@ -101,10 +101,6 @@ export const TEST_DEFENDERS: MilitaryUnit[] = [
   new TankUnit(Nationality.JAPAN),
   new TankUnit(Nationality.GERMANY),
 
-  // Anti-air units
-  new AntiAirUnit(Nationality.GERMANY),
-  new AntiAirUnit(Nationality.GERMANY),
-
   // Fighter jet units
   new FighterJetUnit(Nationality.GERMANY),
   new FighterJetUnit(Nationality.JAPAN),
@@ -143,4 +139,10 @@ export const TEST_DEFENDERS: MilitaryUnit[] = [
   new SubmarineUnit(Nationality.GERMANY),
   new SubmarineUnit(Nationality.JAPAN),
   new SubmarineUnit(Nationality.GERMANY),
+];
+
+export const TEST_NEUTRAL_UNITS: MilitaryUnit[] = [
+  // Anti-air units
+  new AntiAirUnit(Nationality.GERMANY),
+  new AntiAirUnit(Nationality.GERMANY),
 ];

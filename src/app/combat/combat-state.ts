@@ -4,7 +4,7 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { CombatActions, CombatRole } from './combat.actions';
 import { CombatRules } from './combat-rules';
-import { TEST_ATTACKERS, TEST_DEFENDERS } from '../../dev-data';
+import { TEST_ATTACKERS, TEST_DEFENDERS, TEST_NEUTRAL_UNITS } from '../../dev-data';
 import { CasualtyPhase, CombatPhase } from './combat-phase';
 import { CombatProfile, RuleContext } from '@ww2/shared/effective-unit';
 import { getCombatProfiles, getHitPoints } from '@ww2/shared/effective-unit.reducer';
@@ -109,7 +109,7 @@ export class CombatState {
   @Action(CombatActions.PreparingBattlefield)
   prepareBattlefield(context: CombatStateContext) {
     const attackingArmy = [...TEST_ATTACKERS];
-    const defendingArmy = [...TEST_DEFENDERS];
+    const defendingArmy = [...TEST_DEFENDERS, ...TEST_NEUTRAL_UNITS];
 
     const baseState: CombatStateModel = {
       ...DEFAULT_STATE,
@@ -885,10 +885,7 @@ export class CombatState {
   }
 
   private toHitPool(hits: CombatHit[]): HitPool {
-    return hits.reduce(
-      (pool, hit) => addHitsToPool(pool, hit.targetKind, 1),
-      createEmptyHitPool(),
-    );
+    return hits.reduce((pool, hit) => addHitsToPool(pool, hit.targetKind, 1), createEmptyHitPool());
   }
 
   private hasEligibleTarget(
