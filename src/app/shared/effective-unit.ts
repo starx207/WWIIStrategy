@@ -34,7 +34,7 @@ export interface EffectiveUnit {
 }
 
 export type OptionalRuleId = never;
-export type TechnologyId = never;
+export type TechnologyId = 'jet-fighters' | 'heavy-bombers' | 'super-submarines';
 
 export interface RuleState {
   enabledOptionalRules: OptionalRuleId[];

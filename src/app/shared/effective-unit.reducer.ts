@@ -11,6 +11,7 @@ import { MilitaryUnit } from './military-unit';
 import { UNIT_RULES } from './unit-rule';
 import { CombatRole } from '@ww2/combat/combat.actions';
 import { isEffectiveUnit } from './utility';
+import { UnitType } from './unit-type';
 
 type EffectiveUnitInput = MilitaryUnit | EffectiveUnit;
 
@@ -71,6 +72,45 @@ const resolveRuleContext = (context?: RuleContext, extra?: RuleContextInput): Ru
   };
 };
 
+const applyTechnologyEffects = (
+  effectiveUnit: EffectiveUnit,
+  context: RuleContext,
+): EffectiveUnit => {
+  const unitTechnologies =
+    context.ruleState.technologiesByNationality?.[effectiveUnit.nationality] ?? [];
+  if (unitTechnologies.length === 0) {
+    return effectiveUnit;
+  }
+
+  if (unitTechnologies.includes('jet-fighters') && effectiveUnit.type === UnitType.FIGHTER_JET) {
+    const defenseProfile = effectiveUnit.combatProfiles.find(
+      (p) => p.role === 'defend' && p.id === 'standard-combat',
+    );
+    if (defenseProfile) {
+      defenseProfile.target = 5;
+    }
+  }
+
+  if (unitTechnologies.includes('heavy-bombers') && effectiveUnit.type === UnitType.BOMBER) {
+    // All attack profiles get +1 shot per round, not just standard combat.
+    const attackProfiles = effectiveUnit.combatProfiles.filter((p) => p.role === 'attack');
+    attackProfiles.forEach((profile) => {
+      profile.shotsPerRound = 2;
+    });
+  }
+
+  if (unitTechnologies.includes('super-submarines') && effectiveUnit.type === UnitType.SUBMARINE) {
+    const attackProfile = effectiveUnit.combatProfiles.find(
+      (p) => p.role === 'attack' && p.id === 'standard-combat',
+    );
+    if (attackProfile) {
+      attackProfile.target = 3;
+    }
+  }
+
+  return effectiveUnit;
+};
+
 const getEffectiveUnit = (unit: EffectiveUnitInput, context?: RuleContext): EffectiveUnit => {
   if (isEffectiveUnit(unit)) {
     return unit;
@@ -87,10 +127,12 @@ const getEffectiveUnit = (unit: EffectiveUnitInput, context?: RuleContext): Effe
     combatProfiles: buildStandardCombatProfiles(baseStats),
   };
 
-  return UNIT_RULES.reduce(
+  const effectiveUnitWithUnitRules = UNIT_RULES.reduce(
     (effectiveUnit, rule) => rule.modify?.(effectiveUnit, resolvedContext) ?? effectiveUnit,
     baseEffectiveUnit,
   );
+
+  return applyTechnologyEffects(effectiveUnitWithUnitRules, resolvedContext);
 };
 
 const getEffectiveStats = (unit: EffectiveUnitInput, context?: RuleContext): BaseUnitProfile => {
