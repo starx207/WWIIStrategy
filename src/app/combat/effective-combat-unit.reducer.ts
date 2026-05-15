@@ -1,20 +1,15 @@
-import { CasualtyPhase, CombatPhase } from '@ww2/combat/combat-phase';
-import {
-  CombatProfile,
-  DEFAULT_RULE_STATE,
-  EffectiveUnit,
-  RuleContext,
-  RuleContextInput,
-} from './effective-unit';
-import { BaseUnitProfile, UNIT_PROFILES } from './unit-profile';
-import { MilitaryUnit } from './military-unit';
-import { UNIT_RULES } from './unit-rule';
-import { CombatRole } from '@ww2/combat/combat.actions';
-import { isEffectiveUnit } from './utility';
-import { UnitType } from './unit-type';
-import { Nationality } from './nationality';
+import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { CombatProfile, EffectiveCombatUnit, isEffectiveCombatUnit } from './effective-combat-unit';
+import { RuleContext, RuleContextInput } from './rule-context';
+import { BaseUnitProfile, UNIT_PROFILES } from '@ww2/shared/unit-profile';
+import { CasualtyPhase, CombatPhase } from './combat-phase';
+import { DEFAULT_RULE_STATE } from '@ww2/shared/effective-unit';
+import { UnitType } from '@ww2/shared/unit-type';
+import { Nationality } from '@ww2/shared/nationality';
+import { CombatRole } from './combat.actions';
+import { UNIT_RULES } from './rules/unit-rule.definitions';
 
-type EffectiveUnitInput = MilitaryUnit | EffectiveUnit;
+type EffectiveCombatUnitInput = MilitaryUnit | EffectiveCombatUnit;
 
 const isInputOnly = (context?: RuleContext | RuleContextInput): context is RuleContextInput =>
   context !== undefined && !('ruleState' in context);
@@ -74,9 +69,9 @@ const resolveRuleContext = (context?: RuleContext, extra?: RuleContextInput): Ru
 };
 
 const applyTechnologyEffects = (
-  effectiveUnit: EffectiveUnit,
+  effectiveUnit: EffectiveCombatUnit,
   context: RuleContext,
-): EffectiveUnit => {
+): EffectiveCombatUnit => {
   const unitTechnologies =
     context.ruleState.technologiesByNationality?.[effectiveUnit.nationality] ?? [];
   if (unitTechnologies.length === 0) {
@@ -113,9 +108,9 @@ const applyTechnologyEffects = (
 };
 
 const applyNationalAdvantages = (
-  effectiveUnit: EffectiveUnit,
+  effectiveUnit: EffectiveCombatUnit,
   context: RuleContext,
-): EffectiveUnit => {
+): EffectiveCombatUnit => {
   if (effectiveUnit.nationality === Nationality.SOVIET_UNION) {
     const sovietAdvantages = context.ruleState.nationalAdvantages[Nationality.SOVIET_UNION];
     if (
@@ -179,14 +174,17 @@ const applyNationalAdvantages = (
   return effectiveUnit;
 };
 
-const getEffectiveUnit = (unit: EffectiveUnitInput, context?: RuleContext): EffectiveUnit => {
-  if (isEffectiveUnit(unit)) {
+const getEffectiveUnit = (
+  unit: EffectiveCombatUnitInput,
+  context?: RuleContext,
+): EffectiveCombatUnit => {
+  if (isEffectiveCombatUnit(unit)) {
     return unit;
   }
 
   const resolvedContext = resolveRuleContext(context);
   const baseStats = { ...UNIT_PROFILES[unit.type] };
-  const baseEffectiveUnit: EffectiveUnit = {
+  const baseEffectiveUnit: EffectiveCombatUnit = {
     unit,
     id: unit.id,
     type: unit.type,
@@ -205,12 +203,15 @@ const getEffectiveUnit = (unit: EffectiveUnitInput, context?: RuleContext): Effe
   return applyNationalAdvantages(techAdvancedUnit, resolvedContext);
 };
 
-const getEffectiveStats = (unit: EffectiveUnitInput, context?: RuleContext): BaseUnitProfile => {
+const getEffectiveStats = (
+  unit: EffectiveCombatUnitInput,
+  context?: RuleContext,
+): BaseUnitProfile => {
   return getEffectiveUnit(unit, context).stats;
 };
 
 const getCombatTarget = (
-  unit: EffectiveUnitInput,
+  unit: EffectiveCombatUnitInput,
   role: CombatRole,
   context?: RuleContext,
 ): number => {
@@ -218,16 +219,16 @@ const getCombatTarget = (
 };
 
 export const getEffectiveArmy: {
-  (units: EffectiveUnit[]): EffectiveUnit[];
-  (units: MilitaryUnit[], context: RuleContext): EffectiveUnit[];
-} = (units: EffectiveUnitInput[], context?: RuleContext): EffectiveUnit[] => {
+  (units: EffectiveCombatUnit[]): EffectiveCombatUnit[];
+  (units: MilitaryUnit[], context: RuleContext): EffectiveCombatUnit[];
+} = (units: EffectiveCombatUnitInput[], context?: RuleContext): EffectiveCombatUnit[] => {
   return units.map((unit) => getEffectiveUnit(unit, context));
 };
 
 export const getCombatProfiles: {
-  (unit: EffectiveUnit): CombatProfile[];
+  (unit: EffectiveCombatUnit): CombatProfile[];
   (unit: MilitaryUnit, context: RuleContext): CombatProfile[];
-} = (unit: EffectiveUnitInput, context?: RuleContext): CombatProfile[] => {
+} = (unit: EffectiveCombatUnitInput, context?: RuleContext): CombatProfile[] => {
   return getEffectiveUnit(unit, context).combatProfiles.filter((profile) => {
     const matchesRole = context?.role === undefined || profile.role === context.role;
     const matchesPhase = context?.phase === undefined || profile.phases.includes(context.phase);
@@ -236,10 +237,14 @@ export const getCombatProfiles: {
 };
 
 export const getPrimaryCombatProfile: {
-  (unit: EffectiveUnit, role: CombatRole, context?: RuleContextInput): CombatProfile | undefined;
+  (
+    unit: EffectiveCombatUnit,
+    role: CombatRole,
+    context?: RuleContextInput,
+  ): CombatProfile | undefined;
   (unit: MilitaryUnit, role: CombatRole, context: RuleContext): CombatProfile | undefined;
 } = (
-  unit: EffectiveUnitInput,
+  unit: EffectiveCombatUnitInput,
   role: CombatRole,
   context?: RuleContext | RuleContextInput,
 ): CombatProfile | undefined => {
@@ -255,24 +260,26 @@ export const getPrimaryCombatProfile: {
 };
 
 export const getDefaultCombatTarget: {
-  (unit: EffectiveUnit, role: CombatRole): number;
+  (unit: EffectiveCombatUnit, role: CombatRole): number;
   (unit: MilitaryUnit, role: CombatRole, context: RuleContext): number;
-} = (unit: EffectiveUnitInput, role: CombatRole, context?: RuleContext): number => {
+} = (unit: EffectiveCombatUnitInput, role: CombatRole, context?: RuleContext): number => {
   return getCombatTarget(unit, role, context);
 };
 
 export const getHitPoints: {
-  (unit: EffectiveUnit): number;
+  (unit: EffectiveCombatUnit): number;
   (unit: MilitaryUnit, context: RuleContext): number;
-} = (unit: EffectiveUnitInput, context?: RuleContext): number => {
-  return isEffectiveUnit(unit) ? unit.stats.hitPoints : getEffectiveStats(unit, context).hitPoints;
+} = (unit: EffectiveCombatUnitInput, context?: RuleContext): number => {
+  return isEffectiveCombatUnit(unit)
+    ? unit.stats.hitPoints
+    : getEffectiveStats(unit, context).hitPoints;
 };
 
 export const canParticipateInCombatPhase: {
-  (unit: EffectiveUnit, phase: CombatPhase, role: CombatRole): boolean;
+  (unit: EffectiveCombatUnit, phase: CombatPhase, role: CombatRole): boolean;
   (unit: MilitaryUnit, phase: CombatPhase, role: CombatRole, context: RuleContext): boolean;
 } = (
-  unit: EffectiveUnitInput,
+  unit: EffectiveCombatUnitInput,
   phase: CombatPhase,
   role: CombatRole,
   context?: RuleContext,

@@ -2,7 +2,6 @@ import { CdkMenuModule } from '@angular/cdk/menu';
 import { Component, computed, input, output } from '@angular/core';
 import { MilitaryUnitIcon } from '../military-unit-icon';
 import { MilitaryUnitSquad } from '../military-unit-squad';
-import { getHitPoints } from '../effective-unit.reducer';
 import {
   ContextMenuAction,
   ContextMenuActionSelected,
@@ -39,11 +38,7 @@ export class SquadComponent {
   });
 
   protected unitType = computed(() => this.squad().type);
-  protected hpRemaining = computed(() => this.squad().hpRemaining);
-  protected hpMax = computed(() => {
-    const unit = this.squad().units[0];
-    return unit ? getHitPoints(unit) : undefined;
-  });
+  protected variant = computed(() => this.squad().displayVariant);
   protected nationality = computed(() => this.squad().nationality);
   protected unitCount = computed(() => this.squad().count);
 

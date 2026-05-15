@@ -3,23 +3,20 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { CombatPhase } from './combat-phase';
 import { CombatRole } from './combat.actions';
 import { CombatHit, CombatState, CombatStateModel } from './combat-state';
-import { getEffectiveArmy, getHitPoints } from '@ww2/shared/effective-unit.reducer';
+import { createResolvedRuleContext } from './rule-context.factory';
+import { getEffectiveArmy, getHitPoints } from './effective-combat-unit.reducer';
 import {
+  HitPool,
   addHitsToPool,
   createEmptyHitPool,
-  HitPool,
   targetKindPriorityForUnit,
   totalHitPool,
-} from '@ww2/shared/hit-pool';
-import { createResolvedRuleContext } from './rule-context.factory';
+} from './hit-pool';
 
 type AssignmentMap = Record<string, CombatHit[]>;
 
 function hitPoolFromHits(hits: CombatHit[]): HitPool {
-  return hits.reduce(
-    (pool, hit) => addHitsToPool(pool, hit.targetKind, 1),
-    createEmptyHitPool(),
-  );
+  return hits.reduce((pool, hit) => addHitsToPool(pool, hit.targetKind, 1), createEmptyHitPool());
 }
 
 function consumeHitForUnit(
@@ -94,11 +91,6 @@ export class CombatSelectors {
   }
 
   @Selector([CombatState])
-  static canCaptureTerritory(state: CombatStateModel) {
-    return state.canCaptureTerritory;
-  }
-
-  @Selector([CombatState])
   static resolutionSummary(state: CombatStateModel) {
     return state.resolutionSummary;
   }
@@ -117,14 +109,6 @@ export class CombatSelectors {
   static battleReadyIds(role: CombatRole) {
     return createSelector([CombatState], (state: CombatStateModel) => {
       return role === 'attack' ? state.attackerReadyToFireIds : state.defenderReadyToFireIds;
-    });
-  }
-
-  static hitsToAssign(role: CombatRole) {
-    return createSelector([CombatState], (state: CombatStateModel) => {
-      return hitPoolFromHits(
-        role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign,
-      );
     });
   }
 
@@ -193,24 +177,6 @@ export class CombatSelectors {
     });
   }
 
-  @Selector([
-    CombatSelectors.pendingHitCountForRole('attack'),
-    CombatSelectors.pendingHitCountForRole('defend'),
-  ])
-  static pendingHitCount(attackerPending: number, defenderPending: number) {
-    return attackerPending + defenderPending;
-  }
-
-  @Selector([CombatSelectors.pendingHitCount])
-  static pendingHitValues(pendingHitCount: number) {
-    return pendingHitCount > 0 ? Array.from({ length: pendingHitCount }, () => 1) : [];
-  }
-
-  @Selector([CombatSelectors.pendingHitValues])
-  static hitValues(pendingHitValues: number[]) {
-    return pendingHitValues;
-  }
-
   @Selector([CombatState])
   static pendingCasualties(state: CombatStateModel) {
     const pendingIds = new Set<string>();
@@ -268,28 +234,5 @@ export class CombatSelectors {
     }
 
     return damageMap;
-  }
-
-  @Selector([CombatState])
-  static activeCombatRole(state: CombatStateModel) {
-    if (
-      state.currentPhase !== CombatPhase.OPENING_FIRE &&
-      state.currentPhase !== CombatPhase.COMBAT
-    ) {
-      return undefined;
-    }
-
-    const hasAttackersReady = state.attackerReadyToFireIds.length > 0;
-    const hasDefendersReady = state.defenderReadyToFireIds.length > 0;
-
-    if (hasAttackersReady && !hasDefendersReady) {
-      return 'attack';
-    }
-
-    if (hasDefendersReady && !hasAttackersReady) {
-      return 'defend';
-    }
-
-    return undefined;
   }
 }

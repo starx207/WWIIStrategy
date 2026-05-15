@@ -1,5 +1,5 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import type { CombatProfileId } from '@ww2/shared/effective-unit';
+import { CombatProfileId } from './effective-combat-unit';
 
 // TODO: Clean up this file later. Lots of verbose comments.
 

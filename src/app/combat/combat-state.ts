@@ -3,23 +3,24 @@ import { Injectable } from '@angular/core';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { CombatActions, CombatRole } from './combat.actions';
-import { CombatRules } from './combat-rules';
+import { CombatRules } from './rules/combat-rules';
 import { TEST_ATTACKERS, TEST_DEFENDERS, TEST_NEUTRAL_UNITS } from '../../dev-data';
 import { CasualtyPhase, CombatPhase } from './combat-phase';
-import { CombatProfile, RuleContext } from '@ww2/shared/effective-unit';
-import { getCombatProfiles, getHitPoints } from '@ww2/shared/effective-unit.reducer';
-import {
-  addHitsToPool,
-  createEmptyHitPool,
-  HitPool,
-  targetKindPriorityForUnit,
-  totalHitPool,
-  totalRemainingHitCapacityForTargetKind,
-  unitCanConsumeHit,
-  unitMatchesTargetKind,
-} from '@ww2/shared/hit-pool';
 import { TargetKind } from '@ww2/shared/unit-profile';
 import { createResolvedRuleContext } from './rule-context.factory';
+import { CombatProfile } from './effective-combat-unit';
+import { getCombatProfiles, getHitPoints } from './effective-combat-unit.reducer';
+import {
+  totalRemainingHitCapacityForTargetKind,
+  totalHitPool,
+  HitPool,
+  targetKindPriorityForUnit,
+  addHitsToPool,
+  createEmptyHitPool,
+  unitMatchesTargetKind,
+  unitCanConsumeHit,
+} from './hit-pool';
+import { RuleContext } from './rule-context';
 
 export type CombatOutcome = 'ongoing' | 'attackerVictory' | 'defenderVictory';
 

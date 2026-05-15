@@ -1,9 +1,14 @@
-import { RuleContext } from './effective-unit';
-import { getHitPoints } from './effective-unit.reducer';
-import { MilitaryUnit } from './military-unit';
-import { Nationality } from './nationality';
-import { TargetKind } from './unit-profile';
-import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES, SEA_UNIT_TYPES, UnitType } from './unit-type';
+import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { Nationality } from '@ww2/shared/nationality';
+import { TargetKind } from '@ww2/shared/unit-profile';
+import {
+  AIR_UNIT_TYPES,
+  NEUTRAL_UNIT_TYPES,
+  SEA_UNIT_TYPES,
+  UnitType,
+} from '@ww2/shared/unit-type';
+import { RuleContext } from './rule-context';
+import { getHitPoints } from './effective-combat-unit.reducer';
 
 export type HitPool = Partial<Record<TargetKind, number>>;
 

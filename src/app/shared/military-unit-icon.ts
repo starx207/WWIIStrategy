@@ -30,8 +30,7 @@ export class MilitaryUnitIcon {
 
   nationality = input.required<Nationality>();
   unitType = input.required<UnitType>();
-  unitHp = input<number | undefined>();
-  hpRemaining = input<number | undefined>();
+  variant = input<string | undefined>();
 
   private readonly isNeutral = computed(() => NEUTRAL_UNIT_TYPES.includes(this.unitType()));
 
@@ -41,12 +40,9 @@ export class MilitaryUnitIcon {
     if (!isValid) {
       return '';
     }
-    const hpLeft = this.hpRemaining() ?? 0;
-    const hpMax = this.unitHp() ?? hpLeft;
-    const hpIndicator = hpLeft > 0 && hpMax > hpLeft ? `-hp-${this.hpRemaining()}` : '';
     return this.isNeutral()
       ? `images/${this.unitType()}.svg`
-      : `images/${this.nationality()}/${this.unitType()}${hpIndicator}.svg`;
+      : `images/${this.nationality()}/${this.unitType()}${this.variant() ?? ''}.svg`;
   });
 
   protected readonly nationalityClass = computed(() =>

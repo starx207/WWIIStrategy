@@ -1,5 +1,6 @@
-import { RuleContextInput, RuleContext, DEFAULT_RULE_STATE } from '@ww2/shared/effective-unit';
+import { DEFAULT_RULE_STATE } from '@ww2/shared/effective-unit';
 import { CombatStateModel } from './combat-state';
+import { RuleContext, RuleContextInput } from './rule-context';
 
 type RuleContextCombatStateInput = Pick<
   CombatStateModel,

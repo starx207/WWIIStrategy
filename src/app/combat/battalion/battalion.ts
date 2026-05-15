@@ -5,19 +5,17 @@ import {
   SquadComponent,
 } from '@ww2/shared/squad-component/squad-component';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { createSquads, MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
+import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { Store } from '@ngxs/store';
 import { CombatActions, CombatRole } from '../combat.actions';
 import { CombatSelectors } from '../combat-selectors';
 import { CombatPhase } from '../combat-phase';
-import {
-  getDefaultCombatTarget,
-  getPrimaryCombatProfile,
-} from '@ww2/shared/effective-unit.reducer';
-import { HitPool, unitCanConsumeHit } from '@ww2/shared/hit-pool';
 import { UnitType } from '@ww2/shared/unit-type';
-import { CombatProfile, EffectiveUnit } from '@ww2/shared/effective-unit';
 import { CombatHit } from '../combat-state';
+import { CombatProfile, EffectiveCombatUnit } from '../effective-combat-unit';
+import { getDefaultCombatTarget, getPrimaryCombatProfile } from '../effective-combat-unit.reducer';
+import { HitPool, unitCanConsumeHit } from '../hit-pool';
+import { createSquads } from '../create-squads';
 
 type AssignmentMap = Record<string, CombatHit[]>;
 
@@ -54,7 +52,7 @@ export class Battalion {
     return this.roleFilter;
   }
 
-  fromArmy = input<EffectiveUnit[]>([]);
+  fromArmy = input<EffectiveCombatUnit[]>([]);
   protected phase = this.store.selectSignal(CombatSelectors.currentPhase);
 
   battalionUnits = computed(() => {

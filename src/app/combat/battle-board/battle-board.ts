@@ -17,9 +17,9 @@ import { CombatSelectors } from '../combat-selectors';
 import { Dice } from '@ww2/shared/dice/dice';
 import { CombatPhase } from '../combat-phase';
 import { ModalDialog } from '@ww2/shared/modal-dialog/modal-dialog';
-import { CombatProfileId } from '@ww2/shared/effective-unit';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { HitPool } from '@ww2/shared/hit-pool';
+import { CombatProfileId } from '../effective-combat-unit';
+import { HitPool } from '../hit-pool';
 
 const MAX_DICE_COUNT = 20;
 
