@@ -1,7 +1,7 @@
 import { Action, State, StateContext } from '@ngxs/store';
 import { Injectable } from '@angular/core';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES } from '@ww2/shared/unit-type';
+import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { CombatActions, CombatRole } from './combat.actions';
 import { CombatRules } from './rules/combat-rules';
 import { TEST_ATTACKERS, TEST_DEFENDERS, TEST_NEUTRAL_UNITS } from '../../dev-data';
@@ -21,6 +21,8 @@ import {
   unitCanConsumeHit,
 } from './hit-pool';
 import { RuleContext } from './rule-context';
+import { DEFAULT_RULE_STATE, RuleState } from '@ww2/shared/effective-unit';
+import { Nationality } from '@ww2/shared/nationality';
 
 export type CombatOutcome = 'ongoing' | 'attackerVictory' | 'defenderVictory';
 
@@ -59,6 +61,7 @@ export interface BattleResolutionSummary {
 
 export interface CombatStateModel {
   territory?: string;
+  ruleState: RuleState; // TODO: Things like this might be better suited to a dedicated state slice.
   attackingArmy: MilitaryUnit[];
   defendingArmy: MilitaryUnit[];
   currentPhase?: CombatPhase;
@@ -80,6 +83,7 @@ export interface CombatStateModel {
 
 const DEFAULT_STATE: CombatStateModel = {
   territory: 'TestTerritory',
+  ruleState: copyRuleState(DEFAULT_RULE_STATE),
   attackingArmy: [],
   defendingArmy: [],
   currentPhase: undefined,
@@ -99,6 +103,22 @@ const DEFAULT_STATE: CombatStateModel = {
   round: 0,
 };
 
+function copyRuleState(ruleState: RuleState): RuleState {
+  return {
+    technologiesByNationality: Object.fromEntries(
+      Object.entries(ruleState.technologiesByNationality).map(([nationality, technologies]) => [
+        nationality,
+        [...technologies],
+      ]),
+    ),
+    nationalAdvantages: {
+      [Nationality.SOVIET_UNION]: { ...ruleState.nationalAdvantages[Nationality.SOVIET_UNION] },
+      [Nationality.GERMANY]: { ...ruleState.nationalAdvantages[Nationality.GERMANY] },
+      [Nationality.UNITED_STATES]: { ...ruleState.nationalAdvantages[Nationality.UNITED_STATES] },
+    },
+  };
+}
+
 type CombatStateContext = StateContext<CombatStateModel>;
 
 @State<CombatStateModel>({
@@ -114,6 +134,10 @@ export class CombatState {
 
     const baseState: CombatStateModel = {
       ...DEFAULT_STATE,
+      ruleState: this.activateWolfPacksIfQualified(
+        copyRuleState(DEFAULT_RULE_STATE),
+        attackingArmy,
+      ),
       attackingArmy,
       defendingArmy,
       unitDamageById: this.buildInitialDamageMap(attackingArmy, defendingArmy),
@@ -123,6 +147,7 @@ export class CombatState {
     if (initialOutcome.outcome !== 'ongoing') {
       context.setState({
         ...baseState,
+        ruleState: this.restoreBattleScopedRuleState(baseState.ruleState),
         outcome: initialOutcome.outcome,
         canCaptureTerritory: initialOutcome.canCaptureTerritory,
         resolutionSummary: this.buildResolutionSummary(
@@ -410,6 +435,7 @@ export class CombatState {
     }
 
     context.patchState({
+      ruleState: this.restoreBattleScopedRuleState(state.ruleState),
       currentPhase: undefined,
       attackerReadyToFireIds: [],
       defenderReadyToFireIds: [],
@@ -645,6 +671,7 @@ export class CombatState {
     if (outcome.outcome !== 'ongoing') {
       context.setState({
         ...postResolutionState,
+        ruleState: this.restoreBattleScopedRuleState(postResolutionState.ruleState),
         currentPhase: undefined,
       });
       return;
@@ -688,6 +715,52 @@ export class CombatState {
       damageById[unit.id] = 0;
     }
     return damageById;
+  }
+
+  private activateWolfPacksIfQualified(
+    ruleState: RuleState,
+    attackingArmy: MilitaryUnit[],
+  ): RuleState {
+    const germanAdvantages = ruleState.nationalAdvantages[Nationality.GERMANY];
+    if (germanAdvantages.wolfPacks !== 'enabled') {
+      return ruleState;
+    }
+
+    const germanSubmarineCount = attackingArmy.filter(
+      (unit) => unit.type === UnitType.SUBMARINE && unit.nationality === Nationality.GERMANY,
+    ).length;
+    if (germanSubmarineCount < 3) {
+      return ruleState;
+    }
+
+    return {
+      ...ruleState,
+      nationalAdvantages: {
+        ...ruleState.nationalAdvantages,
+        [Nationality.GERMANY]: {
+          ...germanAdvantages,
+          wolfPacks: 'active',
+        },
+      },
+    };
+  }
+
+  private restoreBattleScopedRuleState(ruleState: RuleState): RuleState {
+    const germanAdvantages = ruleState.nationalAdvantages[Nationality.GERMANY];
+    if (germanAdvantages.wolfPacks !== 'active') {
+      return ruleState;
+    }
+
+    return {
+      ...ruleState,
+      nationalAdvantages: {
+        ...ruleState.nationalAdvantages,
+        [Nationality.GERMANY]: {
+          ...germanAdvantages,
+          wolfPacks: 'enabled',
+        },
+      },
+    };
   }
 
   private buildSurvivingDamageMap(

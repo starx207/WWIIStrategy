@@ -19,6 +19,13 @@ import { createSquads } from '../create-squads';
 
 type AssignmentMap = Record<string, CombatHit[]>;
 
+export function findPendingCasualtyInSquad(
+  squad: MilitaryUnitSquad,
+  pendingCasualtyIds: string[],
+): MilitaryUnit | undefined {
+  return squad.units.find((unit) => pendingCasualtyIds.includes(unit.id));
+}
+
 @Component({
   selector: 'ww2-battalion',
   imports: [SquadComponent],
@@ -195,7 +202,11 @@ export class Battalion {
       return;
     }
 
-    const casualty = squad.units[0];
+    const casualty = findPendingCasualtyInSquad(squad, this.pendingCasualtyIds());
+    if (!casualty) {
+      return;
+    }
+
     this.store.dispatch(new CombatActions.UndoCasualties([casualty], this.role));
   }
 

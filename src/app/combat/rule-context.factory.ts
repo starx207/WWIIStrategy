@@ -1,10 +1,9 @@
-import { DEFAULT_RULE_STATE } from '@ww2/shared/effective-unit';
 import { CombatStateModel } from './combat-state';
 import { RuleContext, RuleContextInput } from './rule-context';
 
 type RuleContextCombatStateInput = Pick<
   CombatStateModel,
-  'attackingArmy' | 'defendingArmy' | 'currentPhase'
+  'attackingArmy' | 'defendingArmy' | 'currentPhase' | 'ruleState'
 >;
 
 export const createResolvedRuleContext = (
@@ -16,6 +15,6 @@ export const createResolvedRuleContext = (
     ...ruleContext,
     attackingArmy: state.attackingArmy,
     defendingArmy: state.defendingArmy,
-    ruleState: ruleContext?.ruleState ?? DEFAULT_RULE_STATE,
+    ruleState: ruleContext?.ruleState ?? state.ruleState,
   };
 };

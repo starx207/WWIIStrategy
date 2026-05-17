@@ -132,19 +132,13 @@ const applyNationalAdvantages = (
     if (
       effectiveUnit.type === UnitType.SUBMARINE &&
       context.role === 'attack' &&
-      (germanAdvantages.wolfPacks === 'active' || germanAdvantages.wolfPacks === 'enabled')
+      germanAdvantages.wolfPacks === 'active'
     ) {
-      const submarineCount = context.attackingArmy.filter(
-        (unit) =>
-          unit.type === UnitType.SUBMARINE && unit.nationality === effectiveUnit.nationality,
-      ).length;
-      if (submarineCount >= 3) {
-        const attackProfile = effectiveUnit.combatProfiles.find(
-          (p) => p.role === 'attack' && p.id === 'standard-combat',
-        );
-        if (attackProfile) {
-          attackProfile.target += 1;
-        }
+      const attackProfile = effectiveUnit.combatProfiles.find(
+        (p) => p.role === 'attack' && p.id === 'standard-combat',
+      );
+      if (attackProfile) {
+        attackProfile.target += 1;
       }
     }
   }
