@@ -1,0 +1,6 @@
+.map-container {
+  width: 95vw;
+  height: 95vh;
+  margin: 10px auto;
+  background-color: white; // Matches the image border. So if the image is smaller than the container, it will blend in.
+}
