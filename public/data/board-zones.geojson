@@ -15,6 +15,7 @@
       "properties": {
         "id": "sea-001",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 3",
         "boardNumber": 3,
         "selectable": true,
@@ -143,6 +144,7 @@
       "properties": {
         "id": "sea-002",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 4",
         "boardNumber": 4,
         "selectable": true,
@@ -407,6 +409,7 @@
       "properties": {
         "id": "sea-003",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 1",
         "boardNumber": 1,
         "selectable": true,
@@ -731,6 +734,7 @@
       "properties": {
         "id": "sea-004",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 2",
         "boardNumber": 2,
         "selectable": true,
@@ -1111,6 +1115,7 @@
       "properties": {
         "id": "sea-005",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 6",
         "boardNumber": 6,
         "selectable": true,
@@ -1331,6 +1336,7 @@
       "properties": {
         "id": "sea-006",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 62",
         "boardNumber": 62,
         "selectable": true,
@@ -1575,6 +1581,7 @@
       "properties": {
         "id": "sea-007",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 63",
         "boardNumber": 63,
         "selectable": true,
@@ -1791,6 +1798,7 @@
       "properties": {
         "id": "sea-008",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 7",
         "boardNumber": 7,
         "selectable": true,
@@ -2045,6 +2053,7 @@
       "properties": {
         "id": "sea-009",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 5",
         "boardNumber": 5,
         "selectable": true,
@@ -2309,6 +2318,7 @@
       "properties": {
         "id": "sea-010",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 64",
         "boardNumber": 64,
         "selectable": true,
@@ -2401,6 +2411,7 @@
       "properties": {
         "id": "sea-011",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 9",
         "boardNumber": 9,
         "selectable": true,
@@ -2541,6 +2552,7 @@
       "properties": {
         "id": "sea-012",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 8",
         "boardNumber": 8,
         "selectable": true,
@@ -2649,6 +2661,7 @@
       "properties": {
         "id": "sea-013",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 61",
         "boardNumber": 61,
         "selectable": true,
@@ -2849,6 +2862,7 @@
       "properties": {
         "id": "sea-014",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 60",
         "boardNumber": 60,
         "selectable": true,
@@ -3105,6 +3119,7 @@
       "properties": {
         "id": "sea-015",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 57",
         "boardNumber": 57,
         "selectable": true,
@@ -3165,6 +3180,7 @@
       "properties": {
         "id": "sea-016",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 56",
         "boardNumber": 56,
         "selectable": true,
@@ -3291,6 +3307,7 @@
       "properties": {
         "id": "sea-017",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 55",
         "boardNumber": 55,
         "selectable": true,
@@ -3379,6 +3396,7 @@
       "properties": {
         "id": "sea-018",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 10",
         "boardNumber": 10,
         "selectable": true,
@@ -3607,6 +3625,7 @@
       "properties": {
         "id": "sea-019",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 11",
         "boardNumber": 11,
         "selectable": true,
@@ -3651,6 +3670,7 @@
       "properties": {
         "id": "sea-020",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 12",
         "boardNumber": 12,
         "selectable": true,
@@ -3791,6 +3811,7 @@
       "properties": {
         "id": "sea-021",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 13",
         "boardNumber": 13,
         "selectable": true,
@@ -3979,6 +4000,7 @@
       "properties": {
         "id": "sea-022",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 14",
         "boardNumber": 14,
         "selectable": true,
@@ -4291,6 +4313,7 @@
       "properties": {
         "id": "sea-023",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 16",
         "boardNumber": 16,
         "selectable": true,
@@ -4583,6 +4606,7 @@
       "properties": {
         "id": "sea-024",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 59",
         "boardNumber": 59,
         "selectable": true,
@@ -4775,6 +4799,7 @@
       "properties": {
         "id": "sea-025",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 20",
         "boardNumber": 20,
         "selectable": true,
@@ -4929,6 +4954,7 @@
       "properties": {
         "id": "sea-026",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 19",
         "boardNumber": 19,
         "selectable": true,
@@ -5195,6 +5221,7 @@
       "properties": {
         "id": "sea-027",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 15",
         "boardNumber": 15,
         "selectable": true,
@@ -5355,6 +5382,7 @@
       "properties": {
         "id": "sea-028",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 58",
         "boardNumber": 58,
         "selectable": true,
@@ -5457,6 +5485,7 @@
       "properties": {
         "id": "sea-029",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 51",
         "boardNumber": 51,
         "selectable": true,
@@ -5551,6 +5580,7 @@
       "properties": {
         "id": "sea-030",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 52",
         "boardNumber": 52,
         "selectable": true,
@@ -5701,6 +5731,7 @@
       "properties": {
         "id": "sea-031",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 53",
         "boardNumber": 53,
         "selectable": true,
@@ -5753,6 +5784,7 @@
       "properties": {
         "id": "sea-032",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 54",
         "boardNumber": 54,
         "selectable": true,
@@ -5857,6 +5889,7 @@
       "properties": {
         "id": "sea-033",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 18",
         "boardNumber": 18,
         "selectable": true,
@@ -5969,6 +6002,7 @@
       "properties": {
         "id": "sea-034",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 17",
         "boardNumber": 17,
         "selectable": true,
@@ -6101,6 +6135,7 @@
       "properties": {
         "id": "sea-035",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 35",
         "boardNumber": 35,
         "selectable": true,
@@ -6265,6 +6300,7 @@
       "properties": {
         "id": "sea-036",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 36",
         "boardNumber": 36,
         "selectable": true,
@@ -6527,6 +6563,7 @@
       "properties": {
         "id": "sea-037",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 49",
         "boardNumber": 49,
         "selectable": true,
@@ -6721,6 +6758,7 @@
       "properties": {
         "id": "sea-038",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 34",
         "boardNumber": 34,
         "selectable": true,
@@ -6977,6 +7015,7 @@
       "properties": {
         "id": "sea-039",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 48",
         "boardNumber": 48,
         "selectable": true,
@@ -7155,6 +7194,7 @@
       "properties": {
         "id": "sea-040",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 50",
         "boardNumber": 50,
         "selectable": true,
@@ -7325,6 +7365,7 @@
       "properties": {
         "id": "sea-041",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 21",
         "boardNumber": 21,
         "selectable": true,
@@ -7429,6 +7470,7 @@
       "properties": {
         "id": "sea-042",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 22",
         "boardNumber": 22,
         "selectable": true,
@@ -7505,6 +7547,7 @@
       "properties": {
         "id": "sea-043",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 23",
         "boardNumber": 23,
         "selectable": true,
@@ -7641,6 +7684,7 @@
       "properties": {
         "id": "sea-044",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 37",
         "boardNumber": 37,
         "selectable": true,
@@ -7803,6 +7847,7 @@
       "properties": {
         "id": "sea-045",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 47",
         "boardNumber": 47,
         "selectable": true,
@@ -7997,6 +8042,7 @@
       "properties": {
         "id": "sea-046",
         "kind": "sea",
+        "subKind": "island",
         "name": "Sea Zone 45",
         "boardNumber": 45,
         "selectable": true,
@@ -8219,6 +8265,7 @@
       "properties": {
         "id": "sea-047",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 44",
         "boardNumber": 44,
         "selectable": true,
@@ -8299,6 +8346,7 @@
       "properties": {
         "id": "sea-048",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 43",
         "boardNumber": 43,
         "selectable": true,
@@ -8343,6 +8391,7 @@
       "properties": {
         "id": "sea-049",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 24",
         "boardNumber": 24,
         "selectable": true,
@@ -8409,6 +8458,7 @@
       "properties": {
         "id": "sea-050",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 33",
         "boardNumber": 33,
         "selectable": true,
@@ -8553,6 +8603,7 @@
       "properties": {
         "id": "sea-051",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 32",
         "boardNumber": 32,
         "selectable": true,
@@ -8657,6 +8708,7 @@
       "properties": {
         "id": "sea-052",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 31",
         "boardNumber": 31,
         "selectable": true,
@@ -8701,6 +8753,7 @@
       "properties": {
         "id": "sea-053",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 38",
         "boardNumber": 38,
         "selectable": true,
@@ -8793,6 +8846,7 @@
       "properties": {
         "id": "sea-054",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 46",
         "boardNumber": 46,
         "selectable": true,
@@ -8945,6 +8999,7 @@
       "properties": {
         "id": "sea-055",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 25",
         "boardNumber": 25,
         "selectable": true,
@@ -9057,6 +9112,7 @@
       "properties": {
         "id": "sea-056",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 26",
         "boardNumber": 26,
         "selectable": true,
@@ -9101,6 +9157,7 @@
       "properties": {
         "id": "sea-057",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 27",
         "boardNumber": 27,
         "selectable": true,
@@ -9189,6 +9246,7 @@
       "properties": {
         "id": "sea-058",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 28",
         "boardNumber": 28,
         "selectable": true,
@@ -9277,6 +9335,7 @@
       "properties": {
         "id": "sea-059",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 41",
         "boardNumber": 41,
         "selectable": true,
@@ -9455,6 +9514,7 @@
       "properties": {
         "id": "sea-060",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 42",
         "boardNumber": 42,
         "selectable": true,
@@ -9499,6 +9559,7 @@
       "properties": {
         "id": "sea-061",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 29",
         "boardNumber": 29,
         "selectable": true,
@@ -9559,6 +9620,7 @@
       "properties": {
         "id": "sea-062",
         "kind": "sea",
+        "subKind": "interior",
         "name": "Sea Zone 30",
         "boardNumber": 30,
         "selectable": true,
@@ -9603,6 +9665,7 @@
       "properties": {
         "id": "sea-063",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 39",
         "boardNumber": 39,
         "selectable": true,
@@ -9683,6 +9746,7 @@
       "properties": {
         "id": "sea-064",
         "kind": "sea",
+        "subKind": "coastal",
         "name": "Sea Zone 40",
         "boardNumber": 40,
         "selectable": true,
@@ -9811,6 +9875,7 @@
       "properties": {
         "id": "land-001",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Greenland",
         "terrainColor": "green",
         "nationality": "us",
@@ -10000,6 +10065,7 @@
       "properties": {
         "id": "land-002",
         "kind": "land",
+        "subKind": "coastal",
         "name": "United Kingdom",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -10524,6 +10590,7 @@
       "properties": {
         "id": "land-003",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Norway",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -10841,6 +10908,7 @@
       "properties": {
         "id": "land-004",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Karelia S.S.R.",
         "terrainColor": "rust",
         "nationality": "su",
@@ -11122,6 +11190,7 @@
       "properties": {
         "id": "land-005",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Archangel",
         "terrainColor": "rust",
         "nationality": "su",
@@ -11439,6 +11508,7 @@
       "properties": {
         "id": "land-006",
         "kind": "land",
+        "subKind": "interior",
         "name": "Russia",
         "terrainColor": "rust",
         "nationality": "su",
@@ -11624,6 +11694,7 @@
       "properties": {
         "id": "land-007",
         "kind": "land",
+        "subKind": "interior",
         "name": "Evenki National Okrug",
         "terrainColor": "rust",
         "nationality": "su",
@@ -11753,6 +11824,7 @@
       "properties": {
         "id": "land-008",
         "kind": "land",
+        "subKind": "interior",
         "name": "Yakut S.S.R.",
         "terrainColor": "rust",
         "nationality": "su",
@@ -11858,6 +11930,7 @@
       "properties": {
         "id": "land-009",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Soviet Far East",
         "terrainColor": "rust",
         "nationality": "su",
@@ -12043,6 +12116,7 @@
       "properties": {
         "id": "land-010",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Alaska",
         "terrainColor": "green",
         "nationality": "us",
@@ -12360,6 +12434,7 @@
       "properties": {
         "id": "land-011",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Western Canada",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -12473,6 +12548,7 @@
       "properties": {
         "id": "land-012",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Eastern Canada",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -12874,6 +12950,7 @@
       "properties": {
         "id": "land-013",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Eastern Europe",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -13059,6 +13136,7 @@
       "properties": {
         "id": "land-014",
         "kind": "land",
+        "subKind": "interior",
         "name": "Belorussia",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -13196,6 +13274,7 @@
       "properties": {
         "id": "land-015",
         "kind": "land",
+        "subKind": "interior",
         "name": "West Russia",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -13377,6 +13456,7 @@
       "properties": {
         "id": "land-016",
         "kind": "land",
+        "subKind": "interior",
         "name": "Novosibirsk",
         "terrainColor": "rust",
         "nationality": "su",
@@ -13574,6 +13654,7 @@
       "properties": {
         "id": "land-017",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Buryatia S.S.R.",
         "terrainColor": "rust",
         "nationality": "su",
@@ -13831,6 +13912,7 @@
       "properties": {
         "id": "land-018",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Germany",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -14064,6 +14146,7 @@
       "properties": {
         "id": "land-019",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Manchuria",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -14325,6 +14408,7 @@
       "properties": {
         "id": "land-020",
         "kind": "land",
+        "subKind": "island",
         "name": "Midway Island",
         "terrainColor": "green",
         "nationality": "us",
@@ -14387,6 +14471,7 @@
       "properties": {
         "id": "land-021",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Eastern United States",
         "terrainColor": "green",
         "nationality": "us",
@@ -14700,6 +14785,7 @@
       "properties": {
         "id": "land-022",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Western Europe",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -15053,6 +15139,7 @@
       "properties": {
         "id": "land-023",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Balkans",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -15310,6 +15397,7 @@
       "properties": {
         "id": "land-024",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Ukraine S.S.R.",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -15567,6 +15655,7 @@
       "properties": {
         "id": "land-025",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Caucasus",
         "terrainColor": "rust",
         "nationality": "su",
@@ -15820,6 +15909,7 @@
       "properties": {
         "id": "land-026",
         "kind": "land",
+        "subKind": "interior",
         "name": "Kazakh S.S.R.",
         "terrainColor": "rust",
         "nationality": "su",
@@ -16053,6 +16143,7 @@
       "properties": {
         "id": "land-027",
         "kind": "land",
+        "subKind": "interior",
         "name": "Sinkiang",
         "terrainColor": "green",
         "nationality": "us",
@@ -16262,6 +16353,7 @@
       "properties": {
         "id": "land-028",
         "kind": "land",
+        "subKind": "interior",
         "name": "China",
         "terrainColor": "green",
         "nationality": "us",
@@ -16495,6 +16587,7 @@
       "properties": {
         "id": "land-029",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Japan",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -16903,6 +16996,7 @@
       "properties": {
         "id": "land-030",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Western United States",
         "terrainColor": "green",
         "nationality": "us",
@@ -17040,6 +17134,7 @@
       "properties": {
         "id": "land-031",
         "kind": "land",
+        "subKind": "interior",
         "name": "Central United States",
         "terrainColor": "green",
         "nationality": "us",
@@ -17109,6 +17204,7 @@
       "properties": {
         "id": "land-032",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Gibraltar",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -17198,6 +17294,7 @@
       "properties": {
         "id": "land-033",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Southern Europe",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -17667,6 +17764,7 @@
       "properties": {
         "id": "land-034",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Persia",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -17856,6 +17954,7 @@
       "properties": {
         "id": "land-035",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Kwangtung",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -18173,6 +18272,7 @@
       "properties": {
         "id": "land-036",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Mexico",
         "terrainColor": "green",
         "nationality": "us",
@@ -18335,6 +18435,7 @@
       "properties": {
         "id": "land-037",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Panama",
         "terrainColor": "green",
         "nationality": "us",
@@ -18571,6 +18672,7 @@
       "properties": {
         "id": "land-038",
         "kind": "land",
+        "subKind": "island",
         "name": "West Indies",
         "terrainColor": "green",
         "nationality": "us",
@@ -18728,6 +18830,7 @@
       "properties": {
         "id": "land-039",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Algeria",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -18965,6 +19068,7 @@
       "properties": {
         "id": "land-040",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Libya",
         "terrainColor": "dark-gray",
         "nationality": "de",
@@ -19130,6 +19234,7 @@
       "properties": {
         "id": "land-041",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Trans-Jordan",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -19331,6 +19436,7 @@
       "properties": {
         "id": "land-042",
         "kind": "land",
+        "subKind": "coastal",
         "name": "India",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -19588,6 +19694,7 @@
       "properties": {
         "id": "land-043",
         "kind": "land",
+        "subKind": "coastal",
         "name": "French Indochina",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -19873,6 +19980,7 @@
       "properties": {
         "id": "land-044",
         "kind": "land",
+        "subKind": "island",
         "name": "Okinawa",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -19955,6 +20063,7 @@
       "properties": {
         "id": "land-045",
         "kind": "land",
+        "subKind": "island",
         "name": "Wake Island",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -20021,6 +20130,7 @@
       "properties": {
         "id": "land-046",
         "kind": "land",
+        "subKind": "island",
         "name": "Hawaiian Islands",
         "terrainColor": "green",
         "nationality": "us",
@@ -20151,6 +20261,7 @@
       "properties": {
         "id": "land-047",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Brazil",
         "terrainColor": "green",
         "nationality": "us",
@@ -20428,6 +20539,7 @@
       "properties": {
         "id": "land-048",
         "kind": "land",
+        "subKind": "coastal",
         "name": "French West Africa",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -20597,6 +20709,7 @@
       "properties": {
         "id": "land-049",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Anglo-Egypt",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -20858,6 +20971,7 @@
       "properties": {
         "id": "land-050",
         "kind": "land",
+        "subKind": "island",
         "name": "Philippine Islands",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -21024,6 +21138,7 @@
       "properties": {
         "id": "land-051",
         "kind": "land",
+        "subKind": "coastal",
         "name": "French Equatorial Africa",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -21201,6 +21316,7 @@
       "properties": {
         "id": "land-052",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Italian East Africa",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -21426,6 +21542,7 @@
       "properties": {
         "id": "land-053",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Borneo",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -21616,6 +21733,7 @@
       "properties": {
         "id": "land-054",
         "kind": "land",
+        "subKind": "island",
         "name": "Caroline Islands",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -21758,6 +21876,7 @@
       "properties": {
         "id": "land-055",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Belgian Congo",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -21963,6 +22082,7 @@
       "properties": {
         "id": "land-056",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Rhodesia",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -22164,6 +22284,7 @@
       "properties": {
         "id": "land-057",
         "kind": "land",
+        "subKind": "coastal",
         "name": "East Indies",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -22373,6 +22494,7 @@
       "properties": {
         "id": "land-058",
         "kind": "land",
+        "subKind": "island",
         "name": "New Guinea",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -22546,6 +22668,7 @@
       "properties": {
         "id": "land-059",
         "kind": "land",
+        "subKind": "island",
         "name": "Solomon Islands",
         "terrainColor": "orange",
         "nationality": "ja",
@@ -22716,6 +22839,7 @@
       "properties": {
         "id": "land-060",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Union of South Africa",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -22917,6 +23041,7 @@
       "properties": {
         "id": "land-061",
         "kind": "land",
+        "subKind": "coastal",
         "name": "French Madagascar",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -23070,6 +23195,7 @@
       "properties": {
         "id": "land-062",
         "kind": "land",
+        "subKind": "coastal",
         "name": "Australia",
         "terrainColor": "tan",
         "nationality": "uk",
@@ -23355,6 +23481,7 @@
       "properties": {
         "id": "land-063",
         "kind": "land",
+        "subKind": "coastal",
         "name": "New Zealand",
         "terrainColor": "tan",
         "nationality": "uk",

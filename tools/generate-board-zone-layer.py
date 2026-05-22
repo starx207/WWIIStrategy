@@ -39,6 +39,7 @@ PALETTE = [
 ]
 
 SELECTABLE_LAND_COLORS = {"tan", "rust", "dark-gray", "green", "orange"}
+NEUTRAL_LAND_COLOR = "neutral-gray"
 
 LAND_SEED_THRESHOLD = 12
 LAND_MIN_AREA = 500
@@ -53,6 +54,7 @@ SEA_SPLIT_EROSION_RADIUS = 2
 SEA_OUTLINE_EXPANSION_RADIUS = 4
 SEA_CLOSE_RADIUS = 1
 SEA_SIMPLIFICATION_EPSILON = 3.0
+COASTAL_ADJACENCY_RADIUS = 10
 
 # These are blue inland lakes in the board art, not sea zones.
 INLAND_SEA_EXCLUSION_RECTS = [
@@ -887,6 +889,99 @@ def point_inside_geojson_polygon(point: tuple[float, float], polygon: list[list[
     )
 
 
+def mask_from_components(components_to_mask: list[dict[str, Any]], shape: tuple[int, int]) -> np.ndarray:
+    mask = np.zeros(shape, dtype=bool)
+
+    for component in components_to_mask:
+        for y, run_x0, run_x1 in component["runs"]:
+            mask[y, run_x0 : run_x1 + 1] = True
+
+    return mask
+
+
+def polygon_inside_geojson_polygon(
+    candidate_polygon: list[list[list[float]]],
+    container_polygon: list[list[list[float]]],
+) -> bool:
+    outer_ring = candidate_polygon[0]
+    if not point_inside_geojson_polygon(geojson_ring_centroid(outer_ring), container_polygon):
+        return False
+
+    return all(point_inside_geojson_polygon((point[0], point[1]), container_polygon) for point in outer_ring[:-1])
+
+
+def feature_inside_feature(candidate: dict[str, Any], container: dict[str, Any]) -> bool:
+    container_polygons = geojson_polygons(container["geometry"])
+
+    return all(
+        any(polygon_inside_geojson_polygon(candidate_polygon, container_polygon) for container_polygon in container_polygons)
+        for candidate_polygon in geojson_polygons(candidate["geometry"])
+    )
+
+
+def land_containing_sea_ids(features: list[dict[str, Any]]) -> dict[str, str]:
+    sea_features = [feature for feature in features if feature["properties"]["kind"] == "sea"]
+    result = {}
+
+    for land_feature in (feature for feature in features if feature["properties"]["kind"] == "land"):
+        containers = [
+            sea_feature["properties"]["id"]
+            for sea_feature in sea_features
+            if feature_inside_feature(land_feature, sea_feature)
+        ]
+
+        if len(containers) == 1:
+            result[land_feature["properties"]["id"]] = containers[0]
+
+    return result
+
+
+def feature_has_opposite_border(
+    feature: dict[str, Any],
+    feature_masks: dict[str, np.ndarray],
+    land_mask: np.ndarray,
+    sea_mask: np.ndarray,
+    neutral_mask: np.ndarray,
+) -> bool:
+    feature_id = feature["properties"]["id"]
+    feature_kind = feature["properties"]["kind"]
+    opposite_mask = sea_mask if feature_kind == "land" else land_mask
+    search_mask = dilate(feature_masks[feature_id], COASTAL_ADJACENCY_RADIUS)
+    neutral_clearance = ~dilate(neutral_mask, COASTAL_ADJACENCY_RADIUS)
+
+    return bool(np.any(search_mask & opposite_mask & neutral_clearance))
+
+
+def add_zone_subkinds(
+    features: list[dict[str, Any]],
+    feature_masks: dict[str, np.ndarray],
+    neutral_mask: np.ndarray,
+) -> None:
+    land_mask = np.zeros_like(neutral_mask)
+    sea_mask = np.zeros_like(neutral_mask)
+
+    for feature in features:
+        feature_id = feature["properties"]["id"]
+        if feature["properties"]["kind"] == "land":
+            land_mask |= feature_masks[feature_id]
+        else:
+            sea_mask |= feature_masks[feature_id]
+
+    contained_land_by_sea = land_containing_sea_ids(features)
+    island_sea_ids = set(contained_land_by_sea.values())
+
+    for feature in features:
+        properties = feature["properties"]
+        feature_id = properties["id"]
+
+        if feature_id in contained_land_by_sea or feature_id in island_sea_ids:
+            properties["subKind"] = "island"
+        elif feature_has_opposite_border(feature, feature_masks, land_mask, sea_mask, neutral_mask):
+            properties["subKind"] = "coastal"
+        else:
+            properties["subKind"] = "interior"
+
+
 def orient_hole_for_polygon(
     hole: list[list[float]],
     polygon: list[list[list[float]]],
@@ -989,7 +1084,7 @@ def combine_components(group: list[dict[str, Any]], config: dict[str, Any] | Non
     return component_from_runs(runs, group[0]["terrainColor"])
 
 
-def make_masks(image: Image.Image) -> tuple[dict[str, np.ndarray], np.ndarray]:
+def make_masks(image: Image.Image) -> tuple[dict[str, np.ndarray], np.ndarray, np.ndarray]:
     pixels = np.array(image).astype(np.int32)
     colors = np.array([color for _, color, _ in PALETTE], dtype=np.int32)
     distances = ((pixels[:, :, None, :] - colors[None, None, :, :]) ** 2).sum(axis=3)
@@ -1007,11 +1102,14 @@ def make_masks(image: Image.Image) -> tuple[dict[str, np.ndarray], np.ndarray]:
     sea_threshold = PALETTE[sea_index][2]
     sea_mask = (nearest == sea_index) & (minimum_distances <= sea_threshold * sea_threshold)
 
-    return land_color_masks, sea_mask
+    neutral_index = palette_name_to_index[NEUTRAL_LAND_COLOR]
+    neutral_mask = distances[:, :, neutral_index] <= LAND_SEED_THRESHOLD * LAND_SEED_THRESHOLD
+
+    return land_color_masks, sea_mask, neutral_mask
 
 
 def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
-    land_color_masks, sea_mask = make_masks(image)
+    land_color_masks, sea_mask, neutral_mask = make_masks(image)
     sea_free = sea_mask & ~dilate(~sea_mask, SEA_SPLIT_EROSION_RADIUS)
     sea_free = remove_lines(sea_free, SEA_DIVIDER_LINES, width=7)
 
@@ -1072,6 +1170,7 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
         target.extend(panama_sliver)
 
     features = []
+    feature_masks = {}
 
     for index, group in enumerate(
         sorted(
@@ -1101,6 +1200,7 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
 
         feature_id = f"sea-{index:03d}"
         board_number = SEA_ZONE_BOARD_NUMBERS[feature_id]
+        feature_masks[feature_id] = mask_from_components(group, sea_mask.shape)
         geometry = (
             {"type": "Polygon", "coordinates": polygons[0]}
             if len(polygons) == 1
@@ -1113,6 +1213,7 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
                 "properties": {
                     "id": feature_id,
                     "kind": "sea",
+                    "subKind": "interior",
                     "name": f"Sea Zone {board_number}",
                     "boardNumber": board_number,
                     "selectable": True,
@@ -1184,9 +1285,11 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
 
         feature_id = f"land-{index:03d}"
         terrain_color = component["terrainColor"]
+        feature_masks[feature_id] = mask_from_components([component], sea_mask.shape)
         properties = {
             "id": feature_id,
             "kind": "land",
+            "subKind": "interior",
             "name": LAND_ZONE_NAMES[feature_id],
             "terrainColor": terrain_color,
             "nationality": NATIONALITY_BY_TERRAIN_COLOR[terrain_color],
@@ -1216,6 +1319,7 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
             }
         )
 
+    add_zone_subkinds(features, feature_masks, neutral_mask)
     add_land_holes_to_target_sea_zones(features)
 
     return {
