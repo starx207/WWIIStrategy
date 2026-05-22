@@ -8,13 +8,15 @@ import {
   ContextMenuComponent,
 } from '../context-menu/context-menu';
 import { EffectiveUnit } from '../effective-unit';
+import { MilitaryUnit } from '../military-unit';
 
 export type SquadDirection = 'left-face' | 'right-face';
 
-export type SquadContextAction = ContextMenuAction<MilitaryUnitSquad>;
-export interface SquadContextActionSelected {
-  action: SquadContextAction;
-  squad: MilitaryUnitSquad;
+export type SquadContextAction<T extends EffectiveUnit | MilitaryUnit = MilitaryUnit> =
+  ContextMenuAction<MilitaryUnitSquad<T>>;
+export interface SquadContextActionSelected<T extends EffectiveUnit | MilitaryUnit = MilitaryUnit> {
+  action: SquadContextAction<T>;
+  squad: MilitaryUnitSquad<T>;
 }
 
 @Component({
@@ -27,12 +29,12 @@ export interface SquadContextActionSelected {
     '(click)': 'selectSquad()',
   },
 })
-export class SquadComponent {
-  squad = input.required<MilitaryUnitSquad<EffectiveUnit>>();
+export class SquadComponent<T extends EffectiveUnit | MilitaryUnit = MilitaryUnit> {
+  squad = input.required<MilitaryUnitSquad<T>>();
   selected = output();
-  contextMenuActionSelected = output<SquadContextActionSelected>();
+  contextMenuActionSelected = output<SquadContextActionSelected<T>>();
   direction = input<SquadDirection>('left-face');
-  contextMenuActions = input<SquadContextAction[]>([]);
+  contextMenuActions = input<SquadContextAction<T>[]>([]);
   disabled = input(false, {
     transform: (value: boolean | string) => (typeof value === 'string' ? value === '' : value),
   });
@@ -56,7 +58,7 @@ export class SquadComponent {
     this.selected.emit();
   }
 
-  protected onContextMenuActionSelected(event: ContextMenuActionSelected<MilitaryUnitSquad>) {
+  protected onContextMenuActionSelected(event: ContextMenuActionSelected<MilitaryUnitSquad<T>>) {
     this.contextMenuActionSelected.emit({ action: event.action, squad: event.context });
   }
 }
