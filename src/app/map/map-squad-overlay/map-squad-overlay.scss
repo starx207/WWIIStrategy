@@ -1,0 +1,42 @@
+:root {
+  --map-squad-grid-cell-size: 1.0125rem;
+  --map-squad-grid-gap: 0.075rem;
+  --map-squad-overlay-scale: 1;
+}
+
+.map-squad-overlay {
+  display: grid;
+  gap: var(--map-squad-grid-gap);
+  align-items: center;
+  justify-items: center;
+  pointer-events: auto;
+  transform: scale(var(--map-squad-overlay-scale));
+  transform-origin: center center;
+}
+
+.map-squad-overlay__squad {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  filter: drop-shadow(0.08em 0.12em 0.08em rgba(0, 0, 0, 0.55));
+  --squad-font-size: var(--map-squad-grid-cell-size);
+  --squad-count-badge-font-size: 0.3em;
+  --squad-count-badge-line-height: 1;
+  --squad-count-badge-min-width: 1em;
+  --squad-count-badge-height: 1em;
+  --squad-count-badge-padding: 0.18em 0.18em;
+}
+
+.map-squad-overlay__squad .military-unit-squad__content,
+.map-squad-overlay__squad .military-unit-icon,
+.map-squad-overlay__squad .graphics-container {
+  width: 100%;
+  height: 100%;
+}
+
+.map-squad-overlay__squad svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

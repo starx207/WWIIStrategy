@@ -1,0 +1,14 @@
+<div
+  class="map-squad-overlay"
+  [style.grid-template-columns]="'repeat(' + layout().columns + ', var(--map-squad-grid-cell-size))'"
+  [style.grid-template-rows]="'repeat(' + layout().rows + ', var(--map-squad-grid-cell-size))'"
+>
+  @for (positionedSquad of layout().squads; track positionedSquad.squad.id) {
+    <ww2-squad
+      class="map-squad-overlay__squad"
+      [squad]="positionedSquad.squad"
+      [style.grid-column]="positionedSquad.gridColumn + ' / span ' + positionedSquad.columns"
+      [style.grid-row]="positionedSquad.gridRow + ' / span ' + positionedSquad.rows"
+    />
+  }
+</div>

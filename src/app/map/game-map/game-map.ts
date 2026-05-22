@@ -1,8 +1,22 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  ApplicationRef,
+  Component,
+  effect,
+  EffectRef,
+  ElementRef,
+  EnvironmentInjector,
+  inject,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+import { Store } from '@ngxs/store';
+import { FeatureLike } from 'ol/Feature';
+import { Map as OlMap } from 'ol';
 import { configureMap } from '../map-config';
 import { mapTerritoriesLayer, TerritoryStyleId } from '../layers/map-territories';
-import { Map } from 'ol';
-import { FeatureLike } from 'ol/Feature';
+import { MapSelectors } from '../map-selectors';
+import { connectSquadOverlaysToMap } from '../overlays/squad-placement';
 
 @Component({
   selector: 'ww2-game-map',
@@ -14,7 +28,16 @@ export class GameMap implements OnInit, OnDestroy {
   @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef<HTMLElement>;
   selectedZoneId: string | undefined;
 
-  private map!: Map;
+  private readonly appRef = inject(ApplicationRef);
+  private readonly environmentInjector = inject(EnvironmentInjector);
+  private readonly store = inject(Store);
+  private readonly squadsByTerritoryName = this.store.selectSignal(
+    MapSelectors.squadsByTerritoryName,
+  );
+
+  private map!: OlMap;
+  private squadOverlayCleanup: (() => void) | undefined;
+  private squadOverlayEffect: EffectRef | undefined;
 
   ngOnInit(): void {
     const zoneLayer = mapTerritoriesLayer(this.selectZoneStyle.bind(this));
@@ -22,6 +45,16 @@ export class GameMap implements OnInit, OnDestroy {
     const { map } = configureMap(this.mapContainer.nativeElement, {
       layers: [zoneLayer],
     });
+    this.map = map;
+    const { cleanup, refresh } = connectSquadOverlaysToMap(
+      this.map,
+      zoneLayer,
+      this.squadsByTerritoryName,
+      this.appRef,
+      this.environmentInjector,
+    );
+    this.squadOverlayCleanup = cleanup;
+    this.squadOverlayEffect = effect(() => refresh(this.squadsByTerritoryName()));
 
     map.on('singleclick', (event) => {
       this.selectedZoneId = map.forEachFeatureAtPixel(event.pixel, (feature) => {
@@ -30,11 +63,12 @@ export class GameMap implements OnInit, OnDestroy {
       });
       zoneLayer.changed();
     });
-
-    this.map = map;
   }
 
   ngOnDestroy(): void {
+    this.squadOverlayEffect?.destroy();
+    this.squadOverlayCleanup?.();
+
     if (this.map) {
       this.map.setTarget(undefined);
     }
