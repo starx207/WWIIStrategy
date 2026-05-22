@@ -1,5 +1,5 @@
 :host {
-  font-size: 1rem;
+  font-size: var(--squad-font-size, 1rem);
   display: block;
   position: relative;
 }
@@ -12,9 +12,11 @@
   user-select: none;
   -webkit-user-select: none;
 
-  font-size: 0.8em;
-  height: 1em;
-  padding: 2px;
+  font-size: var(--squad-count-badge-font-size, 0.8em);
+  line-height: var(--squad-count-badge-line-height, normal);
+  min-width: var(--squad-count-badge-min-width, auto);
+  height: var(--squad-count-badge-height, 1em);
+  padding: var(--squad-count-badge-padding, 2px);
 }
 
 :host.military-unit-squad__left-face {
