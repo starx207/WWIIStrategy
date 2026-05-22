@@ -1,0 +1,429 @@
+import { MilitaryUnit, InfantryUnit, TankUnit, FighterJetUnit, FactoryUnit, ArtilleryUnit, TransportUnit, DestroyerUnit, AntiAirUnit, BomberUnit, BattleshipUnit, AircraftCarrierUnit, SubmarineUnit } from '@ww2/shared/military-unit';
+import { Nationality } from '@ww2/shared/nationality';
+import { LandTerritoryName, TerritoryName } from './map-state';
+
+
+export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, MilitaryUnit[]>> = {
+  // UNITED STATES CONTROLLED TERRITORIES
+  'Western United States': [
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new AntiAirUnit(Nationality.UNITED_STATES),
+    new FactoryUnit(Nationality.UNITED_STATES),
+    new FighterJetUnit(Nationality.UNITED_STATES),
+  ],
+  'Central United States': [
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new InfantryUnit(Nationality.UNITED_STATES),
+  ],
+  'Eastern United States': [
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new ArtilleryUnit(Nationality.UNITED_STATES),
+    new TankUnit(Nationality.UNITED_STATES),
+    new AntiAirUnit(Nationality.UNITED_STATES),
+    new FactoryUnit(Nationality.UNITED_STATES),
+    new FighterJetUnit(Nationality.UNITED_STATES),
+    new BomberUnit(Nationality.UNITED_STATES),
+  ],
+  Alaska: [
+    new InfantryUnit(Nationality.UNITED_STATES),
+  ],
+  'Midway Island': [
+    new InfantryUnit(Nationality.UNITED_STATES),
+  ],
+  'Hawaiian Islands': [
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new FighterJetUnit(Nationality.UNITED_STATES),
+  ],
+  China: [
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new FighterJetUnit(Nationality.UNITED_STATES),
+  ],
+  Sinkiang: [
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new InfantryUnit(Nationality.UNITED_STATES),
+    new FighterJetUnit(Nationality.UNITED_STATES),
+  ],
+  'Sea Zone 55': [
+    new BattleshipUnit(Nationality.UNITED_STATES),
+    new TransportUnit(Nationality.UNITED_STATES),
+  ],
+  'Sea Zone 10': [
+    new TransportUnit(Nationality.UNITED_STATES),
+    new TransportUnit(Nationality.UNITED_STATES),
+    new DestroyerUnit(Nationality.UNITED_STATES),
+  ],
+  'Sea Zone 20': [
+    new DestroyerUnit(Nationality.UNITED_STATES),
+  ],
+  'Sea Zone 52': [
+    new AircraftCarrierUnit(Nationality.UNITED_STATES),
+    new FighterJetUnit(Nationality.UNITED_STATES),
+    new SubmarineUnit(Nationality.UNITED_STATES),
+  ],
+
+  // UNITED KINGDOM CONTROLLED TERRITORIES
+  'United Kingdom': [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+    new ArtilleryUnit(Nationality.UNITED_KINGDOM),
+    new TankUnit(Nationality.UNITED_KINGDOM),
+    new AntiAirUnit(Nationality.UNITED_KINGDOM),
+    new FactoryUnit(Nationality.UNITED_KINGDOM),
+    new FighterJetUnit(Nationality.UNITED_KINGDOM),
+    new FighterJetUnit(Nationality.UNITED_KINGDOM),
+    new BomberUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Eastern Canada': [
+    new TankUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Western Canada': [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'New Zealand': [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+  ],
+  Australia: [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+  ],
+  India: [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+    new AntiAirUnit(Nationality.UNITED_KINGDOM),
+  ],
+  Persia: [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Trans-Jordan': [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Anglo-Egypt': [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+    new TankUnit(Nationality.UNITED_KINGDOM),
+    new FighterJetUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Union of South Africa': [
+    new InfantryUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Sea Zone 2': [
+    new BattleshipUnit(Nationality.UNITED_KINGDOM),
+    new TransportUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Sea Zone 1': [
+    new TransportUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Sea Zone 40': [
+    new TransportUnit(Nationality.UNITED_KINGDOM),
+    new SubmarineUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Sea Zone 35': [
+    new AircraftCarrierUnit(Nationality.UNITED_KINGDOM),
+    new FighterJetUnit(Nationality.UNITED_KINGDOM),
+    new TransportUnit(Nationality.UNITED_KINGDOM),
+    new DestroyerUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Sea Zone 15': [
+    new DestroyerUnit(Nationality.UNITED_KINGDOM),
+  ],
+  'Sea Zone 13': [
+    new BattleshipUnit(Nationality.UNITED_KINGDOM),
+  ],
+
+  // SOVIET UNION CONTROLLED TERRITORIES
+  Russia: [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new ArtilleryUnit(Nationality.SOVIET_UNION),
+    new TankUnit(Nationality.SOVIET_UNION),
+    new TankUnit(Nationality.SOVIET_UNION),
+    new AntiAirUnit(Nationality.SOVIET_UNION),
+    new FactoryUnit(Nationality.SOVIET_UNION),
+    new FighterJetUnit(Nationality.SOVIET_UNION),
+  ],
+  'Karelia S.S.R.': [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new FighterJetUnit(Nationality.SOVIET_UNION),
+  ],
+  Archangel: [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new TankUnit(Nationality.SOVIET_UNION),
+  ],
+  Caucasus: [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new ArtilleryUnit(Nationality.SOVIET_UNION),
+    new TankUnit(Nationality.SOVIET_UNION),
+    new AntiAirUnit(Nationality.SOVIET_UNION),
+    new FactoryUnit(Nationality.SOVIET_UNION),
+  ],
+  'Kazakh S.S.R.': [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+  ],
+  Novosibirsk: [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+  ],
+  'Evenki National Okrug': [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+  ],
+  'Yakut S.S.R.': [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+  ],
+  'Buryatia S.S.R.': [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+  ],
+  'Soviet Far East': [
+    new InfantryUnit(Nationality.SOVIET_UNION),
+    new InfantryUnit(Nationality.SOVIET_UNION),
+  ],
+  'Sea Zone 4': [
+    new SubmarineUnit(Nationality.SOVIET_UNION),
+  ],
+
+  // GERMANY CONTROLLED TERRITORIES
+  Germany: [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+    new AntiAirUnit(Nationality.GERMANY),
+    new FactoryUnit(Nationality.GERMANY),
+    new FighterJetUnit(Nationality.GERMANY),
+    new BomberUnit(Nationality.GERMANY),
+  ],
+  'Western Europe': [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+    new AntiAirUnit(Nationality.GERMANY),
+    new FighterJetUnit(Nationality.GERMANY),
+  ],
+  Norway: [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new FighterJetUnit(Nationality.GERMANY),
+  ],
+  'Southern Europe': [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new ArtilleryUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+    new AntiAirUnit(Nationality.GERMANY),
+    new FactoryUnit(Nationality.GERMANY),
+  ],
+  'Eastern Europe': [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+    new FighterJetUnit(Nationality.GERMANY),
+  ],
+  Balkans: [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+    new FighterJetUnit(Nationality.GERMANY),
+  ],
+  Belorussia: [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+  ],
+  'Ukraine S.S.R.': [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new ArtilleryUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+    new FighterJetUnit(Nationality.GERMANY),
+  ],
+  'West Russia': [
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new InfantryUnit(Nationality.GERMANY),
+    new ArtilleryUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+  ],
+  Algeria: [
+    new InfantryUnit(Nationality.GERMANY),
+    new ArtilleryUnit(Nationality.GERMANY),
+  ],
+  Libya: [
+    new InfantryUnit(Nationality.GERMANY),
+    new TankUnit(Nationality.GERMANY),
+  ],
+  'Sea Zone 5': [
+    new TransportUnit(Nationality.GERMANY),
+    new SubmarineUnit(Nationality.GERMANY),
+    new SubmarineUnit(Nationality.GERMANY),
+    new DestroyerUnit(Nationality.GERMANY),
+  ],
+  'Sea Zone 8': [
+    new SubmarineUnit(Nationality.GERMANY),
+  ],
+  'Sea Zone 14': [
+    new BattleshipUnit(Nationality.GERMANY),
+    new TransportUnit(Nationality.GERMANY),
+  ],
+
+  // JAPAN CONTROLLED TERRITORIES
+  Japan: [
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+    new ArtilleryUnit(Nationality.JAPAN),
+    new TankUnit(Nationality.JAPAN),
+    new AntiAirUnit(Nationality.JAPAN),
+    new FactoryUnit(Nationality.JAPAN),
+    new FighterJetUnit(Nationality.JAPAN),
+    new BomberUnit(Nationality.JAPAN),
+  ],
+  Manchuria: [
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+    new FighterJetUnit(Nationality.JAPAN),
+  ],
+  Kwangtung: [
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  'French Indochina': [
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+    new FighterJetUnit(Nationality.JAPAN),
+  ],
+  'East Indies': [
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  Borneo: [
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  'Philippine Islands': [
+    new InfantryUnit(Nationality.JAPAN),
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  Okinawa: [
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  'Wake Island': [
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  'Caroline Islands': [
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  'New Guinea': [
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  'Solomon Islands': [
+    new InfantryUnit(Nationality.JAPAN),
+  ],
+  'Sea Zone 60': [
+    new BattleshipUnit(Nationality.JAPAN),
+    new TransportUnit(Nationality.JAPAN),
+  ],
+  'Sea Zone 59': [
+    new TransportUnit(Nationality.JAPAN),
+  ],
+  'Sea Zone 37': [
+    new BattleshipUnit(Nationality.JAPAN),
+    new AircraftCarrierUnit(Nationality.JAPAN),
+    new FighterJetUnit(Nationality.JAPAN),
+    new FighterJetUnit(Nationality.JAPAN),
+  ],
+  'Sea Zone 50': [
+    new AircraftCarrierUnit(Nationality.JAPAN),
+    new FighterJetUnit(Nationality.JAPAN),
+    new DestroyerUnit(Nationality.JAPAN),
+  ],
+  'Sea Zone 45': [
+    new SubmarineUnit(Nationality.JAPAN),
+  ]
+};
+
+export const INITIAL_LAND_TERRITORY_CONTROL = {
+  Greenland: Nationality.UNITED_STATES,
+  'United Kingdom': Nationality.UNITED_KINGDOM,
+  Norway: Nationality.GERMANY,
+  'Karelia S.S.R.': Nationality.SOVIET_UNION,
+  Archangel: Nationality.SOVIET_UNION,
+  Russia: Nationality.SOVIET_UNION,
+  'Evenki National Okrug': Nationality.SOVIET_UNION,
+  'Yakut S.S.R.': Nationality.SOVIET_UNION,
+  'Soviet Far East': Nationality.SOVIET_UNION,
+  Alaska: Nationality.UNITED_STATES,
+  'Western Canada': Nationality.UNITED_KINGDOM,
+  'Eastern Canada': Nationality.UNITED_KINGDOM,
+  'Eastern Europe': Nationality.GERMANY,
+  Belorussia: Nationality.GERMANY,
+  'West Russia': Nationality.GERMANY,
+  Novosibirsk: Nationality.SOVIET_UNION,
+  'Buryatia S.S.R.': Nationality.SOVIET_UNION,
+  Germany: Nationality.GERMANY,
+  Manchuria: Nationality.JAPAN,
+  'Midway Island': Nationality.UNITED_STATES,
+  'Eastern United States': Nationality.UNITED_STATES,
+  'Western Europe': Nationality.GERMANY,
+  Balkans: Nationality.GERMANY,
+  'Ukraine S.S.R.': Nationality.GERMANY,
+  Caucasus: Nationality.SOVIET_UNION,
+  'Kazakh S.S.R.': Nationality.SOVIET_UNION,
+  Sinkiang: Nationality.UNITED_STATES,
+  China: Nationality.UNITED_STATES,
+  Japan: Nationality.JAPAN,
+  'Western United States': Nationality.UNITED_STATES,
+  'Central United States': Nationality.UNITED_STATES,
+  Gibraltar: Nationality.UNITED_KINGDOM,
+  'Southern Europe': Nationality.GERMANY,
+  Persia: Nationality.UNITED_KINGDOM,
+  Kwangtung: Nationality.JAPAN,
+  Mexico: Nationality.UNITED_STATES,
+  Panama: Nationality.UNITED_STATES,
+  'West Indies': Nationality.UNITED_STATES,
+  Algeria: Nationality.GERMANY,
+  Libya: Nationality.GERMANY,
+  'Trans-Jordan': Nationality.UNITED_KINGDOM,
+  India: Nationality.UNITED_KINGDOM,
+  'French Indochina': Nationality.JAPAN,
+  Okinawa: Nationality.JAPAN,
+  'Wake Island': Nationality.JAPAN,
+  'Hawaiian Islands': Nationality.UNITED_STATES,
+  Brazil: Nationality.UNITED_STATES,
+  'French West Africa': Nationality.UNITED_KINGDOM,
+  'Anglo-Egypt': Nationality.UNITED_KINGDOM,
+  Manila: Nationality.JAPAN,
+  'French Equatorial Africa': Nationality.UNITED_KINGDOM,
+  'Italian East Africa': Nationality.UNITED_KINGDOM,
+  Borneo: Nationality.JAPAN,
+  'Caroline Islands': Nationality.JAPAN,
+  'Belgian Congo': Nationality.UNITED_KINGDOM,
+  Rhodesia: Nationality.UNITED_KINGDOM,
+  'East Indies': Nationality.JAPAN,
+  'New Guinea': Nationality.JAPAN,
+  'Solomon Islands': Nationality.JAPAN,
+  'Union of South Africa': Nationality.UNITED_KINGDOM,
+  'French Madagascar': Nationality.UNITED_KINGDOM,
+  Australia: Nationality.UNITED_KINGDOM,
+  'New Zealand': Nationality.UNITED_KINGDOM,
+} as Record<LandTerritoryName, Nationality>;
+
