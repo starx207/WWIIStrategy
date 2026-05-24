@@ -15,6 +15,7 @@ import io
 import json
 import math
 import re
+import subprocess
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -1332,6 +1333,27 @@ def write_text_lf(path: Path, content: str) -> None:
         output.write(content)
 
 
+def format_generated_files(paths: list[Path]) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    prettier = repo_root / "node_modules" / ".bin" / "prettier"
+
+    if not prettier.exists():
+        raise FileNotFoundError("Prettier is not installed. Run npm install before generating board zone files.")
+
+    subprocess.run(
+        [
+            prettier.as_posix(),
+            "--write",
+            "--ignore-unknown",
+            "--config",
+            (repo_root / "package.json").as_posix(),
+            *(path.resolve().as_posix() for path in paths),
+        ],
+        cwd=repo_root,
+        check=True,
+    )
+
+
 def land_merge_index(component: dict[str, Any], color_name: str) -> int | None:
     for index, config in enumerate(LAND_MERGE_RECTS):
         if config["color"] != color_name:
@@ -1696,24 +1718,32 @@ def main() -> None:
     args = parse_args()
     image = extract_embedded_png(args.input)
     geojson, territory_features, adjacency_by_name, special_adjacencies = build_geojson(image, args.input)
+    generated_files = [
+        args.output,
+        args.territories_output_dir / "territory-names.ts",
+        args.territories_output_dir / "territory-info.ts",
+        args.territories_output_dir / "territory-adjacency.ts",
+    ]
 
     write_text_lf(args.output, json.dumps(geojson, indent=2) + "\n")
 
     write_text_lf(
-        args.territories_output_dir / "territory-names.ts",
+        generated_files[1],
         format_territory_names_typescript(territory_features),
     )
     write_text_lf(
-        args.territories_output_dir / "territory-info.ts",
+        generated_files[2],
         format_territory_info_typescript(territory_features),
     )
     write_text_lf(
-        args.territories_output_dir / "territory-adjacency.ts",
+        generated_files[3],
         format_territory_adjacency_typescript(adjacency_by_name, special_adjacencies),
     )
 
     if args.preview:
         write_preview(image, geojson, args.preview)
+
+    format_generated_files(generated_files)
 
     sea_count = sum(1 for feature in territory_features if feature["properties"]["kind"] == "sea")
     land_count = sum(1 for feature in territory_features if feature["properties"]["kind"] == "land")
