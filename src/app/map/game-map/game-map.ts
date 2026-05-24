@@ -17,6 +17,8 @@ import { configureMap } from '../map-config';
 import { mapTerritoriesLayer, TerritoryStyleId } from '../layers/map-territories';
 import { MapSelectors } from '../map-selectors';
 import { connectSquadOverlaysToMap } from '../overlays/squad-placement';
+import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
+import type { TerritoryName } from '../../territories/territory-names';
 
 @Component({
   selector: 'ww2-game-map',
@@ -79,6 +81,9 @@ export class GameMap implements OnInit, OnDestroy {
       return 'selected';
     }
 
-    return feature.get('kind') === 'sea' ? 'sea' : 'land';
+    const territoryName = feature.get('name') as TerritoryName | undefined;
+    return typeof territoryName === 'string' && TERRITORY_INFO_BY_NAME[territoryName].kind === 'sea'
+      ? 'sea'
+      : 'land';
   }
 }

@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { Overlay, Map as OlMap, Feature } from 'ol';
 import { MapSquadOverlay } from '../map-squad-overlay/map-squad-overlay';
-import { TerritoryName } from '../map-state';
+import { TERRITORY_NAMES, TerritoryName } from '../../territories/territory-names';
 import { Geometry } from 'ol/geom';
 import VectorSource from 'ol/source/Vector';
 import { MapSelectors } from '../map-selectors';
@@ -80,10 +80,10 @@ const refreshSquadOverlays = (
   clearSquadOverlays(squadOverlayRefs, appRef, map);
 
   for (const [territoryName, squads] of Object.entries(squadsByTerritoryName)) {
-    if (squads.length === 0) {
+    if (squads.length === 0 || !TERRITORY_NAMES.includes(territoryName as TerritoryName)) {
       continue;
     }
-    const feature = territoryFeaturesByName.get(territoryName);
+    const feature = territoryFeaturesByName.get(territoryName as TerritoryName);
     const geometry = feature?.getGeometry();
     if (!geometry) {
       continue;
@@ -125,9 +125,9 @@ const refreshTerritoryFeatures = (
   const features = zoneSource?.getFeatures() ?? [];
 
   for (const feature of features) {
-    const territoryName = feature.get('name');
+    const territoryName = feature.get('name') as TerritoryName | undefined;
     const geometry = feature.getGeometry();
-    if (typeof territoryName === 'string' && geometry) {
+    if (typeof territoryName === 'string' && TERRITORY_NAMES.includes(territoryName) && geometry) {
       refreshedTerritoryFeatureMap.set(territoryName, feature);
     }
   }

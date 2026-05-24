@@ -55,6 +55,33 @@ SEA_OUTLINE_EXPANSION_RADIUS = 4
 SEA_CLOSE_RADIUS = 1
 SEA_SIMPLIFICATION_EPSILON = 3.0
 COASTAL_ADJACENCY_RADIUS = 10
+TERRITORY_ADJACENCY_RADIUS = 18
+MANUAL_TERRITORY_ADJACENCIES = [
+    ("Sea Zone 25", "Sea Zone 42"),
+    ("Sea Zone 21", "Sea Zone 43"),
+    ("Sea Zone 20", "Sea Zone 54"),
+    ("Sea Zone 19", "Sea Zone 20"),
+    ("Sea Zone 15", "Sea Zone 34"),
+    ("Sea Zone 3", "Sea Zone 4"),
+    ("Panama", "Mexico"),
+    ("Eastern United States", "Central United States"),
+    ("Eastern Canada", "Western Canada"),
+]
+
+SPECIAL_ADJACENCIES = [
+    {
+        "from": "Sea Zone 15",
+        "to": "Sea Zone 34",
+        "kind": "canal",
+        "requiredTerritories": ["Anglo-Egypt", "Trans-Jordan"],
+    },
+    {
+        "from": "Sea Zone 20",
+        "to": "Sea Zone 54",
+        "kind": "canal",
+        "requiredTerritories": ["Panama"],
+    },
+]
 
 # These are blue inland lakes in the board art, not sea zones.
 INLAND_SEA_EXCLUSION_RECTS = [
@@ -411,6 +438,12 @@ def parse_args() -> argparse.Namespace:
         "--preview",
         type=Path,
         help="Optional PNG preview with generated outlines drawn over the board.",
+    )
+    parser.add_argument(
+        "--territories-output-dir",
+        type=Path,
+        default=Path("src/app/territories"),
+        help="Directory for generated TypeScript territory metadata files.",
     )
     return parser.parse_args()
 
@@ -1021,6 +1054,284 @@ def add_land_holes_to_target_sea_zones(features: list[dict[str, Any]]) -> None:
                 sea_polygon.append(orient_hole_for_polygon(land_ring["ring"], sea_polygon))
 
 
+def expanded_bbox(bbox: list[int], radius: int, shape: tuple[int, int]) -> tuple[int, int, int, int]:
+    height, width = shape
+
+    return (
+        max(0, bbox[0] - radius),
+        max(0, bbox[1] - radius),
+        min(width - 1, bbox[2] + radius),
+        min(height - 1, bbox[3] + radius),
+    )
+
+
+def bboxes_overlap(left: tuple[int, int, int, int], right: tuple[int, int, int, int]) -> bool:
+    return left[0] <= right[2] and right[0] <= left[2] and left[1] <= right[3] and right[1] <= left[3]
+
+
+def bbox_slice(bbox: tuple[int, int, int, int]) -> tuple[slice, slice]:
+    return slice(bbox[1], bbox[3] + 1), slice(bbox[0], bbox[2] + 1)
+
+
+def masks_are_adjacent(
+    left_mask: np.ndarray,
+    right_mask: np.ndarray,
+    left_bbox: list[int],
+    right_bbox: list[int],
+    selectable_mask: np.ndarray,
+    neutral_blocker: np.ndarray,
+) -> bool:
+    shape = neutral_blocker.shape
+    left_expanded_bbox = expanded_bbox(left_bbox, TERRITORY_ADJACENCY_RADIUS, shape)
+    right_expanded_bbox = expanded_bbox(right_bbox, TERRITORY_ADJACENCY_RADIUS, shape)
+
+    if not bboxes_overlap(left_expanded_bbox, right_expanded_bbox):
+        return False
+
+    search_bbox = (
+        max(0, min(left_bbox[0], right_bbox[0]) - TERRITORY_ADJACENCY_RADIUS),
+        max(0, min(left_bbox[1], right_bbox[1]) - TERRITORY_ADJACENCY_RADIUS),
+        min(shape[1] - 1, max(left_bbox[2], right_bbox[2]) + TERRITORY_ADJACENCY_RADIUS),
+        min(shape[0] - 1, max(left_bbox[3], right_bbox[3]) + TERRITORY_ADJACENCY_RADIUS),
+    )
+    slices = bbox_slice(search_bbox)
+    left_search_mask = left_mask[slices]
+    right_search_mask = right_mask[slices]
+    allowed_mask = (
+        (~selectable_mask[slices] & ~neutral_blocker[slices])
+        | left_search_mask
+        | right_search_mask
+    )
+    expanded_mask = left_search_mask.copy()
+
+    for _ in range(TERRITORY_ADJACENCY_RADIUS):
+        expanded_mask = dilate(expanded_mask, 1) & allowed_mask
+        if np.any(expanded_mask & right_search_mask):
+            return True
+
+    return False
+
+
+def build_adjacency_by_name(
+    features: list[dict[str, Any]],
+    feature_masks: dict[str, np.ndarray],
+    feature_bboxes: dict[str, list[int]],
+    neutral_mask: np.ndarray,
+) -> dict[str, set[str]]:
+    selectable_features = [feature for feature in features if feature["properties"].get("selectable")]
+    adjacency_by_name = {feature["properties"]["name"]: set() for feature in selectable_features}
+    neutral_blocker = dilate(neutral_mask, TERRITORY_ADJACENCY_RADIUS)
+    selectable_mask = np.zeros_like(neutral_mask)
+
+    for feature in selectable_features:
+        selectable_mask |= feature_masks[feature["properties"]["id"]]
+
+    for left_index, left_feature in enumerate(selectable_features):
+        left_id = left_feature["properties"]["id"]
+        left_name = left_feature["properties"]["name"]
+
+        for right_feature in selectable_features[left_index + 1 :]:
+            right_id = right_feature["properties"]["id"]
+            if not masks_are_adjacent(
+                feature_masks[left_id],
+                feature_masks[right_id],
+                feature_bboxes[left_id],
+                feature_bboxes[right_id],
+                selectable_mask,
+                neutral_blocker,
+            ):
+                continue
+
+            right_name = right_feature["properties"]["name"]
+            adjacency_by_name[left_name].add(right_name)
+            adjacency_by_name[right_name].add(left_name)
+
+    for left_name, right_name in MANUAL_TERRITORY_ADJACENCIES:
+        if left_name not in adjacency_by_name:
+            raise ValueError(f"Manual adjacency references unknown territory: {left_name}")
+        if right_name not in adjacency_by_name:
+            raise ValueError(f"Manual adjacency references unknown territory: {right_name}")
+
+        adjacency_by_name[left_name].add(right_name)
+        adjacency_by_name[right_name].add(left_name)
+
+    for adjacency in SPECIAL_ADJACENCIES:
+        left_name = adjacency["from"]
+        right_name = adjacency["to"]
+        required_territories = adjacency["requiredTerritories"]
+
+        if left_name not in adjacency_by_name:
+            raise ValueError(f"Special adjacency references unknown territory: {left_name}")
+        if right_name not in adjacency_by_name:
+            raise ValueError(f"Special adjacency references unknown territory: {right_name}")
+        for territory_name in required_territories:
+            if territory_name not in adjacency_by_name:
+                raise ValueError(f"Special adjacency references unknown territory: {territory_name}")
+        if right_name not in adjacency_by_name[left_name]:
+            raise ValueError(f"Special adjacency is not adjacent: {left_name} / {right_name}")
+
+    return adjacency_by_name
+
+
+def build_territory_outputs(
+    features: list[dict[str, Any]],
+    feature_masks: dict[str, np.ndarray],
+    feature_bboxes: dict[str, list[int]],
+    neutral_mask: np.ndarray,
+) -> tuple[dict[str, set[str]], list[dict[str, Any]]]:
+    adjacency_by_name = build_adjacency_by_name(features, feature_masks, feature_bboxes, neutral_mask)
+
+    return adjacency_by_name, SPECIAL_ADJACENCIES
+
+
+def format_typescript_string(value: str) -> str:
+    return json.dumps(value)
+
+
+def format_const_array(name: str, values: list[str]) -> list[str]:
+    lines = [f"export const {name} = ["]
+    lines.extend(f"  {format_typescript_string(value)}," for value in values)
+    lines.append("] as const;")
+
+    return lines
+
+
+def format_territory_names_typescript(features: list[dict[str, Any]]) -> str:
+    land_names = sorted(
+        feature["properties"]["name"]
+        for feature in features
+        if feature["properties"].get("kind") == "land"
+    )
+    sea_names = sorted(
+        feature["properties"]["name"]
+        for feature in features
+        if feature["properties"].get("kind") == "sea"
+    )
+
+    territory_names = sorted(land_names + sea_names)
+    lines = [
+        *format_const_array("LAND_TERRITORY_NAMES", land_names),
+        "",
+        *format_const_array("SEA_TERRITORY_NAMES", sea_names),
+        "",
+        *format_const_array("TERRITORY_NAMES", territory_names),
+        "",
+        "export type LandTerritoryName = (typeof LAND_TERRITORY_NAMES)[number];",
+        "export type SeaTerritoryName = (typeof SEA_TERRITORY_NAMES)[number];",
+        "export type TerritoryName = (typeof TERRITORY_NAMES)[number];",
+        "",
+    ]
+
+    return "\n".join(lines)
+
+
+def format_territory_info_typescript(features: list[dict[str, Any]]) -> str:
+    lines = [
+        "import type { TerritoryName } from './territory-names';",
+        "",
+        "export type TerritoryKind = 'land' | 'sea';",
+        "export type TerritorySubKind = 'coastal' | 'interior' | 'island';",
+        "",
+        "export interface TerritoryInfo {",
+        "  readonly kind: TerritoryKind;",
+        "  readonly subKind: TerritorySubKind;",
+        "}",
+        "",
+        "export const TERRITORY_INFO_BY_NAME: Record<TerritoryName, TerritoryInfo> = {",
+    ]
+
+    for feature in sorted(features, key=lambda item: item["properties"]["name"]):
+        properties = feature["properties"]
+        name = properties["name"]
+        kind = properties["kind"]
+        sub_kind = properties["subKind"]
+        lines.append(
+            f"  {format_typescript_string(name)}: "
+            f"{{ kind: {format_typescript_string(kind)}, subKind: {format_typescript_string(sub_kind)} }},"
+        )
+
+    lines.extend([
+        "};",
+        "",
+    ])
+
+    return "\n".join(lines)
+
+
+def special_adjacency_key(left_name: str, right_name: str) -> str:
+    return "|".join(sorted([left_name, right_name]))
+
+
+def format_territory_adjacency_typescript(
+    adjacency_by_name: dict[str, set[str]],
+    special_adjacencies: list[dict[str, Any]],
+) -> str:
+    lines = [
+        "import type { TerritoryName } from './territory-names';",
+        "",
+        "export type SpecialAdjacencyKind = 'canal';",
+        "",
+        "export interface SpecialAdjacency {",
+        "  readonly kind: SpecialAdjacencyKind;",
+        "  readonly territories: readonly [TerritoryName, TerritoryName];",
+        "  readonly requiredTerritories: readonly TerritoryName[];",
+        "}",
+        "",
+        "export const ADJACENT_TERRITORIES_BY_NAME: Record<TerritoryName, readonly TerritoryName[]> = {",
+    ]
+
+    for name in sorted(adjacency_by_name):
+        neighbors = ", ".join(format_typescript_string(neighbor) for neighbor in sorted(adjacency_by_name[name]))
+        lines.append(f"  {format_typescript_string(name)}: [{neighbors}],")
+
+    lines.extend([
+        "};",
+        "",
+        "export const SPECIAL_ADJACENCIES: Record<string, SpecialAdjacency> = {",
+    ])
+
+    for adjacency in sorted(special_adjacencies, key=lambda item: special_adjacency_key(item["from"], item["to"])):
+        left_name = adjacency["from"]
+        right_name = adjacency["to"]
+        key = special_adjacency_key(left_name, right_name)
+        required_territories = ", ".join(
+            format_typescript_string(name) for name in sorted(adjacency["requiredTerritories"])
+        )
+        lines.append(
+            f"  {format_typescript_string(key)}: "
+            f"{{ kind: {format_typescript_string(adjacency['kind'])}, "
+            f"territories: [{format_typescript_string(left_name)}, {format_typescript_string(right_name)}], "
+            f"requiredTerritories: [{required_territories}] }},"
+        )
+
+    lines.extend([
+        "};",
+        "",
+    ])
+
+    return "\n".join(lines)
+
+
+def geojson_feature_without_runtime_metadata(feature: dict[str, Any]) -> dict[str, Any]:
+    next_feature = {
+        **feature,
+        "properties": {
+            key: value
+            for key, value in feature["properties"].items()
+            if key not in {"kind", "subKind"}
+        },
+    }
+
+    return next_feature
+
+
+def write_text_lf(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with path.open("w", encoding="utf-8", newline="\n") as output:
+        output.write(content)
+
+
 def land_merge_index(component: dict[str, Any], color_name: str) -> int | None:
     for index, config in enumerate(LAND_MERGE_RECTS):
         if config["color"] != color_name:
@@ -1108,7 +1419,10 @@ def make_masks(image: Image.Image) -> tuple[dict[str, np.ndarray], np.ndarray, n
     return land_color_masks, sea_mask, neutral_mask
 
 
-def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
+def build_geojson(
+    image: Image.Image,
+    source_image: Path,
+) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, set[str]], list[dict[str, Any]]]:
     land_color_masks, sea_mask, neutral_mask = make_masks(image)
     sea_free = sea_mask & ~dilate(~sea_mask, SEA_SPLIT_EROSION_RADIUS)
     sea_free = remove_lines(sea_free, SEA_DIVIDER_LINES, width=7)
@@ -1171,6 +1485,7 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
 
     features = []
     feature_masks = {}
+    feature_bboxes = {}
 
     for index, group in enumerate(
         sorted(
@@ -1201,6 +1516,12 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
         feature_id = f"sea-{index:03d}"
         board_number = SEA_ZONE_BOARD_NUMBERS[feature_id]
         feature_masks[feature_id] = mask_from_components(group, sea_mask.shape)
+        feature_bboxes[feature_id] = [
+            min(component["bbox"][0] for component in group),
+            min(component["bbox"][1] for component in group),
+            max(component["bbox"][2] for component in group),
+            max(component["bbox"][3] for component in group),
+        ]
         geometry = (
             {"type": "Polygon", "coordinates": polygons[0]}
             if len(polygons) == 1
@@ -1286,6 +1607,7 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
         feature_id = f"land-{index:03d}"
         terrain_color = component["terrainColor"]
         feature_masks[feature_id] = mask_from_components([component], sea_mask.shape)
+        feature_bboxes[feature_id] = component["bbox"]
         properties = {
             "id": feature_id,
             "kind": "land",
@@ -1322,7 +1644,8 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
     add_zone_subkinds(features, feature_masks, neutral_mask)
     add_land_holes_to_target_sea_zones(features)
 
-    return {
+    geojson_features = [geojson_feature_without_runtime_metadata(feature) for feature in features]
+    geojson = {
         "type": "FeatureCollection",
         "name": "game-board-zones",
         "properties": {
@@ -1331,12 +1654,21 @@ def build_geojson(image: Image.Image, source_image: Path) -> dict[str, Any]:
             "coordinateOrigin": "bottom-left",
             "sourceImage": source_image.as_posix(),
             "notes": (
-                "Generated mask contours for selectable land territories and sea zones; "
+                "Generated mask contours for selectable territories and sea zones; "
+                "territory kind metadata lives in src/app/territories/territory-info.ts; "
                 "neutral light-gray territories are intentionally omitted."
             ),
         },
-        "features": features,
+        "features": geojson_features,
     }
+    adjacency_by_name, special_adjacencies = build_territory_outputs(
+        features,
+        feature_masks,
+        feature_bboxes,
+        neutral_mask,
+    )
+
+    return geojson, features, adjacency_by_name, special_adjacencies
 
 
 def write_preview(image: Image.Image, geojson: dict[str, Any], preview_path: Path) -> None:
@@ -1345,7 +1677,7 @@ def write_preview(image: Image.Image, geojson: dict[str, Any], preview_path: Pat
     draw = ImageDraw.Draw(overlay)
 
     for feature in geojson["features"]:
-        color = (255, 255, 0, 130) if feature["properties"]["kind"] == "sea" else (255, 0, 255, 150)
+        color = (255, 255, 0, 130) if feature["properties"]["id"].startswith("sea-") else (255, 0, 255, 150)
         geometry = feature["geometry"]
         polygons = [geometry["coordinates"]] if geometry["type"] == "Polygon" else geometry["coordinates"]
 
@@ -1363,17 +1695,30 @@ def write_preview(image: Image.Image, geojson: dict[str, Any], preview_path: Pat
 def main() -> None:
     args = parse_args()
     image = extract_embedded_png(args.input)
-    geojson = build_geojson(image, args.input)
+    geojson, territory_features, adjacency_by_name, special_adjacencies = build_geojson(image, args.input)
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(geojson, indent=2) + "\n", encoding="utf-8")
+    write_text_lf(args.output, json.dumps(geojson, indent=2) + "\n")
+
+    write_text_lf(
+        args.territories_output_dir / "territory-names.ts",
+        format_territory_names_typescript(territory_features),
+    )
+    write_text_lf(
+        args.territories_output_dir / "territory-info.ts",
+        format_territory_info_typescript(territory_features),
+    )
+    write_text_lf(
+        args.territories_output_dir / "territory-adjacency.ts",
+        format_territory_adjacency_typescript(adjacency_by_name, special_adjacencies),
+    )
 
     if args.preview:
         write_preview(image, geojson, args.preview)
 
-    sea_count = sum(1 for feature in geojson["features"] if feature["properties"]["kind"] == "sea")
-    land_count = sum(1 for feature in geojson["features"] if feature["properties"]["kind"] == "land")
+    sea_count = sum(1 for feature in territory_features if feature["properties"]["kind"] == "sea")
+    land_count = sum(1 for feature in territory_features if feature["properties"]["kind"] == "land")
     print(f"Wrote {args.output.as_posix()} with {sea_count} sea zones and {land_count} land zones.")
+    print(f"Wrote TypeScript territory files to {args.territories_output_dir.as_posix()}.")
 
 
 if __name__ == "__main__":

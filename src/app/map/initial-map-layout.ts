@@ -1,7 +1,20 @@
-import { MilitaryUnit, InfantryUnit, TankUnit, FighterJetUnit, FactoryUnit, ArtilleryUnit, TransportUnit, DestroyerUnit, AntiAirUnit, BomberUnit, BattleshipUnit, AircraftCarrierUnit, SubmarineUnit } from '@ww2/shared/military-unit';
+import {
+  MilitaryUnit,
+  InfantryUnit,
+  TankUnit,
+  FighterJetUnit,
+  FactoryUnit,
+  ArtilleryUnit,
+  TransportUnit,
+  DestroyerUnit,
+  AntiAirUnit,
+  BomberUnit,
+  BattleshipUnit,
+  AircraftCarrierUnit,
+  SubmarineUnit,
+} from '@ww2/shared/military-unit';
 import { Nationality } from '@ww2/shared/nationality';
-import { LandTerritoryName, TerritoryName } from './map-state';
-
+import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
 
 export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, MilitaryUnit[]>> = {
   // UNITED STATES CONTROLLED TERRITORIES
@@ -26,12 +39,8 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new FighterJetUnit(Nationality.UNITED_STATES),
     new BomberUnit(Nationality.UNITED_STATES),
   ],
-  Alaska: [
-    new InfantryUnit(Nationality.UNITED_STATES),
-  ],
-  'Midway Island': [
-    new InfantryUnit(Nationality.UNITED_STATES),
-  ],
+  Alaska: [new InfantryUnit(Nationality.UNITED_STATES)],
+  'Midway Island': [new InfantryUnit(Nationality.UNITED_STATES)],
   'Hawaiian Islands': [
     new InfantryUnit(Nationality.UNITED_STATES),
     new InfantryUnit(Nationality.UNITED_STATES),
@@ -56,9 +65,7 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new TransportUnit(Nationality.UNITED_STATES),
     new DestroyerUnit(Nationality.UNITED_STATES),
   ],
-  'Sea Zone 20': [
-    new DestroyerUnit(Nationality.UNITED_STATES),
-  ],
+  'Sea Zone 20': [new DestroyerUnit(Nationality.UNITED_STATES)],
   'Sea Zone 52': [
     new AircraftCarrierUnit(Nationality.UNITED_STATES),
     new FighterJetUnit(Nationality.UNITED_STATES),
@@ -77,15 +84,9 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new FighterJetUnit(Nationality.UNITED_KINGDOM),
     new BomberUnit(Nationality.UNITED_KINGDOM),
   ],
-  'Eastern Canada': [
-    new TankUnit(Nationality.UNITED_KINGDOM),
-  ],
-  'Western Canada': [
-    new InfantryUnit(Nationality.UNITED_KINGDOM),
-  ],
-  'New Zealand': [
-    new InfantryUnit(Nationality.UNITED_KINGDOM),
-  ],
+  'Eastern Canada': [new TankUnit(Nationality.UNITED_KINGDOM)],
+  'Western Canada': [new InfantryUnit(Nationality.UNITED_KINGDOM)],
+  'New Zealand': [new InfantryUnit(Nationality.UNITED_KINGDOM)],
   Australia: [
     new InfantryUnit(Nationality.UNITED_KINGDOM),
     new InfantryUnit(Nationality.UNITED_KINGDOM),
@@ -97,27 +98,19 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new InfantryUnit(Nationality.UNITED_KINGDOM),
     new AntiAirUnit(Nationality.UNITED_KINGDOM),
   ],
-  Persia: [
-    new InfantryUnit(Nationality.UNITED_KINGDOM),
-  ],
-  'Trans-Jordan': [
-    new InfantryUnit(Nationality.UNITED_KINGDOM),
-  ],
+  Persia: [new InfantryUnit(Nationality.UNITED_KINGDOM)],
+  'Trans-Jordan': [new InfantryUnit(Nationality.UNITED_KINGDOM)],
   'Anglo-Egypt': [
     new InfantryUnit(Nationality.UNITED_KINGDOM),
     new TankUnit(Nationality.UNITED_KINGDOM),
     new FighterJetUnit(Nationality.UNITED_KINGDOM),
   ],
-  'Union of South Africa': [
-    new InfantryUnit(Nationality.UNITED_KINGDOM),
-  ],
+  'Union of South Africa': [new InfantryUnit(Nationality.UNITED_KINGDOM)],
   'Sea Zone 2': [
     new BattleshipUnit(Nationality.UNITED_KINGDOM),
     new TransportUnit(Nationality.UNITED_KINGDOM),
   ],
-  'Sea Zone 1': [
-    new TransportUnit(Nationality.UNITED_KINGDOM),
-  ],
+  'Sea Zone 1': [new TransportUnit(Nationality.UNITED_KINGDOM)],
   'Sea Zone 40': [
     new TransportUnit(Nationality.UNITED_KINGDOM),
     new SubmarineUnit(Nationality.UNITED_KINGDOM),
@@ -128,12 +121,8 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new TransportUnit(Nationality.UNITED_KINGDOM),
     new DestroyerUnit(Nationality.UNITED_KINGDOM),
   ],
-  'Sea Zone 15': [
-    new DestroyerUnit(Nationality.UNITED_KINGDOM),
-  ],
-  'Sea Zone 13': [
-    new BattleshipUnit(Nationality.UNITED_KINGDOM),
-  ],
+  'Sea Zone 15': [new DestroyerUnit(Nationality.UNITED_KINGDOM)],
+  'Sea Zone 13': [new BattleshipUnit(Nationality.UNITED_KINGDOM)],
 
   // SOVIET UNION CONTROLLED TERRITORIES
   Russia: [
@@ -192,9 +181,7 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new InfantryUnit(Nationality.SOVIET_UNION),
     new InfantryUnit(Nationality.SOVIET_UNION),
   ],
-  'Sea Zone 4': [
-    new SubmarineUnit(Nationality.SOVIET_UNION),
-  ],
+  'Sea Zone 4': [new SubmarineUnit(Nationality.SOVIET_UNION)],
 
   // GERMANY CONTROLLED TERRITORIES
   Germany: [
@@ -262,27 +249,16 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new ArtilleryUnit(Nationality.GERMANY),
     new TankUnit(Nationality.GERMANY),
   ],
-  Algeria: [
-    new InfantryUnit(Nationality.GERMANY),
-    new ArtilleryUnit(Nationality.GERMANY),
-  ],
-  Libya: [
-    new InfantryUnit(Nationality.GERMANY),
-    new TankUnit(Nationality.GERMANY),
-  ],
+  Algeria: [new InfantryUnit(Nationality.GERMANY), new ArtilleryUnit(Nationality.GERMANY)],
+  Libya: [new InfantryUnit(Nationality.GERMANY), new TankUnit(Nationality.GERMANY)],
   'Sea Zone 5': [
     new TransportUnit(Nationality.GERMANY),
     new SubmarineUnit(Nationality.GERMANY),
     new SubmarineUnit(Nationality.GERMANY),
     new DestroyerUnit(Nationality.GERMANY),
   ],
-  'Sea Zone 8': [
-    new SubmarineUnit(Nationality.GERMANY),
-  ],
-  'Sea Zone 14': [
-    new BattleshipUnit(Nationality.GERMANY),
-    new TransportUnit(Nationality.GERMANY),
-  ],
+  'Sea Zone 8': [new SubmarineUnit(Nationality.GERMANY)],
+  'Sea Zone 14': [new BattleshipUnit(Nationality.GERMANY), new TransportUnit(Nationality.GERMANY)],
 
   // JAPAN CONTROLLED TERRITORIES
   Japan: [
@@ -312,39 +288,16 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new InfantryUnit(Nationality.JAPAN),
     new FighterJetUnit(Nationality.JAPAN),
   ],
-  'East Indies': [
-    new InfantryUnit(Nationality.JAPAN),
-    new InfantryUnit(Nationality.JAPAN),
-  ],
-  Borneo: [
-    new InfantryUnit(Nationality.JAPAN),
-  ],
-  'Philippine Islands': [
-    new InfantryUnit(Nationality.JAPAN),
-    new InfantryUnit(Nationality.JAPAN),
-  ],
-  Okinawa: [
-    new InfantryUnit(Nationality.JAPAN),
-  ],
-  'Wake Island': [
-    new InfantryUnit(Nationality.JAPAN),
-  ],
-  'Caroline Islands': [
-    new InfantryUnit(Nationality.JAPAN),
-  ],
-  'New Guinea': [
-    new InfantryUnit(Nationality.JAPAN),
-  ],
-  'Solomon Islands': [
-    new InfantryUnit(Nationality.JAPAN),
-  ],
-  'Sea Zone 60': [
-    new BattleshipUnit(Nationality.JAPAN),
-    new TransportUnit(Nationality.JAPAN),
-  ],
-  'Sea Zone 59': [
-    new TransportUnit(Nationality.JAPAN),
-  ],
+  'East Indies': [new InfantryUnit(Nationality.JAPAN), new InfantryUnit(Nationality.JAPAN)],
+  Borneo: [new InfantryUnit(Nationality.JAPAN)],
+  'Philippine Islands': [new InfantryUnit(Nationality.JAPAN), new InfantryUnit(Nationality.JAPAN)],
+  Okinawa: [new InfantryUnit(Nationality.JAPAN)],
+  'Wake Island': [new InfantryUnit(Nationality.JAPAN)],
+  'Caroline Islands': [new InfantryUnit(Nationality.JAPAN)],
+  'New Guinea': [new InfantryUnit(Nationality.JAPAN)],
+  'Solomon Islands': [new InfantryUnit(Nationality.JAPAN)],
+  'Sea Zone 60': [new BattleshipUnit(Nationality.JAPAN), new TransportUnit(Nationality.JAPAN)],
+  'Sea Zone 59': [new TransportUnit(Nationality.JAPAN)],
   'Sea Zone 37': [
     new BattleshipUnit(Nationality.JAPAN),
     new AircraftCarrierUnit(Nationality.JAPAN),
@@ -356,9 +309,7 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
     new FighterJetUnit(Nationality.JAPAN),
     new DestroyerUnit(Nationality.JAPAN),
   ],
-  'Sea Zone 45': [
-    new SubmarineUnit(Nationality.JAPAN),
-  ]
+  'Sea Zone 45': [new SubmarineUnit(Nationality.JAPAN)],
 };
 
 export const INITIAL_LAND_TERRITORY_CONTROL = {
@@ -411,7 +362,7 @@ export const INITIAL_LAND_TERRITORY_CONTROL = {
   Brazil: Nationality.UNITED_STATES,
   'French West Africa': Nationality.UNITED_KINGDOM,
   'Anglo-Egypt': Nationality.UNITED_KINGDOM,
-  Manila: Nationality.JAPAN,
+  'Philippine Islands': Nationality.JAPAN,
   'French Equatorial Africa': Nationality.UNITED_KINGDOM,
   'Italian East Africa': Nationality.UNITED_KINGDOM,
   Borneo: Nationality.JAPAN,
@@ -426,4 +377,3 @@ export const INITIAL_LAND_TERRITORY_CONTROL = {
   Australia: Nationality.UNITED_KINGDOM,
   'New Zealand': Nationality.UNITED_KINGDOM,
 } as Record<LandTerritoryName, Nationality>;
-
