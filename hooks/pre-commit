@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ ! -d node_modules ]; then
+  echo "node_modules is missing. Run npm install before committing."
+  exit 1
+fi
+
+npm run format:check:staged
