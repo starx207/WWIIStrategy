@@ -1,6 +1,8 @@
 <div
   class="map-squad-overlay"
-  [style.grid-template-columns]="'repeat(' + layout().columns + ', var(--map-squad-grid-cell-size))'"
+  [style.grid-template-columns]="
+    'repeat(' + layout().columns + ', var(--map-squad-grid-cell-size))'
+  "
   [style.grid-template-rows]="'repeat(' + layout().rows + ', var(--map-squad-grid-cell-size))'"
 >
   @for (positionedSquad of layout().squads; track positionedSquad.squad.id) {

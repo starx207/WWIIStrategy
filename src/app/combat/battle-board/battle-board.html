@@ -17,7 +17,9 @@
   @for (rank of ATTACK_SQUAD_RANKS; track $index) {
     <ww2-battalion
       #attacker
-      [class]="`battle-board__squad-${ATTACK_SQUAD_RANKS.length - $index} battle-board__attack__${rank}`"
+      [class]="
+        `battle-board__squad-${ATTACK_SQUAD_RANKS.length - $index} battle-board__attack__${rank}`
+      "
       [class.battle-board__squad__active]="activeBattalion() === attacker"
       [fromArmy]="attackers()"
       [strength]="rank"
@@ -42,7 +44,9 @@
   @for (rank of DEFENSE_SQUAD_RANKS; track $index) {
     <ww2-battalion
       #defender
-      [class]="`battle-board__squad-${DEFENSE_SQUAD_RANKS.length - $index} battle-board__defend__${rank}`"
+      [class]="
+        `battle-board__squad-${DEFENSE_SQUAD_RANKS.length - $index} battle-board__defend__${rank}`
+      "
       [class.battle-board__squad__active]="activeBattalion() === defender"
       [fromArmy]="defenders()"
       [strength]="rank"
