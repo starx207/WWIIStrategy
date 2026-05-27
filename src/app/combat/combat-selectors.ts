@@ -12,6 +12,8 @@ import {
   targetKindPriorityForUnit,
   totalHitPool,
 } from './hit-pool';
+import { SettingsSelectors } from '@ww2/settings/settings-selectors';
+import { RuleState } from '@ww2/settings/settings-state';
 
 type AssignmentMap = Record<string, CombatHit[]>;
 
@@ -96,14 +98,17 @@ export class CombatSelectors {
   }
 
   static combatForce(role: CombatRole) {
-    return createSelector([CombatState], (state: CombatStateModel) => {
-      const army = role === 'attack' ? state.attackingArmy : state.defendingArmy;
-      const ruleState = createResolvedRuleContext(state);
-      return getEffectiveArmy(army, {
-        ...ruleState,
-        role: role,
-      });
-    });
+    return createSelector(
+      [CombatState, SettingsSelectors.rules],
+      (state: CombatStateModel, rulesState: RuleState) => {
+        const army = role === 'attack' ? state.attackingArmy : state.defendingArmy;
+        const ruleState = createResolvedRuleContext(state, rulesState);
+        return getEffectiveArmy(army, {
+          ...ruleState,
+          role: role,
+        });
+      },
+    );
   }
 
   static battleReadyIds(role: CombatRole) {
@@ -196,12 +201,12 @@ export class CombatSelectors {
     return [...pendingIds];
   }
 
-  @Selector([CombatState])
-  static allCasualtyIds(state: CombatStateModel) {
+  @Selector([CombatState, SettingsSelectors.rules])
+  static allCasualtyIds(state: CombatStateModel, rulesState: RuleState) {
     const casualtyIds: string[] = [];
     const attackerAssigned = state.attackerAssignedHitsByUnitId;
     const defenderAssigned = state.defenderAssignedHitsByUnitId;
-    const ruleState = createResolvedRuleContext(state);
+    const ruleState = createResolvedRuleContext(state, rulesState);
 
     for (const unit of [...state.attackingArmy, ...state.defendingArmy]) {
       const persistentDamage = state.unitDamageById[unit.id] ?? 0;
@@ -215,12 +220,12 @@ export class CombatSelectors {
     return casualtyIds;
   }
 
-  @Selector([CombatState])
-  static damageMap(state: CombatStateModel) {
+  @Selector([CombatState, SettingsSelectors.rules])
+  static damageMap(state: CombatStateModel, rulesState: RuleState) {
     const persistedDamage = state.unitDamageById;
     const attackerDamage = state.attackerAssignedHitsByUnitId;
     const defenderDamage = state.defenderAssignedHitsByUnitId;
-    const ruleState = createResolvedRuleContext(state);
+    const ruleState = createResolvedRuleContext(state, rulesState);
 
     const damageMap: Record<string, number> = {};
     const allMultiHpUnits = [...state.attackingArmy, ...state.defendingArmy]

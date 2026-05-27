@@ -13,6 +13,7 @@ import { provideStore } from '@ngxs/store';
 import { provideHttpClient } from '@angular/common/http';
 import { CombatState } from './combat/combat-state';
 import { MapState } from './map/map-state';
+import { SettingsState } from './settings/settings-state';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,7 +22,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(),
     provideStore(
-      [CombatState, MapState],
+      [CombatState, MapState, SettingsState],
       withNgxsReduxDevtoolsPlugin(),
       withNgxsRouterPlugin(),
       withNgxsStoragePlugin({

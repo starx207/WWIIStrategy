@@ -1,7 +1,7 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { CombatPhase } from './combat-phase';
 import { CombatRole } from './combat.actions';
-import { RuleState } from '@ww2/shared/effective-unit';
+import { RuleState } from '@ww2/settings/settings-state';
 
 export interface RuleContext {
   phase?: CombatPhase;

@@ -8,7 +8,8 @@
     "paths": {
       "@ww2/combat/*": ["./src/app/combat/*"],
       "@ww2/map/*": ["./src/app/map/*"],
-      "@ww2/shared/*": ["./src/app/shared/*"]
+      "@ww2/shared/*": ["./src/app/shared/*"],
+      "@ww2/settings/*": ["./src/app/settings/*"]
     }
   },
   "include": ["src/**/*.ts"],

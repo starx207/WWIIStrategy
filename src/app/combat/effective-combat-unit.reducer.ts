@@ -3,16 +3,16 @@ import { CombatProfile, EffectiveCombatUnit, isEffectiveCombatUnit } from './eff
 import { RuleContext, RuleContextInput } from './rule-context';
 import { BaseUnitProfile, UNIT_PROFILES } from '@ww2/shared/unit-profile';
 import { CasualtyPhase, CombatPhase } from './combat-phase';
-import { DEFAULT_RULE_STATE } from '@ww2/shared/effective-unit';
 import { UnitType } from '@ww2/shared/unit-type';
 import { Nationality } from '@ww2/shared/nationality';
 import { CombatRole } from './combat.actions';
 import { UNIT_RULES } from './rules/unit-rule.definitions';
+import { DEFAULT_RULE_STATE } from '@ww2/settings/settings-state';
 
 type EffectiveCombatUnitInput = MilitaryUnit | EffectiveCombatUnit;
 
 const isInputOnly = (context?: RuleContext | RuleContextInput): context is RuleContextInput =>
-  context !== undefined && !('ruleState' in context);
+  context !== undefined && !('attackingArmy' in context);
 
 const buildStandardCombatProfiles = (stats: BaseUnitProfile): CombatProfile[] => {
   const phases =
@@ -64,7 +64,7 @@ const resolveRuleContext = (context?: RuleContext, extra?: RuleContextInput): Ru
     ...extra,
     attackingArmy: context?.attackingArmy ?? [],
     defendingArmy: context?.defendingArmy ?? [],
-    ruleState: context?.ruleState ?? DEFAULT_RULE_STATE,
+    ruleState: extra?.ruleState ?? context?.ruleState ?? DEFAULT_RULE_STATE,
   };
 };
 
@@ -112,11 +112,14 @@ const applyNationalAdvantages = (
   context: RuleContext,
 ): EffectiveCombatUnit => {
   if (effectiveUnit.nationality === Nationality.SOVIET_UNION) {
-    const sovietAdvantages = context.ruleState.nationalAdvantages[Nationality.SOVIET_UNION];
+    const russianWinterAdvantage = context.ruleState.nationalAdvantages.find(
+      (na) => na.id === 'russianWinter',
+    );
     if (
       effectiveUnit.type === UnitType.INFANTRY &&
       context.role === 'defend' &&
-      sovietAdvantages.russianWinter === 'active'
+      russianWinterAdvantage &&
+      russianWinterAdvantage.state === 'active'
     ) {
       const defenseProfile = effectiveUnit.combatProfiles.find(
         (p) => p.role === 'defend' && p.id === 'standard-combat',
@@ -128,11 +131,14 @@ const applyNationalAdvantages = (
   }
 
   if (effectiveUnit.nationality === Nationality.GERMANY) {
-    const germanAdvantages = context.ruleState.nationalAdvantages[Nationality.GERMANY];
+    const wolfpackAdvantage = context.ruleState.nationalAdvantages.find(
+      (na) => na.id === 'wolfPacks',
+    );
     if (
       effectiveUnit.type === UnitType.SUBMARINE &&
       context.role === 'attack' &&
-      germanAdvantages.wolfPacks === 'active'
+      wolfpackAdvantage &&
+      wolfpackAdvantage.state === 'active'
     ) {
       const attackProfile = effectiveUnit.combatProfiles.find(
         (p) => p.role === 'attack' && p.id === 'standard-combat',
@@ -143,11 +149,14 @@ const applyNationalAdvantages = (
     }
   }
 
-  const usAdvantages = context.ruleState.nationalAdvantages[Nationality.UNITED_STATES];
+  const superfortressesAdvantage = context.ruleState.nationalAdvantages.find(
+    (na) => na.id === 'superfortresses',
+  );
   if (
     effectiveUnit.type === UnitType.ANTI_AIR_GUN &&
     context.role === 'defend' &&
-    (usAdvantages.superfortresses === 'active' || usAdvantages.superfortresses === 'enabled')
+    superfortressesAdvantage &&
+    (superfortressesAdvantage.state === 'active' || superfortressesAdvantage.state === 'enabled')
   ) {
     const usBomberCount = context.attackingArmy.filter(
       (unit) => unit.type === UnitType.BOMBER && unit.nationality === Nationality.UNITED_STATES,

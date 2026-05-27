@@ -1,4 +1,4 @@
-import { Action, State, StateContext } from '@ngxs/store';
+import { Action, State, StateContext, Store } from '@ngxs/store';
 import { Injectable } from '@angular/core';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
@@ -21,8 +21,9 @@ import {
   unitCanConsumeHit,
 } from './hit-pool';
 import { RuleContext } from './rule-context';
-import { DEFAULT_RULE_STATE, RuleState } from '@ww2/shared/effective-unit';
 import { Nationality } from '@ww2/shared/nationality';
+import { SettingsSelectors } from '@ww2/settings/settings-selectors';
+import { SettingsActions } from '@ww2/settings/settings-actions';
 
 export type CombatOutcome = 'ongoing' | 'attackerVictory' | 'defenderVictory';
 
@@ -61,7 +62,6 @@ export interface BattleResolutionSummary {
 
 export interface CombatStateModel {
   territory?: string;
-  ruleState: RuleState; // TODO: Things like this might be better suited to a dedicated state slice.
   attackingArmy: MilitaryUnit[];
   defendingArmy: MilitaryUnit[];
   currentPhase?: CombatPhase;
@@ -83,7 +83,6 @@ export interface CombatStateModel {
 
 const DEFAULT_STATE: CombatStateModel = {
   territory: 'TestTerritory',
-  ruleState: copyRuleState(DEFAULT_RULE_STATE),
   attackingArmy: [],
   defendingArmy: [],
   currentPhase: undefined,
@@ -103,22 +102,6 @@ const DEFAULT_STATE: CombatStateModel = {
   round: 0,
 };
 
-function copyRuleState(ruleState: RuleState): RuleState {
-  return {
-    technologiesByNationality: Object.fromEntries(
-      Object.entries(ruleState.technologiesByNationality).map(([nationality, technologies]) => [
-        nationality,
-        [...technologies],
-      ]),
-    ),
-    nationalAdvantages: {
-      [Nationality.SOVIET_UNION]: { ...ruleState.nationalAdvantages[Nationality.SOVIET_UNION] },
-      [Nationality.GERMANY]: { ...ruleState.nationalAdvantages[Nationality.GERMANY] },
-      [Nationality.UNITED_STATES]: { ...ruleState.nationalAdvantages[Nationality.UNITED_STATES] },
-    },
-  };
-}
-
 type CombatStateContext = StateContext<CombatStateModel>;
 
 @State<CombatStateModel>({
@@ -127,17 +110,17 @@ type CombatStateContext = StateContext<CombatStateModel>;
 })
 @Injectable()
 export class CombatState {
+  constructor(private store: Store) {}
+
   @Action(CombatActions.PreparingBattlefield)
   prepareBattlefield(context: CombatStateContext) {
     const attackingArmy = [...TEST_ATTACKERS];
     const defendingArmy = [...TEST_DEFENDERS, ...TEST_NEUTRAL_UNITS];
 
+    this.activateWolfPackIfQualified(attackingArmy);
+
     const baseState: CombatStateModel = {
       ...DEFAULT_STATE,
-      ruleState: this.activateWolfPacksIfQualified(
-        copyRuleState(DEFAULT_RULE_STATE),
-        attackingArmy,
-      ),
       attackingArmy,
       defendingArmy,
       unitDamageById: this.buildInitialDamageMap(attackingArmy, defendingArmy),
@@ -145,9 +128,10 @@ export class CombatState {
 
     const initialOutcome = this.evaluateOutcome(attackingArmy, defendingArmy);
     if (initialOutcome.outcome !== 'ongoing') {
+      this.restoreBattleScopedRuleState();
+
       context.setState({
         ...baseState,
-        ruleState: this.restoreBattleScopedRuleState(baseState.ruleState),
         outcome: initialOutcome.outcome,
         canCaptureTerritory: initialOutcome.canCaptureTerritory,
         resolutionSummary: this.buildResolutionSummary(
@@ -186,7 +170,10 @@ export class CombatState {
     const readyIdSet = new Set(readyIds);
     const firingUnits: { unit: MilitaryUnit; profile: CombatProfile }[] = [];
     let consumedShotCount = 0;
-    const ruleContext = createResolvedRuleContext(state);
+    const ruleContext = createResolvedRuleContext(
+      state,
+      this.store.selectSnapshot(SettingsSelectors.rules),
+    );
 
     for (const unit of action.units) {
       if (!readyIdSet.has(unit.id)) {
@@ -299,7 +286,10 @@ export class CombatState {
 
     const roleArmy = action.role === 'attack' ? state.attackingArmy : state.defendingArmy;
     const roleArmyIds = new Set(roleArmy.map((unit) => unit.id));
-    const ruleContext = createResolvedRuleContext(state);
+    const ruleContext = createResolvedRuleContext(
+      state,
+      this.store.selectSnapshot(SettingsSelectors.rules),
+    );
 
     let pendingHits = this.getPendingHits(state, action.role, assignments);
     if (pendingHits.length <= 0) {
@@ -434,8 +424,9 @@ export class CombatState {
       return;
     }
 
+    this.restoreBattleScopedRuleState();
+
     context.patchState({
-      ruleState: this.restoreBattleScopedRuleState(state.ruleState),
       currentPhase: undefined,
       attackerReadyToFireIds: [],
       defenderReadyToFireIds: [],
@@ -510,7 +501,11 @@ export class CombatState {
     state: CombatStateModel,
     phase: FirePhase,
   ): Partial<CombatStateModel> {
-    const ruleContext = createResolvedRuleContext(state, { phase });
+    const ruleContext = createResolvedRuleContext(
+      state,
+      this.store.selectSnapshot(SettingsSelectors.rules),
+      { phase },
+    );
     const { attackers, defenders } = this.getEligibleUnitsForPhase(
       phase,
       state.attackingArmy,
@@ -591,7 +586,10 @@ export class CombatState {
     }
     const currentPhase = state.currentPhase;
 
-    const ruleContext = createResolvedRuleContext(state);
+    const ruleContext = createResolvedRuleContext(
+      state,
+      this.store.selectSnapshot(SettingsSelectors.rules),
+    );
 
     const nextDamageById: AssignmentMap = { ...state.unitDamageById };
     for (const [unitId, hits] of Object.entries(state.attackerAssignedHitsByUnitId)) {
@@ -669,9 +667,10 @@ export class CombatState {
     };
 
     if (outcome.outcome !== 'ongoing') {
+      this.restoreBattleScopedRuleState();
+
       context.setState({
         ...postResolutionState,
-        ruleState: this.restoreBattleScopedRuleState(postResolutionState.ruleState),
         currentPhase: undefined,
       });
       return;
@@ -717,50 +716,31 @@ export class CombatState {
     return damageById;
   }
 
-  private activateWolfPacksIfQualified(
-    ruleState: RuleState,
-    attackingArmy: MilitaryUnit[],
-  ): RuleState {
-    const germanAdvantages = ruleState.nationalAdvantages[Nationality.GERMANY];
-    if (germanAdvantages.wolfPacks !== 'enabled') {
-      return ruleState;
+  private activateWolfPackIfQualified(attackingArmy: MilitaryUnit[]) {
+    const ruleState = this.store.selectSnapshot(SettingsSelectors.rules);
+    const wolfpackAdvantage = ruleState.nationalAdvantages.find((na) => na.id === 'wolfPacks');
+    if (!wolfpackAdvantage || wolfpackAdvantage.state !== 'enabled') {
+      return;
     }
 
     const germanSubmarineCount = attackingArmy.filter(
       (unit) => unit.type === UnitType.SUBMARINE && unit.nationality === Nationality.GERMANY,
     ).length;
     if (germanSubmarineCount < 3) {
-      return ruleState;
+      return;
     }
 
-    return {
-      ...ruleState,
-      nationalAdvantages: {
-        ...ruleState.nationalAdvantages,
-        [Nationality.GERMANY]: {
-          ...germanAdvantages,
-          wolfPacks: 'active',
-        },
-      },
-    };
+    this.store.dispatch(new SettingsActions.SetNationalAdvantageState('wolfPacks', 'active'));
   }
 
-  private restoreBattleScopedRuleState(ruleState: RuleState): RuleState {
-    const germanAdvantages = ruleState.nationalAdvantages[Nationality.GERMANY];
-    if (germanAdvantages.wolfPacks !== 'active') {
-      return ruleState;
+  private restoreBattleScopedRuleState() {
+    const ruleState = this.store.selectSnapshot(SettingsSelectors.rules);
+    const wolfpackAdvantage = ruleState.nationalAdvantages.find((na) => na.id === 'wolfPacks');
+    if (!wolfpackAdvantage || wolfpackAdvantage.state !== 'active') {
+      return;
     }
 
-    return {
-      ...ruleState,
-      nationalAdvantages: {
-        ...ruleState.nationalAdvantages,
-        [Nationality.GERMANY]: {
-          ...germanAdvantages,
-          wolfPacks: 'enabled',
-        },
-      },
-    };
+    this.store.dispatch(new SettingsActions.SetNationalAdvantageState('wolfPacks', 'enabled'));
   }
 
   private buildSurvivingDamageMap(
