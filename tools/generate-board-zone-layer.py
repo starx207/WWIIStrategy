@@ -58,15 +58,37 @@ SEA_SIMPLIFICATION_EPSILON = 3.0
 COASTAL_ADJACENCY_RADIUS = 10
 TERRITORY_ADJACENCY_RADIUS = 18
 MANUAL_TERRITORY_ADJACENCIES = [
-    ("Sea Zone 25", "Sea Zone 42"),
-    ("Sea Zone 21", "Sea Zone 43"),
-    ("Sea Zone 20", "Sea Zone 54"),
-    ("Sea Zone 19", "Sea Zone 20"),
-    ("Sea Zone 15", "Sea Zone 34"),
-    ("Sea Zone 3", "Sea Zone 4"),
-    ("Panama", "Mexico"),
-    ("Eastern United States", "Central United States"),
     ("Eastern Canada", "Western Canada"),
+    ("Eastern United States", "Central United States"),
+    ("Panama", "Mexico"),
+    ("Sea Zone 3", "Sea Zone 4"),
+    ("Sea Zone 7", "Sea Zone 12"),
+    ("Sea Zone 15", "Sea Zone 34"),
+    ("Sea Zone 19", "Sea Zone 20"),
+    ("Sea Zone 20", "Sea Zone 54"),
+    ("Sea Zone 21", "Sea Zone 43"),
+    ("Sea Zone 25", "Sea Zone 42"),
+]
+
+MANUAL_TERRITORY_NON_ADJACENCIES = [
+    ("Algeria", "Sea Zone 14"),
+    ("Anglo-Egypt", "Sea Zone 14"),
+    ("Buryatia S.S.R.", "Sea Zone 61"),
+    ("Eastern Canada", "Sea Zone 10"),
+    ("Eastern United States", "Sea Zone 9"),
+    ("French Indochina", "Sea Zone 35"),
+    ("French Indochina", "Sea Zone 37"),
+    ("French Indochina", "Sea Zone 59"),
+    ("French West Africa", "Sea Zone 23"),
+    ("Italian East Africa", "Sea Zone 33"),
+    ("Kwangtung", "Sea Zone 36"),
+    ("Libya", "Sea Zone 13"),
+    ("Libya", "Sea Zone 15"),
+    ("Manchuria", "Sea Zone 59"),
+    ("Manchuria", "Sea Zone 60"),
+    ("New Zealand", "Sea Zone 45"),
+    ("Southern Europe", "Sea Zone 13"),
+    ("Sea Zone 2", "Sea Zone 7"),
 ]
 
 SPECIAL_ADJACENCIES = [
@@ -478,6 +500,44 @@ def dilate(mask: np.ndarray, radius: int) -> np.ndarray:
         )
 
     return out
+
+
+def shift_mask(mask: np.ndarray, delta_y: int, delta_x: int) -> np.ndarray:
+    shifted = np.zeros_like(mask)
+    height, width = mask.shape
+    source_y_start = max(0, -delta_y)
+    source_y_end = min(height, height - delta_y)
+    source_x_start = max(0, -delta_x)
+    source_x_end = min(width, width - delta_x)
+    target_y_start = max(0, delta_y)
+    target_y_end = min(height, height + delta_y)
+    target_x_start = max(0, delta_x)
+    target_x_end = min(width, width + delta_x)
+
+    shifted[target_y_start:target_y_end, target_x_start:target_x_end] = mask[
+        source_y_start:source_y_end, source_x_start:source_x_end
+    ]
+
+    return shifted
+
+
+def masks_are_orthogonally_facing(
+    left_mask: np.ndarray,
+    right_mask: np.ndarray,
+    allowed_mask: np.ndarray,
+    radius: int,
+) -> bool:
+    for delta_y, delta_x in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        frontier = left_mask.copy()
+
+        for _ in range(radius):
+            frontier = shift_mask(frontier, delta_y, delta_x) & allowed_mask
+            if np.any(frontier & right_mask):
+                return True
+            if not np.any(frontier):
+                break
+
+    return False
 
 
 def erode(mask: np.ndarray, radius: int) -> np.ndarray:
@@ -1103,14 +1163,12 @@ def masks_are_adjacent(
         | left_search_mask
         | right_search_mask
     )
-    expanded_mask = left_search_mask.copy()
-
-    for _ in range(TERRITORY_ADJACENCY_RADIUS):
-        expanded_mask = dilate(expanded_mask, 1) & allowed_mask
-        if np.any(expanded_mask & right_search_mask):
-            return True
-
-    return False
+    return masks_are_orthogonally_facing(
+        left_search_mask,
+        right_search_mask,
+        allowed_mask,
+        TERRITORY_ADJACENCY_RADIUS,
+    )
 
 
 def build_adjacency_by_name(
@@ -1155,6 +1213,15 @@ def build_adjacency_by_name(
 
         adjacency_by_name[left_name].add(right_name)
         adjacency_by_name[right_name].add(left_name)
+
+    for left_name, right_name in MANUAL_TERRITORY_NON_ADJACENCIES:
+        if left_name not in adjacency_by_name:
+            raise ValueError(f"Manual non-adjacency references unknown territory: {left_name}")
+        if right_name not in adjacency_by_name:
+            raise ValueError(f"Manual non-adjacency references unknown territory: {right_name}")
+
+        adjacency_by_name[left_name].discard(right_name)
+        adjacency_by_name[right_name].discard(left_name)
 
     for adjacency in SPECIAL_ADJACENCIES:
         left_name = adjacency["from"]
