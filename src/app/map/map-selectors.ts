@@ -1,29 +1,16 @@
-import { createSelector, Selector } from '@ngxs/store';
+import { Selector } from '@ngxs/store';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
-import { Nationality } from '@ww2/shared/nationality';
 import { MapState, MapStateModel } from './map-state';
-import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
+import { TerritoryName } from '../territories/territory-names';
+import { calculatePossibleDestinations } from './rules/movement-calculator';
+import { createResolvedRuleContext } from './rule-context.factory';
+import { RuleState } from '@ww2/settings/settings-state';
+import { SettingsSelectors } from '@ww2/settings/settings-selectors';
 
 type SquadGroups = Record<string, MilitaryUnit[]>;
 
 export class MapSelectors {
-  @Selector([MapState])
-  static unitsByTerritoryName(state: MapStateModel) {
-    return state.unitsByTerritoryName;
-  }
-
-  static unitsInTerritory(territoryName: TerritoryName) {
-    return createSelector([MapState], (state: MapStateModel) => {
-      return state.unitsByTerritoryName[territoryName] ?? [];
-    });
-  }
-
-  @Selector([MapState])
-  static allUnits(state: MapStateModel) {
-    return Object.values(state.unitsByTerritoryName).flatMap((units) => units ?? []);
-  }
-
   @Selector([MapState])
   static squadsByTerritoryName(
     state: MapStateModel,
@@ -38,16 +25,40 @@ export class MapSelectors {
     ) as Record<TerritoryName, MilitaryUnitSquad<MilitaryUnit>[]>;
   }
 
-  @Selector([MapState])
-  static landTerritoryControllerByName(state: MapStateModel) {
-    return state.landTerritoryControllerByName;
-  }
+  @Selector([MapState, SettingsSelectors.rules])
+  static selectedSquadRange(state: MapStateModel, rulesState: RuleState): TerritoryName[] {
+    const selectedSquad = state.selectedSquad;
+    if (!selectedSquad || selectedSquad.unitIds.length === 0) {
+      return [];
+    }
 
-  static controllerForLandTerritory(territoryName: LandTerritoryName) {
-    return createSelector([MapState], (state: MapStateModel): Nationality | undefined => {
-      return state.landTerritoryControllerByName[territoryName];
-    });
+    const { territoryName, unit } = findTerritoryForUnitId(state, selectedSquad.unitIds[0]);
+    if (!territoryName || !unit) {
+      return [];
+    }
+
+    return calculatePossibleDestinations(
+      unit,
+      territoryName,
+      createResolvedRuleContext(state, rulesState),
+    );
   }
+}
+
+function findTerritoryForUnitId(
+  state: MapStateModel,
+  unitId: string,
+): { territoryName?: TerritoryName; unit?: MilitaryUnit } {
+  for (const [territoryName, units] of Object.entries(state.unitsByTerritoryName)) {
+    if (!units) {
+      continue;
+    }
+    const foundUnit = units.find((unit) => unit.id === unitId);
+    if (foundUnit) {
+      return { territoryName: territoryName as TerritoryName, unit: foundUnit };
+    }
+  }
+  return {};
 }
 
 function createMapSquads(
