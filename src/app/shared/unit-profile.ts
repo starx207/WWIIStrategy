@@ -1,3 +1,4 @@
+import { MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
 import { UnitType } from './unit-type';
 
 export type TargetKind = 'unit' | 'air-unit' | 'aa-vulnerable-air-unit' | 'sea-unit' | 'factory';
@@ -9,6 +10,7 @@ export interface BaseUnitProfile {
   openingFire: boolean | 'exclusive';
   targetKind?: TargetKind;
   movement: number;
+  movementPhaseRestriction?: MovementPhase;
 }
 
 export const UNIT_PROFILES: Record<UnitType, BaseUnitProfile> = {
@@ -40,6 +42,7 @@ export const UNIT_PROFILES: Record<UnitType, BaseUnitProfile> = {
     openingFire: 'exclusive',
     targetKind: 'air-unit',
     movement: 1,
+    movementPhaseRestriction: TurnPhase.NON_COMBAT_MOVEMENT,
   },
   [UnitType.FACTORY]: {
     attack: 0,

@@ -1,6 +1,6 @@
 import { EffectiveUnit, isEffectiveUnit } from '@ww2/shared/effective-unit';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { MovementPhase } from '@ww2/shared/turn-phase';
+import { MovementPhase } from '@ww2/game/turn-phase';
 
 export type MovementProfileId = 'standard-movement';
 export type MovementProfileKind = 'standard-movement';

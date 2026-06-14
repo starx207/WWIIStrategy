@@ -1,4 +1,4 @@
-import { MovementPhase, TurnPhase } from '@ww2/shared/turn-phase';
+import { MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
 import { BaseUnitProfile, UNIT_PROFILES } from '@ww2/shared/unit-profile';
 import { EffectiveMapUnit, isEffectiveMapUnit, MovementProfile } from './effective-map-unit';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
