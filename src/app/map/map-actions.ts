@@ -31,6 +31,16 @@ export namespace MapActions {
   }
 
   export class ClearAllMovementPlans {
-    static readonly type = `${ACTION_SOURCE} Clear All Movement Plans`;
+    static readonly type = ACTION_SOURCE + ' Clear All Movement Plans';
+  }
+
+  export class SetSquadLayoutCoordinates {
+    static readonly type = ACTION_SOURCE + ' Set Squad Layout Coordinates';
+
+    constructor(public coordinatesBySquadId: Record<string, Coordinate>) {}
+  }
+
+  export class RecalculateSquadLayoutCoordinates {
+    static readonly type = ACTION_SOURCE + ' Recalculate Squad Layout Coordinates';
   }
 }

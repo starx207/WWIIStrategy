@@ -24,6 +24,7 @@ export interface SquadMovementPlan {
 export interface MapStateModel {
   unitsByTerritoryName: Partial<Record<TerritoryName, MilitaryUnit[]>>;
   landTerritoryControllerByName: Record<LandTerritoryName, Nationality>;
+  squadLayoutCoordinatesBySquadId: Record<string, Coordinate>;
   selectedSquad?: {
     id: string;
     unitIds: string[];
@@ -34,6 +35,7 @@ export interface MapStateModel {
 const DEFAULT_STATE: MapStateModel = {
   unitsByTerritoryName: INITIAL_UNITS_BY_TERRITORY_NAME,
   landTerritoryControllerByName: INITIAL_LAND_TERRITORY_CONTROL,
+  squadLayoutCoordinatesBySquadId: {},
   movementPlansBySquadId: {},
 };
 
@@ -141,6 +143,34 @@ export class MapState {
   clearAllMovementPlans(context: MapStateContext) {
     context.patchState({ movementPlansBySquadId: {} });
   }
+
+  @Action(MapActions.SetSquadLayoutCoordinates)
+  setSquadLayoutCoordinates(
+    context: MapStateContext,
+    action: MapActions.SetSquadLayoutCoordinates,
+  ) {
+    const state = context.getState();
+
+    context.patchState({
+      squadLayoutCoordinatesBySquadId: {
+        ...state.squadLayoutCoordinatesBySquadId,
+        ...copyCoordinatesBySquadId(action.coordinatesBySquadId),
+      },
+    });
+  }
+
+  @Action(MapActions.RecalculateSquadLayoutCoordinates)
+  recalculateSquadLayoutCoordinates(context: MapStateContext) {
+    context.patchState({ squadLayoutCoordinatesBySquadId: {} });
+  }
+}
+
+function copyCoordinatesBySquadId(
+  coordinatesBySquadId: Record<string, Coordinate>,
+): Record<string, Coordinate> {
+  return Object.fromEntries(
+    Object.entries(coordinatesBySquadId).map(([squadId, coordinate]) => [squadId, [...coordinate]]),
+  );
 }
 
 function findTerritoryForUnitId(state: MapStateModel, unitId?: string): TerritoryName | undefined {

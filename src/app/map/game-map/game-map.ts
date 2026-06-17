@@ -1,8 +1,6 @@
 import {
   ApplicationRef,
   Component,
-  effect,
-  EffectRef,
   ElementRef,
   EnvironmentInjector,
   inject,
@@ -44,6 +42,9 @@ export class GameMap implements OnInit, OnDestroy {
     MapSelectors.movementPlansBySquadId,
   );
   private readonly selectedSquad = this.store.selectSignal(MapSelectors.selectedSquad);
+  private readonly squadLayoutCoordinatesBySquadId = this.store.selectSignal(
+    MapSelectors.squadLayoutCoordinatesBySquadId,
+  );
   private readonly selectedSquadMovementPlan = this.store.selectSignal(
     MapSelectors.selectedSquadMovementPlan,
   );
@@ -53,7 +54,6 @@ export class GameMap implements OnInit, OnDestroy {
 
   private map!: OlMap;
   private cleanupFns: ((() => void) | undefined)[] = [];
-  private squadOverlayEffect: EffectRef | undefined;
 
   ngOnInit(): void {
     const { layer: territoriesLayer, cleanup: territoryCleanup } = mapTerritoriesLayer({
@@ -66,8 +66,7 @@ export class GameMap implements OnInit, OnDestroy {
     const { layer: movementPlanLayer, cleanup: cleanupMovementPlan } = mapMovementPlanLayer(
       this.movementPlansBySquadId,
       this.selectedSquad,
-      this.squadsByTerritoryName,
-      territoriesLayer,
+      this.squadLayoutCoordinatesBySquadId,
       this.environmentInjector,
     );
     this.cleanupFns.push(cleanupMovementPlan);
@@ -77,22 +76,20 @@ export class GameMap implements OnInit, OnDestroy {
     });
     this.map = map;
 
-    const { cleanup, refresh } = connectSquadOverlaysToMap(
+    const { cleanup } = connectSquadOverlaysToMap(
       this.map,
       territoriesLayer,
       this.squadsByTerritoryName,
       this.movementPlansBySquadId,
       this.selectedSquad,
+      this.squadLayoutCoordinatesBySquadId,
       this.appRef,
       this.environmentInjector,
       this.onSquadSelected.bind(this),
+      (coordinatesBySquadId) =>
+        this.store.dispatch(new MapActions.SetSquadLayoutCoordinates(coordinatesBySquadId)),
     );
     this.cleanupFns.push(cleanup);
-    this.squadOverlayEffect = effect(
-      () =>
-        refresh(this.squadsByTerritoryName(), this.movementPlansBySquadId(), this.selectedSquad()),
-      { injector: this.environmentInjector },
-    );
 
     map.on('singleclick', (event) => {
       const clickedTerritory = map.forEachFeatureAtPixel(event.pixel, (feature) => {
@@ -117,7 +114,6 @@ export class GameMap implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.squadOverlayEffect?.destroy();
     for (const cleanup of this.cleanupFns) {
       cleanup?.();
     }

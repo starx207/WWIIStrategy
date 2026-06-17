@@ -11,6 +11,7 @@ import { createResolvedRuleContext } from './rule-context.factory';
 import { RuleState } from '@ww2/settings/settings-state';
 import { SettingsSelectors } from '@ww2/settings/settings-selectors';
 import { getMaxMovement } from './effective-map-unit.reducer';
+import { Coordinate } from 'ol/coordinate';
 
 export type SelectedSquadState = NonNullable<MapStateModel['selectedSquad']>;
 
@@ -39,6 +40,11 @@ export class MapSelectors {
   @Selector([MapState])
   static movementPlansBySquadId(state: MapStateModel): Record<string, SquadMovementPlan> {
     return state.movementPlansBySquadId;
+  }
+
+  @Selector([MapState])
+  static squadLayoutCoordinatesBySquadId(state: MapStateModel): Record<string, Coordinate> {
+    return state.squadLayoutCoordinatesBySquadId;
   }
 
   @Selector([MapState])

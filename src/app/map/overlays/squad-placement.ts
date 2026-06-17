@@ -5,6 +5,7 @@ import {
   EnvironmentInjector,
   Signal,
 } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { Overlay, Map as OlMap, Feature } from 'ol';
 import { Coordinate } from 'ol/coordinate';
 import { MapSquadOverlay, MapSquadOverlayVariant } from '../map-squad-overlay/map-squad-overlay';
@@ -22,10 +23,18 @@ import { TerritoryLayer } from '../layers/map-territories';
 import { SquadMovementPlan } from '../map-state';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
+import { combineLatest } from 'rxjs';
 
 type MapSquadOverlayRef = {
   overlay: Overlay;
   componentRef: ComponentRef<MapSquadOverlay>;
+};
+
+type DesiredMapSquadOverlay = {
+  key: string;
+  layout: MapSquadLayout;
+  coordinate: Coordinate;
+  variant: MapSquadOverlayVariant;
 };
 
 type TerritoryFeatureMap = Map<TerritoryName, Feature<Geometry>>;
@@ -34,34 +43,29 @@ type TerritoryLayerSource = VectorSource<Feature<Geometry>>;
 
 type SquadsByTerritoryName = ReturnType<typeof MapSelectors.squadsByTerritoryName>;
 type MovementPlansBySquadId = Record<string, SquadMovementPlan>;
+type SquadLayoutCoordinatesBySquadId = ReturnType<
+  typeof MapSelectors.squadLayoutCoordinatesBySquadId
+>;
 
 interface ConnectSquadOverlaysToMapReturn {
-  refresh: (
-    squadsByTerritoryName: SquadsByTerritoryName,
-    movementPlansBySquadId: MovementPlansBySquadId,
-    selectedSquad: SelectedSquadState | undefined,
-  ) => void;
   cleanup: () => void;
 }
 
 const clearSquadOverlays = (
-  squadOverlayRefs: MapSquadOverlayRef[],
+  squadOverlayRefsByKey: Map<string, MapSquadOverlayRef>,
   appRef: ApplicationRef,
   map?: OlMap,
 ): void => {
-  if (map) {
-    squadOverlayRefs.forEach(({ overlay }) => map.removeOverlay(overlay));
-  }
-
-  squadOverlayRefs.forEach(({ componentRef }) => {
+  for (const { overlay, componentRef } of squadOverlayRefsByKey.values()) {
+    map?.removeOverlay(overlay);
     appRef.detachView(componentRef.hostView);
     componentRef.destroy();
-  });
-  squadOverlayRefs.length = 0;
+  }
+  squadOverlayRefsByKey.clear();
 };
 
 const updateSquadOverlayScale = (
-  squadOverlayRefs: MapSquadOverlayRef[],
+  squadOverlayRefsByKey: Map<string, MapSquadOverlayRef>,
   map?: OlMap,
   baseOverlayResolution?: number,
 ): void => {
@@ -71,60 +75,86 @@ const updateSquadOverlayScale = (
   }
 
   const scale = baseOverlayResolution / currentResolution;
-  squadOverlayRefs.forEach(({ componentRef }) => {
+  for (const { componentRef } of squadOverlayRefsByKey.values()) {
     componentRef.location.nativeElement.style.setProperty(
       '--map-squad-overlay-scale',
       scale.toString(),
     );
-  });
+  }
 };
 
 const refreshSquadOverlays = (
   squadsByTerritoryName: SquadsByTerritoryName,
   movementPlansBySquadId: MovementPlansBySquadId,
   selectedSquad: SelectedSquadState | undefined,
+  squadLayoutCoordinatesBySquadId: SquadLayoutCoordinatesBySquadId,
   territoryFeaturesByName: TerritoryFeatureMap,
-  squadOverlayRefs: MapSquadOverlayRef[],
+  squadOverlayRefsByKey: Map<string, MapSquadOverlayRef>,
   appRef: ApplicationRef,
   environmentInjector: EnvironmentInjector,
   onSquadSelected: (squad: MilitaryUnitSquad<MilitaryUnit>) => void,
-  map?: OlMap,
+  setSquadLayoutCoordinates: (coordinatesBySquadId: Record<string, Coordinate>) => void,
+  map: OlMap,
   baseOverlayResolution?: number,
 ): void => {
-  if (!map || territoryFeaturesByName.size === 0) {
-    return;
+  const missingCoordinates = calculateMissingSquadLayoutCoordinates(
+    squadsByTerritoryName,
+    squadLayoutCoordinatesBySquadId,
+    territoryFeaturesByName,
+  );
+  const effectiveLayoutCoordinatesBySquadId = {
+    ...squadLayoutCoordinatesBySquadId,
+    ...missingCoordinates,
+  };
+
+  if (Object.keys(missingCoordinates).length > 0) {
+    setSquadLayoutCoordinates(missingCoordinates);
   }
 
-  clearSquadOverlays(squadOverlayRefs, appRef, map);
+  reconcileSquadOverlays(
+    buildDesiredSquadOverlays(
+      squadsByTerritoryName,
+      movementPlansBySquadId,
+      selectedSquad,
+      effectiveLayoutCoordinatesBySquadId,
+    ),
+    squadOverlayRefsByKey,
+    appRef,
+    environmentInjector,
+    onSquadSelected,
+    map,
+  );
+  updateSquadOverlayScale(squadOverlayRefsByKey, map, baseOverlayResolution);
+};
 
+function buildDesiredSquadOverlays(
+  squadsByTerritoryName: SquadsByTerritoryName,
+  movementPlansBySquadId: MovementPlansBySquadId,
+  selectedSquad: SelectedSquadState | undefined,
+  squadLayoutCoordinatesBySquadId: SquadLayoutCoordinatesBySquadId,
+): DesiredMapSquadOverlay[] {
+  const desiredOverlays: DesiredMapSquadOverlay[] = [];
   const plannedMovingSquadIds = new Set(
     Object.values(movementPlansBySquadId)
       .filter((plan) => plan.path.length > 0)
       .map((plan) => plan.squadId),
   );
 
-  for (const [territoryName, squads] of Object.entries(squadsByTerritoryName)) {
-    const visibleSquads = squads.filter((squad) => !plannedMovingSquadIds.has(squad.id));
-    if (visibleSquads.length === 0 || !TERRITORY_NAMES.includes(territoryName as TerritoryName)) {
-      continue;
-    }
-    const feature = territoryFeaturesByName.get(territoryName as TerritoryName);
-    const geometry = feature?.getGeometry();
-    if (!geometry) {
-      continue;
-    }
-
-    for (const positionedSquad of layoutMapSquadsInGeometry(visibleSquads, geometry)) {
-      addSquadOverlay(
-        positionedSquad.layout,
-        positionedSquad.coordinate,
-        'normal',
-        squadOverlayRefs,
-        appRef,
-        environmentInjector,
-        onSquadSelected,
-        map,
-      );
+  for (const squads of Object.values(squadsByTerritoryName)) {
+    for (const squad of squads) {
+      if (plannedMovingSquadIds.has(squad.id)) {
+        continue;
+      }
+      const coordinate = squadLayoutCoordinatesBySquadId[squad.id];
+      if (!coordinate) {
+        continue;
+      }
+      desiredOverlays.push({
+        key: 'normal:' + squad.id,
+        layout: createSingleSquadLayout(squad),
+        coordinate,
+        variant: 'normal',
+      });
     }
   }
 
@@ -134,86 +164,104 @@ const refreshSquadOverlays = (
     }
 
     const squad = findSquadById(squadsByTerritoryName, plan.squadId);
-    const startGeometry = territoryFeaturesByName.get(plan.startingTerritoryName)?.getGeometry();
+    const startCoordinate = squadLayoutCoordinatesBySquadId[plan.squadId];
     const finalStep = plan.path[plan.path.length - 1];
 
-    if (!squad || !startGeometry) {
+    if (!squad) {
       continue;
     }
 
-    const startPlacement = layoutMapSquadsInGeometry(
-      squadsByTerritoryName[plan.startingTerritoryName] ?? [],
-      startGeometry,
-    ).find((positionedSquad) => positionedSquad.squad.id === plan.squadId);
-    const isSelectedPlan = selectedSquad?.id === plan.squadId;
-
-    if (startPlacement) {
-      addSquadOverlay(
-        startPlacement.layout,
-        startPlacement.coordinate,
-        'movement-start',
-        squadOverlayRefs,
-        appRef,
-        environmentInjector,
-        onSquadSelected,
-        map,
-      );
+    if (startCoordinate) {
+      desiredOverlays.push({
+        key: 'start:' + plan.squadId,
+        layout: createSingleSquadLayout(squad),
+        coordinate: startCoordinate,
+        variant: 'movement-start',
+      });
     }
-    addSquadOverlay(
-      createSingleSquadLayout(squad),
-      finalStep.coordinate,
-      isSelectedPlan ? 'movement-final' : 'normal',
-      squadOverlayRefs,
-      appRef,
-      environmentInjector,
-      onSquadSelected,
-      map,
-    );
+    desiredOverlays.push({
+      key: 'final:' + plan.squadId,
+      layout: createSingleSquadLayout(squad),
+      coordinate: finalStep.coordinate,
+      variant: selectedSquad?.id === plan.squadId ? 'movement-final' : 'normal',
+    });
   }
 
-  updateSquadOverlayScale(squadOverlayRefs, map, baseOverlayResolution);
-};
+  return desiredOverlays;
+}
 
-const addSquadOverlay = (
-  layout: MapSquadLayout,
-  coordinate: Coordinate,
-  variant: MapSquadOverlayVariant,
-  squadOverlayRefs: MapSquadOverlayRef[],
+function reconcileSquadOverlays(
+  desiredOverlays: DesiredMapSquadOverlay[],
+  squadOverlayRefsByKey: Map<string, MapSquadOverlayRef>,
   appRef: ApplicationRef,
   environmentInjector: EnvironmentInjector,
   onSquadSelected: (squad: MilitaryUnitSquad<MilitaryUnit>) => void,
   map: OlMap,
-): void => {
+): void {
+  const desiredKeys = new Set<string>();
+
+  for (const desiredOverlay of desiredOverlays) {
+    desiredKeys.add(desiredOverlay.key);
+    const existingRef = squadOverlayRefsByKey.get(desiredOverlay.key);
+    if (existingRef) {
+      updateSquadOverlay(existingRef, desiredOverlay);
+      continue;
+    }
+
+    squadOverlayRefsByKey.set(
+      desiredOverlay.key,
+      createSquadOverlay(desiredOverlay, appRef, environmentInjector, onSquadSelected, map),
+    );
+  }
+
+  for (const [key, ref] of squadOverlayRefsByKey) {
+    if (desiredKeys.has(key)) {
+      continue;
+    }
+    map.removeOverlay(ref.overlay);
+    appRef.detachView(ref.componentRef.hostView);
+    ref.componentRef.destroy();
+    squadOverlayRefsByKey.delete(key);
+  }
+}
+
+function createSquadOverlay(
+  desiredOverlay: DesiredMapSquadOverlay,
+  appRef: ApplicationRef,
+  environmentInjector: EnvironmentInjector,
+  onSquadSelected: (squad: MilitaryUnitSquad<MilitaryUnit>) => void,
+  map: OlMap,
+): MapSquadOverlayRef {
   const componentRef = createComponent(MapSquadOverlay, {
     environmentInjector: environmentInjector,
   });
-  componentRef.setInput('layout', layout);
-  componentRef.setInput('variant', variant);
+  componentRef.setInput('layout', desiredOverlay.layout);
+  componentRef.setInput('variant', desiredOverlay.variant);
   componentRef.instance.squadSelected.subscribe(onSquadSelected);
   appRef.attachView(componentRef.hostView);
 
   const overlay = new Overlay({
     element: componentRef.location.nativeElement,
-    position: coordinate,
+    position: desiredOverlay.coordinate,
     positioning: 'center-center',
     stopEvent: true,
   });
 
   map.addOverlay(overlay);
-  squadOverlayRefs.push({ overlay, componentRef });
-};
+  return { overlay, componentRef };
+}
+
+function updateSquadOverlay(
+  overlayRef: MapSquadOverlayRef,
+  desiredOverlay: DesiredMapSquadOverlay,
+): void {
+  overlayRef.componentRef.setInput('layout', desiredOverlay.layout);
+  overlayRef.componentRef.setInput('variant', desiredOverlay.variant);
+  overlayRef.overlay.setPosition(desiredOverlay.coordinate);
+}
 
 const refreshTerritoryFeatures = (
-  squadsByTerritoryName: Signal<SquadsByTerritoryName>,
-  movementPlansBySquadId: Signal<MovementPlansBySquadId>,
-  selectedSquad: Signal<SelectedSquadState | undefined>,
   territoryFeaturesByName: TerritoryFeatureMap,
-  squadOverlayRefs: MapSquadOverlayRef[],
-  appRef: ApplicationRef,
-  environmentInjector: EnvironmentInjector,
-  onSquadSelected: (squad: MilitaryUnitSquad<MilitaryUnit>) => void,
-  map?: OlMap,
-  baseOverlayResolution?: number,
   zoneSource?: TerritoryLayerSource,
 ): void => {
   territoryFeaturesByName.clear();
@@ -226,19 +274,6 @@ const refreshTerritoryFeatures = (
       territoryFeaturesByName.set(territoryName, feature);
     }
   }
-
-  refreshSquadOverlays(
-    squadsByTerritoryName(),
-    movementPlansBySquadId(),
-    selectedSquad(),
-    territoryFeaturesByName,
-    squadOverlayRefs,
-    appRef,
-    environmentInjector,
-    onSquadSelected,
-    map,
-    baseOverlayResolution,
-  );
 };
 
 export const connectSquadOverlaysToMap = (
@@ -247,67 +282,106 @@ export const connectSquadOverlaysToMap = (
   squadsByTerritoryName: Signal<SquadsByTerritoryName>,
   movementPlansBySquadId: Signal<MovementPlansBySquadId>,
   selectedSquad: Signal<SelectedSquadState | undefined>,
+  squadLayoutCoordinatesBySquadId: Signal<SquadLayoutCoordinatesBySquadId>,
   appRef: ApplicationRef,
   environmentInjector: EnvironmentInjector,
   onSquadSelected: (squad: MilitaryUnitSquad<MilitaryUnit>) => void,
+  setSquadLayoutCoordinates: (coordinatesBySquadId: Record<string, Coordinate>) => void,
 ): ConnectSquadOverlaysToMapReturn => {
-  const squadOverlayRefs: MapSquadOverlayRef[] = [];
+  const squadOverlayRefsByKey = new Map<string, MapSquadOverlayRef>();
   const territoryFeaturesByName = new Map<TerritoryName, Feature<Geometry>>();
   const baseOverlayResolution = map.getView().getResolution();
   const sourceKeyEvents = [
     map
       .getView()
       .on('change:resolution', () =>
-        updateSquadOverlayScale(squadOverlayRefs, map, baseOverlayResolution),
+        updateSquadOverlayScale(squadOverlayRefsByKey, map, baseOverlayResolution),
       ),
   ];
+
+  const refreshSub = combineLatest([
+    toObservable(squadsByTerritoryName, { injector: environmentInjector }),
+    toObservable(movementPlansBySquadId, { injector: environmentInjector }),
+    toObservable(selectedSquad, { injector: environmentInjector }),
+    toObservable(squadLayoutCoordinatesBySquadId, { injector: environmentInjector }),
+  ]).subscribe(([squads, movementPlans, activeSquad, layoutCoordinates]) => {
+    refreshSquadOverlays(
+      squads,
+      movementPlans,
+      activeSquad,
+      layoutCoordinates,
+      territoryFeaturesByName,
+      squadOverlayRefsByKey,
+      appRef,
+      environmentInjector,
+      onSquadSelected,
+      setSquadLayoutCoordinates,
+      map,
+      baseOverlayResolution,
+    );
+  });
 
   const territoriesSource = territoriesLayer.getSource();
   if (territoriesSource) {
     sourceKeyEvents.push(
-      territoriesSource.on('featuresloadend', () =>
-        refreshTerritoryFeatures(
-          squadsByTerritoryName,
-          movementPlansBySquadId,
-          selectedSquad,
+      territoriesSource.on('featuresloadend', () => {
+        refreshTerritoryFeatures(territoryFeaturesByName, territoriesSource);
+        refreshSquadOverlays(
+          squadsByTerritoryName(),
+          movementPlansBySquadId(),
+          selectedSquad(),
+          squadLayoutCoordinatesBySquadId(),
           territoryFeaturesByName,
-          squadOverlayRefs,
+          squadOverlayRefsByKey,
           appRef,
           environmentInjector,
           onSquadSelected,
+          setSquadLayoutCoordinates,
           map,
           baseOverlayResolution,
-          territoriesSource,
-        ),
-      ),
+        );
+      }),
     );
   }
 
   return {
-    refresh: (
-      squadsByTerritoryName: SquadsByTerritoryName,
-      movementPlansBySquadId: MovementPlansBySquadId,
-      selectedSquad: SelectedSquadState | undefined,
-    ) => {
-      refreshSquadOverlays(
-        squadsByTerritoryName,
-        movementPlansBySquadId,
-        selectedSquad,
-        territoryFeaturesByName,
-        squadOverlayRefs,
-        appRef,
-        environmentInjector,
-        onSquadSelected,
-        map,
-        baseOverlayResolution,
-      );
-    },
     cleanup: () => {
-      clearSquadOverlays(squadOverlayRefs, appRef, map);
+      refreshSub.unsubscribe();
+      clearSquadOverlays(squadOverlayRefsByKey, appRef, map);
       unByKey(sourceKeyEvents);
     },
   };
 };
+
+function calculateMissingSquadLayoutCoordinates(
+  squadsByTerritoryName: SquadsByTerritoryName,
+  squadLayoutCoordinatesBySquadId: SquadLayoutCoordinatesBySquadId,
+  territoryFeaturesByName: TerritoryFeatureMap,
+): Record<string, Coordinate> {
+  const missingCoordinatesBySquadId: Record<string, Coordinate> = {};
+
+  for (const [territoryName, squads] of Object.entries(squadsByTerritoryName)) {
+    const missingSquadIds = new Set(
+      squads.filter((squad) => !squadLayoutCoordinatesBySquadId[squad.id]).map((squad) => squad.id),
+    );
+    if (missingSquadIds.size === 0 || !TERRITORY_NAMES.includes(territoryName as TerritoryName)) {
+      continue;
+    }
+
+    const geometry = territoryFeaturesByName.get(territoryName as TerritoryName)?.getGeometry();
+    if (!geometry) {
+      continue;
+    }
+
+    for (const positionedSquad of layoutMapSquadsInGeometry(squads, geometry)) {
+      if (missingSquadIds.has(positionedSquad.squad.id)) {
+        missingCoordinatesBySquadId[positionedSquad.squad.id] = [...positionedSquad.coordinate];
+      }
+    }
+  }
+
+  return missingCoordinatesBySquadId;
+}
 
 function findSquadById(
   squadsByTerritoryName: SquadsByTerritoryName,

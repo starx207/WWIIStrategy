@@ -7,14 +7,8 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import { Circle as CircleStyle, Fill, RegularShape, Stroke, Style } from 'ol/style';
 import { SquadMovementPlan } from '../map-state';
-import { TerritoryName } from '../../territories/territory-names';
-import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
-import { layoutMapSquadsInGeometry } from '../map-squad-layout';
 import { EnvironmentInjector, Signal } from '@angular/core';
 import { MapSelectors } from '../map-selectors';
-import { TerritoryLayer } from './map-territories';
-import { unByKey } from 'ol/Observable';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
 
@@ -23,9 +17,7 @@ const INACTIVE_COLOR = 'rgba(46, 128, 255, 0.95)';
 const ACTIVE_FILL = 'rgba(46, 128, 255, 0.18)';
 const INACTIVE_FILL = 'rgba(46, 128, 255, 0.18)';
 
-type TerritoryFeatureMap = Map<TerritoryName, Feature<Geometry>>;
 type MovementFeatureKind = 'segment' | 'arrow' | 'start' | 'final';
-type SquadsByTerritoryName = Record<TerritoryName, MilitaryUnitSquad<MilitaryUnit>[]>;
 
 type MovementPlanFeatureProperties = {
   active: boolean;
@@ -43,15 +35,15 @@ export type MovementPlanLayerReturn = {
 export function mapMovementPlanLayer(
   movementPlansBySquadIdSignal: Signal<ReturnType<typeof MapSelectors.movementPlansBySquadId>>,
   activeSquadSignal: Signal<ReturnType<typeof MapSelectors.selectedSquad>>,
-  squadsByTerritoryNameSignal: Signal<ReturnType<typeof MapSelectors.squadsByTerritoryName>>,
-  territoriesLayer: TerritoryLayer,
+  squadLayoutCoordinatesBySquadIdSignal: Signal<
+    ReturnType<typeof MapSelectors.squadLayoutCoordinatesBySquadId>
+  >,
   injector: EnvironmentInjector,
 ): MovementPlanLayerReturn {
-  const territoryFeaturesByName = new Map<TerritoryName, Feature<Geometry>>();
   const refresh$ = combineLatest([
     toObservable(movementPlansBySquadIdSignal, { injector: injector }),
     toObservable(activeSquadSignal, { injector: injector }),
-    toObservable(squadsByTerritoryNameSignal, { injector: injector }),
+    toObservable(squadLayoutCoordinatesBySquadIdSignal, { injector: injector }),
   ]);
 
   const layer = new VectorLayer({
@@ -60,31 +52,11 @@ export function mapMovementPlanLayer(
     zIndex: 2,
   });
 
-  const refreshSub = refresh$.subscribe(([movementPlans, activeSquad, squadsByTerritory]) => {
-    refreshMovementPlanLayer(
-      layer,
-      movementPlans,
-      activeSquad?.id,
-      territoryFeaturesByName,
-      squadsByTerritory,
-    );
-  });
-
-  const territoryFeatureLoadedKey = territoriesLayer.getSource()?.on('featuresloadend', () => {
-    refreshTerritoryFeatures(territoryFeaturesByName, territoriesLayer);
-    refreshMovementPlanLayer(
-      layer,
-      movementPlansBySquadIdSignal(),
-      activeSquadSignal()?.id,
-      territoryFeaturesByName,
-      squadsByTerritoryNameSignal(),
-    );
+  const refreshSub = refresh$.subscribe(([movementPlans, activeSquad, layoutCoordinates]) => {
+    refreshMovementPlanLayer(layer, movementPlans, activeSquad?.id, layoutCoordinates);
   });
 
   const cleanup = () => {
-    if (territoryFeatureLoadedKey) {
-      unByKey(territoryFeatureLoadedKey);
-    }
     refreshSub.unsubscribe();
   };
 
@@ -95,8 +67,7 @@ function refreshMovementPlanLayer(
   layer: MovementPlanLayer,
   movementPlansBySquadId: Record<string, SquadMovementPlan>,
   activeSquadId: string | undefined,
-  territoryFeaturesByName: TerritoryFeatureMap,
-  squadsByTerritoryName: SquadsByTerritoryName,
+  squadLayoutCoordinatesBySquadId: ReturnType<typeof MapSelectors.squadLayoutCoordinatesBySquadId>,
 ): void {
   const source = layer.getSource();
   if (!source) {
@@ -110,11 +81,7 @@ function refreshMovementPlanLayer(
       continue;
     }
 
-    const startCoordinate = coordinateForStartingSquad(
-      plan,
-      territoryFeaturesByName,
-      squadsByTerritoryName,
-    );
+    const startCoordinate = squadLayoutCoordinatesBySquadId[plan.squadId];
     if (!startCoordinate) {
       continue;
     }
@@ -139,22 +106,6 @@ function refreshMovementPlanLayer(
           rotation: Math.atan2(end[1] - start[1], end[0] - start[0]),
         }),
       );
-    }
-  }
-}
-
-function refreshTerritoryFeatures(
-  territoryFeaturesByName: TerritoryFeatureMap,
-  territoriesLayer: TerritoryLayer,
-) {
-  territoryFeaturesByName.clear();
-  const features = territoriesLayer.getSource()?.getFeatures() ?? [];
-
-  for (const feature of features) {
-    const territoryName = feature.get('name') as TerritoryName | undefined;
-    const geometry = feature.getGeometry();
-    if (typeof territoryName === 'string' && geometry) {
-      territoryFeaturesByName.set(territoryName, feature);
     }
   }
 }
@@ -210,20 +161,4 @@ function createPointFeature(
   properties: MovementPlanFeatureProperties,
 ): Feature<Point> {
   return new Feature({ geometry: new Point(coordinate), ...properties });
-}
-
-function coordinateForStartingSquad(
-  plan: SquadMovementPlan,
-  territoryFeaturesByName: TerritoryFeatureMap,
-  squadsByTerritoryName: SquadsByTerritoryName,
-): Coordinate | undefined {
-  const geometry = territoryFeaturesByName.get(plan.startingTerritoryName)?.getGeometry();
-  if (!geometry) {
-    return undefined;
-  }
-
-  return layoutMapSquadsInGeometry(
-    squadsByTerritoryName[plan.startingTerritoryName] ?? [],
-    geometry,
-  ).find((positionedSquad) => positionedSquad.squad.id === plan.squadId)?.coordinate;
 }
