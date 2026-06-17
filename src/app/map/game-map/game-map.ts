@@ -19,6 +19,10 @@ import { MapSelectors } from '../map-selectors';
 import { connectSquadOverlaysToMap } from '../overlays/squad-placement';
 import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
 import type { TerritoryName } from '../../territories/territory-names';
+import { MapActions } from '../map-actions';
+import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
+import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { mapMovementPlanLayer } from '../layers/movement-plan-layer';
 
 @Component({
   selector: 'ww2-game-map',
@@ -36,40 +40,87 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly squadsByTerritoryName = this.store.selectSignal(
     MapSelectors.squadsByTerritoryName,
   );
+  private readonly movementPlansBySquadId = this.store.selectSignal(
+    MapSelectors.movementPlansBySquadId,
+  );
+  private readonly selectedSquad = this.store.selectSignal(MapSelectors.selectedSquad);
+  private readonly selectedSquadMovementPlan = this.store.selectSignal(
+    MapSelectors.selectedSquadMovementPlan,
+  );
+  private readonly nextAdjacentDestinations = this.store.selectSignal(
+    MapSelectors.selectedSquadNextAdjacentDestinations,
+  );
 
   private map!: OlMap;
-  private squadOverlayCleanup: (() => void) | undefined;
+  private cleanupFns: ((() => void) | undefined)[] = [];
   private squadOverlayEffect: EffectRef | undefined;
 
   ngOnInit(): void {
-    const zoneLayer = mapTerritoriesLayer(this.selectZoneStyle.bind(this));
-
-    const { map } = configureMap(this.mapContainer.nativeElement, {
-      layers: [zoneLayer],
+    const { layer: territoriesLayer, cleanup: territoryCleanup } = mapTerritoriesLayer({
+      stylePicker: this.selectZoneStyle.bind(this),
+      injector: this.environmentInjector,
+      styleRefreshTriggers: [this.nextAdjacentDestinations, this.selectedSquadMovementPlan],
     });
-    this.map = map;
-    const { cleanup, refresh } = connectSquadOverlaysToMap(
-      this.map,
-      zoneLayer,
+    this.cleanupFns.push(territoryCleanup);
+
+    const { layer: movementPlanLayer, cleanup: cleanupMovementPlan } = mapMovementPlanLayer(
+      this.movementPlansBySquadId,
+      this.selectedSquad,
       this.squadsByTerritoryName,
-      this.appRef,
+      territoriesLayer,
       this.environmentInjector,
     );
-    this.squadOverlayCleanup = cleanup;
-    this.squadOverlayEffect = effect(() => refresh(this.squadsByTerritoryName()));
+    this.cleanupFns.push(cleanupMovementPlan);
+
+    const { map } = configureMap(this.mapContainer.nativeElement, {
+      layers: [territoriesLayer, movementPlanLayer],
+    });
+    this.map = map;
+
+    const { cleanup, refresh } = connectSquadOverlaysToMap(
+      this.map,
+      territoriesLayer,
+      this.squadsByTerritoryName,
+      this.movementPlansBySquadId,
+      this.selectedSquad,
+      this.appRef,
+      this.environmentInjector,
+      this.onSquadSelected.bind(this),
+    );
+    this.cleanupFns.push(cleanup);
+    this.squadOverlayEffect = effect(
+      () =>
+        refresh(this.squadsByTerritoryName(), this.movementPlansBySquadId(), this.selectedSquad()),
+      { injector: this.environmentInjector },
+    );
 
     map.on('singleclick', (event) => {
+      const clickedTerritory = map.forEachFeatureAtPixel(event.pixel, (feature) => {
+        const territoryName = feature.get('name') as TerritoryName | undefined;
+        return typeof territoryName === 'string' ? territoryName : undefined;
+      });
+
+      if (clickedTerritory && this.nextAdjacentDestinations().includes(clickedTerritory)) {
+        this.selectedZoneId = undefined;
+        this.store.dispatch(
+          new MapActions.PlanSquadMovementStep(clickedTerritory, event.coordinate),
+        );
+        return;
+      }
+
       this.selectedZoneId = map.forEachFeatureAtPixel(event.pixel, (feature) => {
         const zoneId = feature.get('id');
         return typeof zoneId === 'string' ? zoneId : undefined;
       });
-      zoneLayer.changed();
+      territoriesLayer.changed();
     });
   }
 
   ngOnDestroy(): void {
     this.squadOverlayEffect?.destroy();
-    this.squadOverlayCleanup?.();
+    for (const cleanup of this.cleanupFns) {
+      cleanup?.();
+    }
 
     if (this.map) {
       this.map.setTarget(undefined);
@@ -77,13 +128,31 @@ export class GameMap implements OnInit, OnDestroy {
   }
 
   selectZoneStyle(feature: FeatureLike): TerritoryStyleId {
+    const territoryName = feature.get('name') as TerritoryName | undefined;
+    if (typeof territoryName === 'string') {
+      if (this.nextAdjacentDestinations().includes(territoryName)) {
+        return 'movement-candidate';
+      }
+
+      const selectedPlan = this.selectedSquadMovementPlan();
+      const selectedPlanCurrentTerritory = selectedPlan
+        ? (selectedPlan.path.at(-1)?.territoryName ?? selectedPlan.startingTerritoryName)
+        : undefined;
+      if (territoryName === selectedPlanCurrentTerritory) {
+        return 'movement-current';
+      }
+    }
+
     if (feature.get('id') === this.selectedZoneId) {
       return 'selected';
     }
 
-    const territoryName = feature.get('name') as TerritoryName | undefined;
     return typeof territoryName === 'string' && TERRITORY_INFO_BY_NAME[territoryName].kind === 'sea'
       ? 'sea'
       : 'land';
+  }
+
+  private onSquadSelected(squad: MilitaryUnitSquad<MilitaryUnit>) {
+    this.store.dispatch(new MapActions.SelectSquad(squad));
   }
 }

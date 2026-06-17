@@ -27,6 +27,20 @@ const isValidDestination = (
   return true;
 };
 
+export const calculateAdjacentDestinations: {
+  (unit: MilitaryUnit, startingFrom: TerritoryName, context: RuleContext): TerritoryName[];
+  (unit: EffectiveMapUnit, startingFrom: TerritoryName): TerritoryName[];
+} = (
+  unit: MilitaryUnit | EffectiveMapUnit,
+  startingFrom: TerritoryName,
+  context?: RuleContext,
+): TerritoryName[] => {
+  const resolvedContext = resolveRuleContext(context);
+  return (ADJACENT_TERRITORIES_BY_NAME[startingFrom] ?? []).filter((neighbor) =>
+    isValidDestination(unit, neighbor, resolvedContext),
+  );
+};
+
 export const calculatePossibleDestinations: {
   (unit: MilitaryUnit, startingFrom: TerritoryName, context: RuleContext): TerritoryName[];
   (unit: EffectiveMapUnit, startingFrom: TerritoryName): TerritoryName[];
@@ -46,9 +60,9 @@ export const calculatePossibleDestinations: {
   };
   for (let i = 0; i < maxDistance; i++) {
     for (const territory of nDistanceNeighbors[i]) {
-      const neighbors = (ADJACENT_TERRITORIES_BY_NAME[territory] ?? [])
-        .filter((neighbor) => !visited.has(neighbor))
-        .filter((neighbor) => isValidDestination(unit, neighbor, resolvedContext));
+      const neighbors = calculateAdjacentDestinations(unit, territory, resolvedContext).filter(
+        (neighbor) => !visited.has(neighbor),
+      );
       if (neighbors.length === 0) {
         continue;
       }

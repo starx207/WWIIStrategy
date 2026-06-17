@@ -1,5 +1,5 @@
 <div
-  class="map-squad-overlay"
+  [class]="overlayClasses()"
   [style.grid-template-columns]="
     'repeat(' + layout().columns + ', var(--map-squad-grid-cell-size))'
   "
@@ -11,6 +11,7 @@
       [squad]="positionedSquad.squad"
       [style.grid-column]="positionedSquad.gridColumn + ' / span ' + positionedSquad.columns"
       [style.grid-row]="positionedSquad.gridRow + ' / span ' + positionedSquad.rows"
+      (selected)="selectSquad(positionedSquad.squad)"
     />
   }
 </div>
