@@ -32,6 +32,7 @@ type MapSquadOverlayRef = {
 
 type DesiredMapSquadOverlay = {
   key: string;
+  squadId: string;
   layout: MapSquadLayout;
   coordinate: Coordinate;
   variant: MapSquadOverlayVariant;
@@ -151,6 +152,7 @@ function buildDesiredSquadOverlays(
       }
       desiredOverlays.push({
         key: 'normal:' + squad.id,
+        squadId: squad.id,
         layout: createSingleSquadLayout(squad),
         coordinate,
         variant: 'normal',
@@ -174,6 +176,7 @@ function buildDesiredSquadOverlays(
     if (startCoordinate) {
       desiredOverlays.push({
         key: 'start:' + plan.squadId,
+        squadId: squad.id,
         layout: createSingleSquadLayout(squad),
         coordinate: startCoordinate,
         variant: 'movement-start',
@@ -181,6 +184,7 @@ function buildDesiredSquadOverlays(
     }
     desiredOverlays.push({
       key: 'final:' + plan.squadId,
+      squadId: squad.id,
       layout: createSingleSquadLayout(squad),
       coordinate: finalStep.coordinate,
       variant: selectedSquad?.id === plan.squadId ? 'movement-final' : 'normal',
@@ -235,6 +239,7 @@ function createSquadOverlay(
   const componentRef = createComponent(MapSquadOverlay, {
     environmentInjector: environmentInjector,
   });
+  componentRef.setInput('id', desiredOverlay.squadId);
   componentRef.setInput('layout', desiredOverlay.layout);
   componentRef.setInput('variant', desiredOverlay.variant);
   componentRef.instance.squadSelected.subscribe(onSquadSelected);

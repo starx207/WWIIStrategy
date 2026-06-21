@@ -2,6 +2,11 @@
   --map-squad-grid-cell-size: 1.0125rem;
   --map-squad-grid-gap: 0.075rem;
   --map-squad-overlay-scale: 1;
+  --map-squad-drop-shadow-color: rgba(0, 0, 0, 0.55);
+}
+
+.map-squad-overlay__selected {
+  --map-squad-drop-shadow-color: rgba(255, 254, 208, 0.952);
 }
 
 .map-squad-overlay {
@@ -28,7 +33,7 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  filter: drop-shadow(0.08em 0.12em 0.08em rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0.08em 0.12em 0.08em var(--map-squad-drop-shadow-color));
   --squad-font-size: var(--map-squad-grid-cell-size);
   --squad-count-badge-font-size: 0.3em;
   --squad-count-badge-line-height: 1;
