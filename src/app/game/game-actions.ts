@@ -1,3 +1,4 @@
+import { MenuAction, MenuOption } from '../menu-actions';
 import { GamePhase } from './game-phase';
 import { TurnPhase } from './turn-phase';
 
@@ -22,5 +23,20 @@ export namespace GameActions {
 
   export class AdvanceTurnPhase {
     static readonly type = `${ACTION_SOURCE} Advance Turn Phase`;
+  }
+
+  export class SetContextualMenu {
+    static readonly type = `${ACTION_SOURCE} Set Contextual Menu`;
+
+    constructor(public menuOptions: MenuOption[]) {}
+  }
+
+  export class SetContextualMenuOptionDisabled {
+    static readonly type = `${ACTION_SOURCE} Set Contextual Menu Option Disabled`;
+
+    constructor(
+      public optionIds: MenuAction[],
+      public disabled: boolean,
+    ) {}
   }
 }

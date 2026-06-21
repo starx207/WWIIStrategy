@@ -1,0 +1,42 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  height: var(--app-header-height);
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid rgba(32, 38, 46, 0.18);
+  background: #f7f8fa;
+}
+
+.app-header__group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-header__label {
+  margin-right: 0.25rem;
+  color: #2c3440;
+  font-weight: 700;
+}
+
+.app-header button {
+  border: 1px solid rgba(32, 38, 46, 0.26);
+  border-radius: 0.35rem;
+  background: #ffffff;
+  color: #20262e;
+  cursor: pointer;
+  font: inherit;
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+}
+
+.app-header button:hover:not(:disabled),
+.app-header button:focus-visible:not(:disabled) {
+  border-color: rgba(46, 128, 255, 0.82);
+  outline: none;
+}
+
+.app-header button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

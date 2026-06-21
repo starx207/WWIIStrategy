@@ -3,10 +3,11 @@ import { RouterOutlet } from '@angular/router';
 import { BattleBoard } from './combat/battle-board/battle-board';
 import { ModalDialog } from './shared/modal-dialog/modal-dialog';
 import { GameMap } from '@ww2/map/game-map/game-map';
+import { AppHeader } from './app-header/app-header';
 
 @Component({
   selector: 'ww2-root',
-  imports: [RouterOutlet, BattleBoard, ModalDialog, GameMap],
+  imports: [RouterOutlet, BattleBoard, ModalDialog, GameMap, AppHeader],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

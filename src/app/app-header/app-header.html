@@ -1,0 +1,13 @@
+<header class="app-header">
+  <nav class="app-header__group" aria-label="Movement actions">
+    @for (option of contextualMenuOptions(); track menuOptionTracking($index, option)) {
+      @if (option.id === 'header-label') {
+        <span class="app-header__label">{{ option.label }}</span>
+      } @else {
+        <button type="button" (click)="dispatchMenuAction(option.id)" [disabled]="option.disabled">
+          {{ option.label }}
+        </button>
+      }
+    }
+  </nav>
+</header>

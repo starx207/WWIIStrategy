@@ -11,4 +11,9 @@ export class GameSelectors {
   static turnPhase(state: GameStateModel) {
     return state.turnPhase;
   }
+
+  @Selector([GameState])
+  static contextualMenu(state: GameStateModel) {
+    return state.contextualMenu;
+  }
 }

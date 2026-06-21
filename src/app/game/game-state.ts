@@ -3,15 +3,18 @@ import { Action, State, StateContext } from '@ngxs/store';
 import { GameActions } from './game-actions';
 import { GamePhase } from './game-phase';
 import { TurnPhase } from './turn-phase';
+import { MenuOption } from '../menu-actions';
 
 export interface GameStateModel {
   gamePhase: GamePhase;
   turnPhase: TurnPhase;
+  contextualMenu: MenuOption[];
 }
 
 const DEFAULT_STATE: GameStateModel = {
   gamePhase: GamePhase.SOVIET_TURN,
   turnPhase: TurnPhase.PURCHASE_UNITS,
+  contextualMenu: [],
 };
 
 const GAME_PHASE_ORDER = Object.values(GamePhase).filter(
@@ -59,6 +62,36 @@ export class GameState {
         nextTurnPhase === TurnPhase.PURCHASE_UNITS
           ? getNextGamePhase(state.gamePhase)
           : state.gamePhase,
+    });
+  }
+
+  @Action(GameActions.SetContextualMenu)
+  setContextualMenu(ctx: GameStateContext, action: GameActions.SetContextualMenu) {
+    const menuOptions = action.menuOptions.map((option) => ({
+      ...option,
+      disabled: option.disabled ?? false,
+    }));
+    ctx.patchState({
+      contextualMenu: menuOptions,
+    });
+  }
+
+  @Action(GameActions.SetContextualMenuOptionDisabled)
+  setContextualMenuOptionDisabled(
+    ctx: GameStateContext,
+    action: GameActions.SetContextualMenuOptionDisabled,
+  ) {
+    const { optionIds, disabled } = action;
+
+    const contextualMenu = ctx
+      .getState()
+      .contextualMenu.map((option) =>
+        option.id !== 'header-label' && optionIds.includes(option.id)
+          ? { ...option, disabled }
+          : option,
+      );
+    ctx.patchState({
+      contextualMenu,
     });
   }
 }

@@ -1,6 +1,9 @@
 import {
   ApplicationRef,
   Component,
+  computed,
+  effect,
+  EffectRef,
   ElementRef,
   EnvironmentInjector,
   inject,
@@ -21,6 +24,7 @@ import { MapActions } from '../map-actions';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { mapMovementPlanLayer } from '../layers/movement-plan-layer';
+import { GameActions } from '@ww2/game/game-actions';
 
 @Component({
   selector: 'ww2-game-map',
@@ -51,9 +55,36 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly nextAdjacentDestinations = this.store.selectSignal(
     MapSelectors.selectedSquadNextAdjacentDestinations,
   );
+  private readonly selectedMovementPlan = this.store.selectSignal(
+    MapSelectors.selectedSquadMovementPlan,
+  );
+  private readonly canChangeSelectedMovementPlan = computed(
+    () => (this.selectedMovementPlan()?.path.length ?? 0) > 0,
+  );
+  private readonly hasMovementPlansWithPath = this.store.selectSignal(
+    MapSelectors.hasMovementPlansWithPath,
+  );
 
   private map!: OlMap;
   private cleanupFns: ((() => void) | undefined)[] = [];
+
+  private readonly effects: EffectRef[] = [
+    effect(() => {
+      const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
+      this.store.dispatch(
+        new GameActions.SetContextualMenuOptionDisabled(
+          ['undo-move', 'reset-squad-moves'],
+          !canChangeMovementPlan,
+        ),
+      );
+    }),
+    effect(() => {
+      const hasMovementPlans = this.hasMovementPlansWithPath();
+      this.store.dispatch(
+        new GameActions.SetContextualMenuOptionDisabled(['reset-all-moves'], !hasMovementPlans),
+      );
+    }),
+  ];
 
   ngOnInit(): void {
     const { layer: territoriesLayer, cleanup: territoryCleanup } = mapTerritoriesLayer({
@@ -114,6 +145,9 @@ export class GameMap implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    for (const effectRef of this.effects) {
+      effectRef.destroy();
+    }
     for (const cleanup of this.cleanupFns) {
       cleanup?.();
     }
@@ -149,6 +183,16 @@ export class GameMap implements OnInit, OnDestroy {
   }
 
   private onSquadSelected(squad: MilitaryUnitSquad<MilitaryUnit>) {
+    const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
+    const hasMovementPlans = this.hasMovementPlansWithPath();
+    this.store.dispatch(
+      new GameActions.SetContextualMenu([
+        { id: 'header-label', label: 'Movement' },
+        { id: 'undo-move', label: 'Undo', disabled: !canChangeMovementPlan },
+        { id: 'reset-squad-moves', label: 'Clear Squad', disabled: !canChangeMovementPlan },
+        { id: 'reset-all-moves', label: 'Clear All', disabled: !hasMovementPlans },
+      ]),
+    );
     this.store.dispatch(new MapActions.SelectSquad(squad));
   }
 }
