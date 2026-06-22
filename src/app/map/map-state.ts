@@ -23,6 +23,10 @@ export interface SquadMovementPlan {
 
 export interface MapStateModel {
   unitsByTerritoryName: Partial<Record<TerritoryName, MilitaryUnit[]>>;
+  // TODO: Once we implement capturing territory, it will be important that the control does not transfer until the END of the turn.
+  //       This is because movement rules for aircraft require friendly territories for airfields, so if we transfer control immediately upon capture,
+  //       it would allow aircraft to land there, which is not the intended behavior. We'll likely need some sort of "captured territory" state that transfers to
+  //       this mapping at the end of the turn.
   landTerritoryControllerByName: Record<LandTerritoryName, Nationality>;
   squadLayoutCoordinatesBySquadId: Record<string, Coordinate>;
   selectedSquad?: {

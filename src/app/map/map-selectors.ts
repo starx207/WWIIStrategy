@@ -3,15 +3,14 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { MapState, MapStateModel, SquadMovementPlan } from './map-state';
 import { TerritoryName } from '../territories/territory-names';
-import {
-  calculateAdjacentDestinations,
-  calculatePossibleDestinations,
-} from './rules/movement-calculator';
+import { calculateAdjacentDestinations } from './rules/movement-calculator';
 import { createResolvedRuleContext } from './rule-context.factory';
 import { RuleState } from '@ww2/settings/settings-state';
 import { SettingsSelectors } from '@ww2/settings/settings-selectors';
 import { getMaxMovement } from './effective-map-unit.reducer';
 import { Coordinate } from 'ol/coordinate';
+import { GameSelectors } from '@ww2/game/game-selectors';
+import { TurnPhase } from '@ww2/game/turn-phase';
 
 export type SelectedSquadState = NonNullable<MapStateModel['selectedSquad']>;
 
@@ -63,8 +62,12 @@ export class MapSelectors {
     return Object.values(state.movementPlansBySquadId).some((plan) => plan.path.length > 0);
   }
 
-  @Selector([MapState, SettingsSelectors.rules])
-  static selectedSquadRemainingMovement(state: MapStateModel, rulesState: RuleState): number {
+  @Selector([MapState, SettingsSelectors.rules, GameSelectors.turnPhase])
+  static selectedSquadRemainingMovement(
+    state: MapStateModel,
+    rulesState: RuleState,
+    turnPhase: TurnPhase,
+  ): number {
     const selectedSquad = state.selectedSquad;
     if (!selectedSquad || selectedSquad.unitIds.length === 0) {
       return 0;
@@ -82,14 +85,16 @@ export class MapSelectors {
 
     return Math.max(
       0,
-      getMaxMovement(unit, createResolvedRuleContext(state, rulesState)) - selectedPlan.path.length,
+      getMaxMovement(unit, createResolvedRuleContext(state, turnPhase, rulesState)) -
+        selectedPlan.path.length,
     );
   }
 
-  @Selector([MapState, SettingsSelectors.rules])
+  @Selector([MapState, SettingsSelectors.rules, GameSelectors.turnPhase])
   static selectedSquadNextAdjacentDestinations(
     state: MapStateModel,
     rulesState: RuleState,
+    turnPhase: TurnPhase,
   ): TerritoryName[] {
     const selectedSquad = state.selectedSquad;
     if (!selectedSquad || selectedSquad.unitIds.length === 0) {
@@ -97,45 +102,15 @@ export class MapSelectors {
     }
 
     const selectedPlan = state.movementPlansBySquadId[selectedSquad.id];
-    if (!selectedPlan) {
-      return [];
-    }
-
     const { unit } = findTerritoryForUnitId(state, selectedSquad.unitIds[0]);
     if (!unit) {
       return [];
     }
 
-    const maxMovement = getMaxMovement(unit, createResolvedRuleContext(state, rulesState));
-    if (selectedPlan.path.length >= maxMovement) {
-      return [];
-    }
-
-    const currentTerritoryName =
-      selectedPlan.path.at(-1)?.territoryName ?? selectedPlan.startingTerritoryName;
     return calculateAdjacentDestinations(
       unit,
-      currentTerritoryName,
-      createResolvedRuleContext(state, rulesState),
-    );
-  }
-
-  @Selector([MapState, SettingsSelectors.rules])
-  static selectedSquadRange(state: MapStateModel, rulesState: RuleState): TerritoryName[] {
-    const selectedSquad = state.selectedSquad;
-    if (!selectedSquad || selectedSquad.unitIds.length === 0) {
-      return [];
-    }
-
-    const { territoryName, unit } = findTerritoryForUnitId(state, selectedSquad.unitIds[0]);
-    if (!territoryName || !unit) {
-      return [];
-    }
-
-    return calculatePossibleDestinations(
-      unit,
-      territoryName,
-      createResolvedRuleContext(state, rulesState),
+      selectedPlan,
+      createResolvedRuleContext(state, turnPhase, rulesState),
     );
   }
 }

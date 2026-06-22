@@ -38,6 +38,9 @@ export const resolveRuleContext = (
   return {
     ...context,
     ...extra,
+    unitsByTerritory: context?.unitsByTerritory ?? {},
+    landControlMap: context?.landControlMap ?? {},
+    turnPhase: extra?.turnPhase ?? context?.turnPhase ?? TurnPhase.PURCHASE_UNITS,
     ruleState: extra?.ruleState ?? context?.ruleState ?? DEFAULT_RULE_STATE,
   };
 };
