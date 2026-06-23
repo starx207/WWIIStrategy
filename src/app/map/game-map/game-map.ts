@@ -25,6 +25,8 @@ import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { mapMovementPlanLayer } from '../layers/movement-plan-layer';
 import { GameActions } from '@ww2/game/game-actions';
+import { GameSelectors } from '@ww2/game/game-selectors';
+import { MOVEMENT_PHASES, MovementPhase } from '@ww2/game/turn-phase';
 
 @Component({
   selector: 'ww2-game-map',
@@ -64,6 +66,7 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly hasMovementPlansWithPath = this.store.selectSignal(
     MapSelectors.hasMovementPlansWithPath,
   );
+  private readonly currentTurnPhase = this.store.selectSignal(GameSelectors.turnPhase);
 
   private map!: OlMap;
   private cleanupFns: ((() => void) | undefined)[] = [];
@@ -183,16 +186,22 @@ export class GameMap implements OnInit, OnDestroy {
   }
 
   private onSquadSelected(squad: MilitaryUnitSquad<MilitaryUnit>) {
-    const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
-    const hasMovementPlans = this.hasMovementPlansWithPath();
-    this.store.dispatch(
-      new GameActions.SetContextualMenu([
-        { id: 'header-label', label: 'Movement' },
-        { id: 'undo-move', label: 'Undo', disabled: !canChangeMovementPlan },
-        { id: 'reset-squad-moves', label: 'Clear Squad', disabled: !canChangeMovementPlan },
-        { id: 'reset-all-moves', label: 'Clear All', disabled: !hasMovementPlans },
-      ]),
-    );
-    this.store.dispatch(new MapActions.SelectSquad(squad));
+    const phase = this.currentTurnPhase();
+
+    if ([...MOVEMENT_PHASES].includes(phase)) {
+      const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
+      const hasMovementPlans = this.hasMovementPlansWithPath();
+      this.store.dispatch(
+        new GameActions.SetContextualMenu([
+          { id: 'header-label', label: 'Movement' },
+          { id: 'undo-move', label: 'Undo', disabled: !canChangeMovementPlan },
+          { id: 'reset-squad-moves', label: 'Clear Squad', disabled: !canChangeMovementPlan },
+          { id: 'reset-all-moves', label: 'Clear All', disabled: !hasMovementPlans },
+        ]),
+      );
+      this.store.dispatch(new MapActions.SelectSquad(squad, phase as MovementPhase));
+    } else {
+      this.store.dispatch(new GameActions.SetContextualMenu([]));
+    }
   }
 }

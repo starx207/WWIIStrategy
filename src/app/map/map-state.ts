@@ -9,6 +9,7 @@ import {
 import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
 import { MapActions } from './map-actions';
 import { Coordinate } from 'ol/coordinate';
+import { MovementPhase } from '@ww2/game/turn-phase';
 
 export interface SquadMovementStep {
   territoryName: TerritoryName;
@@ -17,6 +18,7 @@ export interface SquadMovementStep {
 
 export interface SquadMovementPlan {
   squadId: string;
+  phase: MovementPhase;
   startingTerritoryName: TerritoryName;
   path: SquadMovementStep[];
 }
@@ -70,6 +72,7 @@ export class MapState {
               ...state.movementPlansBySquadId,
               [selectedSquad.id]: {
                 squadId: selectedSquad.id,
+                phase: action.phase,
                 startingTerritoryName,
                 path: [],
               },

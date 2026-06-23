@@ -3,6 +3,7 @@ import { EffectiveMapUnit } from './effective-map-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { TerritoryName } from '../territories/territory-names';
 import { Coordinate } from 'ol/coordinate';
+import { MovementPhase } from '@ww2/game/turn-phase';
 
 export namespace MapActions {
   const ACTION_SOURCE = '[Map]';
@@ -10,7 +11,10 @@ export namespace MapActions {
   export class SelectSquad {
     static readonly type = `${ACTION_SOURCE} Select Squad`;
 
-    constructor(public squad: MilitaryUnitSquad<MilitaryUnit | EffectiveMapUnit>) {}
+    constructor(
+      public squad: MilitaryUnitSquad<MilitaryUnit | EffectiveMapUnit>,
+      public phase: MovementPhase,
+    ) {}
   }
 
   export class PlanSquadMovementStep {

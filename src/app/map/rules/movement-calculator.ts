@@ -123,7 +123,7 @@ export const calculateAdjacentDestinations = (
   movement: SquadMovementPlan | undefined,
   context: RuleContext,
 ): TerritoryName[] => {
-  if (!movement) {
+  if (!movement || movement.phase !== context.turnPhase) {
     return [];
   }
 
@@ -138,6 +138,18 @@ export const calculateAdjacentDestinations = (
   }
 
   const currentTerritory = movement.path.at(-1)?.territoryName ?? movement.startingTerritoryName;
+
+  // During a combat move, land & sea units must stop when they encounter enemy units.
+  if (context.turnPhase === TurnPhase.COMBAT_MOVEMENT && ![...AIR_UNIT_TYPES].includes(unit.type)) {
+    const occupyingUnits = context.unitsByTerritory[currentTerritory] ?? [];
+    if (occupyingUnits.length > 0) {
+      const occupyingUnitAlliance = NATION_ALLIANCE[occupyingUnits[0].nationality];
+      const unitAlliance = NATION_ALLIANCE[unit.nationality];
+      if (occupyingUnitAlliance !== unitAlliance) {
+        return [];
+      }
+    }
+  }
 
   return (ADJACENT_TERRITORIES_BY_NAME[currentTerritory] ?? []).filter((neighbor) =>
     isValidDestination(unit, neighbor, remainingMovement, context),
