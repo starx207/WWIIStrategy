@@ -126,6 +126,28 @@ export class GameMap implements OnInit, OnDestroy {
     this.cleanupFns.push(cleanup);
 
     map.on('singleclick', (event) => {
+      const clickedNode = map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature) => {
+          const kind = feature.get('kind');
+          const squadId = feature.get('squadId');
+          const stepIndex = feature.get('stepIndex');
+          return (kind === 'arrow' || kind === 'final') &&
+            typeof squadId === 'string' &&
+            typeof stepIndex === 'number'
+            ? { squadId, stepIndex }
+            : undefined;
+        },
+        { hitTolerance: 6 },
+      );
+
+      if (clickedNode && clickedNode.squadId === this.selectedSquad()?.id) {
+        this.store.dispatch(
+          new MapActions.SetAircraftCombatNode(clickedNode.squadId, clickedNode.stepIndex),
+        );
+        return;
+      }
+
       const clickedTerritory = map.forEachFeatureAtPixel(event.pixel, (feature) => {
         const territoryName = feature.get('name') as TerritoryName | undefined;
         return typeof territoryName === 'string' ? territoryName : undefined;

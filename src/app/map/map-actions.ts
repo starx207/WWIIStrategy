@@ -30,6 +30,15 @@ export namespace MapActions {
     static readonly type = `${ACTION_SOURCE} Undo Squad Movement Step`;
   }
 
+  export class SetAircraftCombatNode {
+    static readonly type = `${ACTION_SOURCE} Set Aircraft Combat Node`;
+
+    constructor(
+      public squadId: string,
+      public stepIndex: number,
+    ) {}
+  }
+
   export class ClearSelectedSquadMovementPlan {
     static readonly type = `${ACTION_SOURCE} Clear Selected Squad Movement Plan`;
   }

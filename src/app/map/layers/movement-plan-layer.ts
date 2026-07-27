@@ -27,6 +27,9 @@ type MovementPlanFeatureProperties = {
   active: boolean;
   kind: MovementFeatureKind;
   subKind?: SquadMovementStepCombatType;
+  // Present on node features ('arrow' / 'final') so a map click can resolve back to a plan step.
+  squadId?: string;
+  stepIndex?: number;
 };
 
 export type MovementPlanLayer = VectorLayer<VectorSource<Feature<Geometry>>>;
@@ -94,7 +97,12 @@ function refreshMovementPlanLayer(
     const active = plan.squadId === activeSquadId;
     source.addFeature(createPointFeature(coordinates[0], { active, kind: 'start' }));
     source.addFeature(
-      createPointFeature(coordinates[coordinates.length - 1], { active, kind: 'final' }),
+      createPointFeature(coordinates[coordinates.length - 1], {
+        active,
+        kind: 'final',
+        squadId: plan.squadId,
+        stepIndex: plan.path.length - 1,
+      }),
     );
 
     for (let index = 0; index < coordinates.length - 1; index++) {
@@ -109,6 +117,8 @@ function refreshMovementPlanLayer(
           active,
           kind: 'arrow',
           subKind: planStep?.combatType,
+          squadId: plan.squadId,
+          stepIndex: index,
         }),
       );
     }

@@ -35,10 +35,35 @@ export const determineMovementStepCombatType = ({
   return 'combat';
 };
 
+type TerritoryEnemyParams = {
+  unit: MilitaryUnit;
+  territory: TerritoryName;
+  unitsByTerritoryName: Partial<Record<TerritoryName, MilitaryUnit[]>>;
+};
+
+/**
+ * True when the territory holds an enemy (opposing-alliance) unit that is not an AA gun — i.e. a
+ * unit an aircraft could choose to engage in combat. AA-only, empty, and friendly territories are
+ * not engageable.
+ */
+export const territoryHasEngageableEnemy = ({
+  unit,
+  territory,
+  unitsByTerritoryName,
+}: TerritoryEnemyParams): boolean => {
+  const unitAlliance = NATION_ALLIANCE[unit.nationality];
+  return (unitsByTerritoryName[territory] ?? []).some(
+    (u) => NATION_ALLIANCE[u.nationality] !== unitAlliance && u.type !== UnitType.ANTI_AIR_GUN,
+  );
+};
+
 type DetermineAircraftPathCombatTypesParams = {
   unit: MilitaryUnit;
   territories: TerritoryName[];
   unitsByTerritoryName: Partial<Record<TerritoryName, MilitaryUnit[]>>;
+  // When set to a valid, engageable step index, that step becomes the combat engagement instead
+  // of the auto "last engageable enemy" pick (the player manually chose it).
+  preferredCombatIndex?: number;
 };
 
 /**
@@ -46,23 +71,22 @@ type DetermineAircraftPathCombatTypesParams = {
  * enemy territory en route to their combat destination. So across the whole planned path,
  * the LAST step whose territory holds enemy (non-AA) units is the combat engagement;
  * every other step is a fly-over that is 'under-fire' when enemy AA is present, otherwise 'none'.
+ * A valid `preferredCombatIndex` overrides that auto pick.
  */
 export const determineAircraftPathCombatTypes = ({
   unit,
   territories,
   unitsByTerritoryName,
+  preferredCombatIndex,
 }: DetermineAircraftPathCombatTypesParams): SquadMovementStepCombatType[] => {
   const unitAlliance = NATION_ALLIANCE[unit.nationality];
 
-  const stepEnemyPresence = territories.map((territory) => {
-    const enemyUnits = (unitsByTerritoryName[territory] ?? []).filter(
-      (u) => NATION_ALLIANCE[u.nationality] !== unitAlliance,
-    );
-    return {
-      hasEnemyNonAA: enemyUnits.some((u) => u.type !== UnitType.ANTI_AIR_GUN),
-      hasAA: enemyUnits.some((u) => u.type === UnitType.ANTI_AIR_GUN),
-    };
-  });
+  const stepEnemyPresence = territories.map((territory) => ({
+    hasEnemyNonAA: territoryHasEngageableEnemy({ unit, territory, unitsByTerritoryName }),
+    hasAA: (unitsByTerritoryName[territory] ?? []).some(
+      (u) => NATION_ALLIANCE[u.nationality] !== unitAlliance && u.type === UnitType.ANTI_AIR_GUN,
+    ),
+  }));
 
   let combatIndex = -1;
   stepEnemyPresence.forEach((presence, index) => {
@@ -70,6 +94,14 @@ export const determineAircraftPathCombatTypes = ({
       combatIndex = index;
     }
   });
+
+  if (
+    preferredCombatIndex !== undefined &&
+    preferredCombatIndex >= 0 &&
+    stepEnemyPresence[preferredCombatIndex]?.hasEnemyNonAA
+  ) {
+    combatIndex = preferredCombatIndex;
+  }
 
   return stepEnemyPresence.map((presence, index) => {
     if (index === combatIndex) {

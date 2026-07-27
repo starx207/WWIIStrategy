@@ -9,10 +9,11 @@ import {
 import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
 import { MapActions } from './map-actions';
 import { Coordinate } from 'ol/coordinate';
-import { MovementPhase } from '@ww2/game/turn-phase';
+import { MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
 import {
   determineAircraftPathCombatTypes,
   determineMovementStepCombatType,
+  territoryHasEngageableEnemy,
 } from './rules/destination-rules';
 import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
 
@@ -23,6 +24,9 @@ export interface SquadMovementStep {
   coordinate: Coordinate;
   combatType: SquadMovementStepCombatType;
   isValidEnd: boolean;
+  // Aircraft only: the player manually designated this step as the combat engagement, overriding
+  // the auto "last engageable enemy" pick. Survives path recompute so the choice sticks.
+  manualCombat?: boolean;
 }
 
 export interface SquadMovementPlan {
@@ -159,6 +163,53 @@ export class MapState {
     });
   }
 
+  @Action(MapActions.SetAircraftCombatNode)
+  setAircraftCombatNode(context: MapStateContext, action: MapActions.SetAircraftCombatNode) {
+    const state = context.getState();
+    const selectedSquad = state.selectedSquad;
+    const selectedPlan = selectedSquad ? state.movementPlansBySquadId[selectedSquad.id] : undefined;
+    const unit = findUnitForSelectedSquad(state);
+
+    if (
+      !selectedSquad ||
+      !selectedPlan ||
+      !unit ||
+      selectedSquad.id !== action.squadId ||
+      selectedPlan.phase !== TurnPhase.COMBAT_MOVEMENT ||
+      ![...AIR_UNIT_TYPES].includes(unit.type)
+    ) {
+      return;
+    }
+
+    const step = selectedPlan.path[action.stepIndex];
+    if (
+      !step ||
+      step.combatType === 'combat' ||
+      !territoryHasEngageableEnemy({
+        unit,
+        territory: step.territoryName,
+        unitsByTerritoryName: state.unitsByTerritoryName,
+      })
+    ) {
+      return;
+    }
+
+    const steps = selectedPlan.path.map((planStep, index) => ({
+      ...planStep,
+      manualCombat: index === action.stepIndex,
+    }));
+
+    context.patchState({
+      movementPlansBySquadId: {
+        ...state.movementPlansBySquadId,
+        [selectedSquad.id]: {
+          ...selectedPlan,
+          path: withRecomputedCombatTypes(unit, steps, state.unitsByTerritoryName),
+        },
+      },
+    });
+  }
+
   @Action(MapActions.ClearSelectedSquadMovementPlan)
   clearSelectedSquadMovementPlan(context: MapStateContext) {
     const state = context.getState();
@@ -206,7 +257,12 @@ function withRecomputedCombatTypes(
 ): SquadMovementStep[] {
   const territories = steps.map((step) => step.territoryName);
   const combatTypes = [...AIR_UNIT_TYPES].includes(unit.type)
-    ? determineAircraftPathCombatTypes({ unit, territories, unitsByTerritoryName })
+    ? determineAircraftPathCombatTypes({
+        unit,
+        territories,
+        unitsByTerritoryName,
+        preferredCombatIndex: steps.findIndex((step) => step.manualCombat),
+      })
     : territories.map((territory) =>
         determineMovementStepCombatType({ unit, territory, unitsByTerritoryName }),
       );
