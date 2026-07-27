@@ -5,8 +5,8 @@ import LineString from 'ol/geom/LineString';
 import Point from 'ol/geom/Point';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import { Circle as CircleStyle, Fill, RegularShape, Stroke, Style } from 'ol/style';
-import { SquadMovementPlan } from '../map-state';
+import { Circle as CircleStyle, Fill, RegularShape, Stroke, Style, Text } from 'ol/style';
+import { SquadMovementPlan, SquadMovementStepCombatType } from '../map-state';
 import { EnvironmentInjector, Signal } from '@angular/core';
 import { MapSelectors } from '../map-selectors';
 import { toObservable } from '@angular/core/rxjs-interop';
@@ -14,15 +14,19 @@ import { combineLatest } from 'rxjs';
 
 const ACTIVE_COLOR = 'rgba(46, 128, 255, 0.95)';
 const INACTIVE_COLOR = 'rgba(46, 128, 255, 0.95)';
+const ACTIVE_WARNING_COLOR = 'rgba(251, 255, 11, 0.95)';
+const INACTIVE_WARNING_COLOR = 'rgba(251, 255, 11, 0.95)';
 const ACTIVE_FILL = 'rgba(46, 128, 255, 0.18)';
 const INACTIVE_FILL = 'rgba(46, 128, 255, 0.18)';
+const COMBAT_COLOR = 'rgba(189, 0, 0, 0.82)';
+const NODE_BORDER_COLOR = 'rgba(255, 255, 255, 0.9)';
 
 type MovementFeatureKind = 'segment' | 'arrow' | 'start' | 'final';
 
 type MovementPlanFeatureProperties = {
   active: boolean;
   kind: MovementFeatureKind;
-  rotation?: number;
+  subKind?: SquadMovementStepCombatType;
 };
 
 export type MovementPlanLayer = VectorLayer<VectorSource<Feature<Geometry>>>;
@@ -96,6 +100,7 @@ function refreshMovementPlanLayer(
     for (let index = 0; index < coordinates.length - 1; index++) {
       const start = coordinates[index];
       const end = coordinates[index + 1];
+      const planStep = plan.path[index];
       source.addFeature(
         new Feature({ geometry: new LineString([start, end]), active, kind: 'segment' }),
       );
@@ -103,18 +108,19 @@ function refreshMovementPlanLayer(
         createPointFeature(end, {
           active,
           kind: 'arrow',
-          rotation: Math.atan2(end[1] - start[1], end[0] - start[0]),
+          subKind: planStep?.combatType,
         }),
       );
     }
   }
 }
 
-function movementPlanStyle(feature: FeatureLike): Style {
+function movementPlanStyle(feature: FeatureLike): Style | Style[] {
   const active = feature.get('active') as MovementPlanFeatureProperties['active'];
   const kind = feature.get('kind') as MovementPlanFeatureProperties['kind'];
-  const rotation = feature.get('rotation') as MovementPlanFeatureProperties['rotation'];
+  const subKind = feature.get('subKind') as MovementPlanFeatureProperties['subKind'];
   const color = active ? ACTIVE_COLOR : INACTIVE_COLOR;
+  const warningColor = active ? ACTIVE_WARNING_COLOR : INACTIVE_WARNING_COLOR;
   const fill = active ? ACTIVE_FILL : INACTIVE_FILL;
   const lineWidth = active ? 4 : 3;
 
@@ -124,17 +130,7 @@ function movementPlanStyle(feature: FeatureLike): Style {
         stroke: new Stroke({ color, width: lineWidth, lineDash: active ? undefined : [8, 8] }),
       });
     case 'arrow':
-      return new Style({
-        image: new RegularShape({
-          points: 3,
-          radius: active ? 11 : 9,
-          fill: new Fill({ color }),
-          stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.82)', width: active ? 2 : 1 }),
-          rotation: rotation ?? 0,
-          rotateWithView: true,
-          angle: Math.PI / 2,
-        }),
-      });
+      return nodeStyle(active, subKind, color, warningColor);
     case 'start':
       return new Style({
         image: new CircleStyle({
@@ -154,6 +150,78 @@ function movementPlanStyle(feature: FeatureLike): Style {
     default:
       return new Style();
   }
+}
+
+/** Picks the symbol for a step node based on its combat type. */
+function nodeStyle(
+  active: boolean,
+  subKind: MovementPlanFeatureProperties['subKind'],
+  color: string,
+  warningColor: string,
+): Style | Style[] {
+  switch (subKind) {
+    case 'combat':
+      return combatNodeStyle(active);
+    case 'under-fire':
+      return underFireNodeStyle(active, warningColor);
+    default:
+      return normalNodeStyle(active, color);
+  }
+}
+
+/** Normal move: solid circle with a white border. */
+function normalNodeStyle(active: boolean, color: string): Style {
+  return new Style({
+    image: new CircleStyle({
+      radius: active ? 8 : 6,
+      fill: new Fill({ color }),
+      stroke: new Stroke({ color: NODE_BORDER_COLOR, width: active ? 2 : 1.5 }),
+    }),
+  });
+}
+
+/** Fly-over under anti-air fire: warning triangle with an exclamation point. */
+function underFireNodeStyle(active: boolean, warningColor: string): Style {
+  const strokeColor = 'rgba(0, 0, 0, 0.9)';
+  return new Style({
+    image: new RegularShape({
+      points: 3,
+      radius: active ? 13 : 11,
+      fill: new Fill({ color: warningColor }),
+      stroke: new Stroke({ color: strokeColor, width: active ? 2 : 1.5 }),
+      angle: 0,
+    }),
+    text: new Text({
+      text: '!',
+      font: `bold ${active ? 13 : 11}px sans-serif`,
+      fill: new Fill({ color: strokeColor }),
+      // Nudge down so the "!" sits inside the visible body of the triangle.
+      offsetY: active ? -1 : -0.8,
+      offsetX: 0.2,
+    }),
+  });
+}
+
+/** Combat engagement: red crosshairs (a ring plus a cross). */
+function combatNodeStyle(active: boolean): Style[] {
+  const radius = active ? 9 : 7;
+  const strokeWidth = active ? 2.5 : 2;
+  const ring = new Style({
+    image: new CircleStyle({
+      radius,
+      stroke: new Stroke({ color: COMBAT_COLOR, width: strokeWidth }),
+    }),
+  });
+  const cross = new Style({
+    image: new RegularShape({
+      points: 4,
+      radius: radius + (active ? 4 : 3),
+      radius2: 0,
+      angle: 0,
+      stroke: new Stroke({ color: COMBAT_COLOR, width: strokeWidth }),
+    }),
+  });
+  return [ring, cross];
 }
 
 function createPointFeature(

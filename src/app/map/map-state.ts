@@ -10,10 +10,19 @@ import { LandTerritoryName, TerritoryName } from '../territories/territory-names
 import { MapActions } from './map-actions';
 import { Coordinate } from 'ol/coordinate';
 import { MovementPhase } from '@ww2/game/turn-phase';
+import {
+  determineAircraftPathCombatTypes,
+  determineMovementStepCombatType,
+} from './rules/destination-rules';
+import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
+
+export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
 
 export interface SquadMovementStep {
   territoryName: TerritoryName;
   coordinate: Coordinate;
+  combatType: SquadMovementStepCombatType;
+  isValidEnd: boolean;
 }
 
 export interface SquadMovementPlan {
@@ -83,7 +92,8 @@ export class MapState {
   @Action(MapActions.PlanSquadMovementStep)
   planSquadMovementStep(context: MapStateContext, action: MapActions.PlanSquadMovementStep) {
     const state = context.getState();
-    const selectedSquadId = state.selectedSquad?.id;
+    const selectedSquad = state.selectedSquad;
+    const selectedSquadId = selectedSquad?.id;
     const selectedPlan = selectedSquadId
       ? state.movementPlansBySquadId[selectedSquadId]
       : undefined;
@@ -92,18 +102,28 @@ export class MapState {
       return;
     }
 
+    // Aircraft only fight in a single destination, so combat type depends on the whole path (see
+    // determineAircraftPathCombatTypes). Append the new step, then recompute the entire path.
+    const appendedSteps: SquadMovementStep[] = [
+      ...selectedPlan.path,
+      {
+        territoryName: action.territoryName,
+        coordinate: [...action.coordinate],
+        isValidEnd: true,
+        combatType: 'none',
+      },
+    ];
+
     context.patchState({
       movementPlansBySquadId: {
         ...state.movementPlansBySquadId,
         [selectedSquadId]: {
           ...selectedPlan,
-          path: [
-            ...selectedPlan.path,
-            {
-              territoryName: action.territoryName,
-              coordinate: [...action.coordinate],
-            },
-          ],
+          path: withRecomputedCombatTypes(
+            findUnitForSelectedSquad(state)!,
+            appendedSteps,
+            state.unitsByTerritoryName,
+          ),
         },
       },
     });
@@ -121,12 +141,19 @@ export class MapState {
       return;
     }
 
+    // Removing the last step can change which step is the aircraft's combat destination, so
+    // recompute the remaining path's combat types rather than just slicing.
+    const remainingSteps = selectedPlan.path.slice(0, -1);
+    const unit = findUnitForSelectedSquad(state);
+
     context.patchState({
       movementPlansBySquadId: {
         ...state.movementPlansBySquadId,
         [selectedSquadId]: {
           ...selectedPlan,
-          path: selectedPlan.path.slice(0, -1),
+          path: unit
+            ? withRecomputedCombatTypes(unit, remainingSteps, state.unitsByTerritoryName)
+            : remainingSteps,
         },
       },
     });
@@ -172,6 +199,21 @@ export class MapState {
   }
 }
 
+function withRecomputedCombatTypes(
+  unit: MilitaryUnit,
+  steps: SquadMovementStep[],
+  unitsByTerritoryName: MapStateModel['unitsByTerritoryName'],
+): SquadMovementStep[] {
+  const territories = steps.map((step) => step.territoryName);
+  const combatTypes = [...AIR_UNIT_TYPES].includes(unit.type)
+    ? determineAircraftPathCombatTypes({ unit, territories, unitsByTerritoryName })
+    : territories.map((territory) =>
+        determineMovementStepCombatType({ unit, territory, unitsByTerritoryName }),
+      );
+
+  return steps.map((step, index) => ({ ...step, combatType: combatTypes[index] }));
+}
+
 function copyCoordinatesBySquadId(
   coordinatesBySquadId: Record<string, Coordinate>,
 ): Record<string, Coordinate> {
@@ -188,6 +230,22 @@ function findTerritoryForUnitId(state: MapStateModel, unitId?: string): Territor
   for (const [territoryName, units] of Object.entries(state.unitsByTerritoryName)) {
     if (units?.some((unit) => unit.id === unitId)) {
       return territoryName as TerritoryName;
+    }
+  }
+  return undefined;
+}
+
+function findUnitForSelectedSquad(state: MapStateModel): MilitaryUnit | undefined {
+  const selectedSquad = state.selectedSquad;
+  if (!selectedSquad) {
+    return undefined;
+  }
+
+  const unitId = selectedSquad.unitIds[0];
+  for (const units of Object.values(state.unitsByTerritoryName)) {
+    const unit = units?.find((unit) => unit.id === unitId);
+    if (unit) {
+      return unit;
     }
   }
   return undefined;
