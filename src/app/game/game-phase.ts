@@ -17,6 +17,15 @@ const NATIONALITY_BY_GAME_PHASE: Partial<Record<GamePhase, Nationality>> = {
   [GamePhase.US_TURN]: Nationality.UNITED_STATES,
 };
 
+/** The powers in the order they take their turns (Soviet → Germany → UK → Japan → USA). */
+export const NATIONALITIES_IN_TURN_ORDER: Nationality[] = [
+  Nationality.SOVIET_UNION,
+  Nationality.GERMANY,
+  Nationality.UNITED_KINGDOM,
+  Nationality.JAPAN,
+  Nationality.UNITED_STATES,
+];
+
 /** The nation whose turn it is, or undefined for the CHECK_FOR_VICTORY phase. */
 export function nationalityForGamePhase(phase: GamePhase): Nationality | undefined {
   return NATIONALITY_BY_GAME_PHASE[phase];

@@ -1,9 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { Store } from '@ngxs/store';
-import { NATIONALITIES, Nationality } from '@ww2/shared/nationality';
+import { Nationality } from '@ww2/shared/nationality';
 import { NATIONALITY_SHORT_LABEL } from '@ww2/shared/nationality-label';
 import { GameSelectors } from '@ww2/game/game-selectors';
-import { nationalityForGamePhase } from '@ww2/game/game-phase';
+import { NATIONALITIES_IN_TURN_ORDER, nationalityForGamePhase } from '@ww2/game/game-phase';
 import { EconomySelectors } from '../economy-selectors';
 
 @Component({
@@ -15,7 +15,7 @@ import { EconomySelectors } from '../economy-selectors';
 export class TreasuryWidget {
   private readonly store = inject(Store);
 
-  protected readonly nationalities = NATIONALITIES;
+  protected readonly nationalities = NATIONALITIES_IN_TURN_ORDER;
   private readonly treasuries = this.store.selectSignal(EconomySelectors.treasuryByNationality);
   private readonly incomes = this.store.selectSignal(EconomySelectors.incomeByNationality);
   private readonly gamePhase = this.store.selectSignal(GameSelectors.gamePhase);
