@@ -113,6 +113,11 @@ export class MapSelectors {
       createResolvedRuleContext(state, turnPhase, rulesState),
     );
   }
+
+  @Selector([MapState])
+  static invalidMovementPlanCount(state: MapStateModel): number {
+    return Object.values(state.movementPlansBySquadId).filter((plan) => !plan.isValid).length;
+  }
 }
 
 function findTerritoryForUnitId(

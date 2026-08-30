@@ -1,0 +1,12 @@
+:host {
+  margin-left: auto;
+}
+
+.invalid-movement-badge {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid rgba(189, 0, 0, 0.4);
+  border-radius: 0.35rem;
+  background: rgba(189, 0, 0, 0.1);
+  color: rgba(189, 0, 0, 0.9);
+  font-weight: 700;
+}

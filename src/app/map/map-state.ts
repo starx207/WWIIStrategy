@@ -16,6 +16,7 @@ import {
   territoryHasEngageableEnemy,
 } from './rules/destination-rules';
 import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
+import { isMovementPlanValid } from './rules/movement-validity';
 
 export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
 
@@ -23,7 +24,6 @@ export interface SquadMovementStep {
   territoryName: TerritoryName;
   coordinate: Coordinate;
   combatType: SquadMovementStepCombatType;
-  isValidEnd: boolean;
   // Aircraft only: the player manually designated this step as the combat engagement, overriding
   // the auto "last engageable enemy" pick. Survives path recompute so the choice sticks.
   manualCombat?: boolean;
@@ -34,6 +34,7 @@ export interface SquadMovementPlan {
   phase: MovementPhase;
   startingTerritoryName: TerritoryName;
   path: SquadMovementStep[];
+  isValid: boolean;
 }
 
 export interface MapStateModel {
@@ -88,6 +89,7 @@ export class MapState {
                 phase: action.phase,
                 startingTerritoryName,
                 path: [],
+                isValid: true,
               },
             },
     });
@@ -113,21 +115,28 @@ export class MapState {
       {
         territoryName: action.territoryName,
         coordinate: [...action.coordinate],
-        isValidEnd: true,
         combatType: 'none',
       },
     ];
+
+    const unit = findUnitForSelectedSquad(state)!;
+    const newPlan = {
+      ...selectedPlan,
+      path: withRecomputedCombatTypes(unit, appendedSteps, state.unitsByTerritoryName),
+    };
+    const isValid = isMovementPlanValid({
+      unit: unit,
+      plan: newPlan,
+      unitsByTerritoryName: state.unitsByTerritoryName,
+      landTerritoryControllerByName: state.landTerritoryControllerByName,
+    });
 
     context.patchState({
       movementPlansBySquadId: {
         ...state.movementPlansBySquadId,
         [selectedSquadId]: {
-          ...selectedPlan,
-          path: withRecomputedCombatTypes(
-            findUnitForSelectedSquad(state)!,
-            appendedSteps,
-            state.unitsByTerritoryName,
-          ),
+          ...newPlan,
+          isValid: isValid,
         },
       },
     });
@@ -150,14 +159,27 @@ export class MapState {
     const remainingSteps = selectedPlan.path.slice(0, -1);
     const unit = findUnitForSelectedSquad(state);
 
+    const newPlan = {
+      ...selectedPlan,
+      path: unit
+        ? withRecomputedCombatTypes(unit, remainingSteps, state.unitsByTerritoryName)
+        : remainingSteps,
+    };
+    const isValid =
+      unit &&
+      isMovementPlanValid({
+        unit: unit,
+        plan: newPlan,
+        unitsByTerritoryName: state.unitsByTerritoryName,
+        landTerritoryControllerByName: state.landTerritoryControllerByName,
+      });
+
     context.patchState({
       movementPlansBySquadId: {
         ...state.movementPlansBySquadId,
         [selectedSquadId]: {
-          ...selectedPlan,
-          path: unit
-            ? withRecomputedCombatTypes(unit, remainingSteps, state.unitsByTerritoryName)
-            : remainingSteps,
+          ...newPlan,
+          isValid: isValid ?? false,
         },
       },
     });
@@ -199,12 +221,23 @@ export class MapState {
       manualCombat: index === action.stepIndex,
     }));
 
+    const newPlan = {
+      ...selectedPlan,
+      path: withRecomputedCombatTypes(unit, steps, state.unitsByTerritoryName),
+    };
+    const isValid = isMovementPlanValid({
+      unit: unit,
+      plan: newPlan,
+      unitsByTerritoryName: state.unitsByTerritoryName,
+      landTerritoryControllerByName: state.landTerritoryControllerByName,
+    });
+
     context.patchState({
       movementPlansBySquadId: {
         ...state.movementPlansBySquadId,
         [selectedSquad.id]: {
-          ...selectedPlan,
-          path: withRecomputedCombatTypes(unit, steps, state.unitsByTerritoryName),
+          ...newPlan,
+          isValid: isValid,
         },
       },
     });

@@ -19,6 +19,7 @@ const INACTIVE_WARNING_COLOR = 'rgba(251, 255, 11, 0.95)';
 const ACTIVE_FILL = 'rgba(46, 128, 255, 0.18)';
 const INACTIVE_FILL = 'rgba(46, 128, 255, 0.18)';
 const COMBAT_COLOR = 'rgba(189, 0, 0, 0.82)';
+const INVALID_COLOR = 'rgba(189, 0, 0, 0.9)';
 const NODE_BORDER_COLOR = 'rgba(255, 255, 255, 0.9)';
 
 type MovementFeatureKind = 'segment' | 'arrow' | 'start' | 'final';
@@ -30,6 +31,8 @@ type MovementPlanFeatureProperties = {
   // Present on node features ('arrow' / 'final') so a map click can resolve back to a plan step.
   squadId?: string;
   stepIndex?: number;
+  // Present on 'final' features: whether the whole plan is a legal, complete move.
+  valid?: boolean;
 };
 
 export type MovementPlanLayer = VectorLayer<VectorSource<Feature<Geometry>>>;
@@ -102,6 +105,7 @@ function refreshMovementPlanLayer(
         kind: 'final',
         squadId: plan.squadId,
         stepIndex: plan.path.length - 1,
+        valid: plan.isValid,
       }),
     );
 
@@ -129,6 +133,7 @@ function movementPlanStyle(feature: FeatureLike): Style | Style[] {
   const active = feature.get('active') as MovementPlanFeatureProperties['active'];
   const kind = feature.get('kind') as MovementPlanFeatureProperties['kind'];
   const subKind = feature.get('subKind') as MovementPlanFeatureProperties['subKind'];
+  const valid = feature.get('valid') as MovementPlanFeatureProperties['valid'];
   const color = active ? ACTIVE_COLOR : INACTIVE_COLOR;
   const warningColor = active ? ACTIVE_WARNING_COLOR : INACTIVE_WARNING_COLOR;
   const fill = active ? ACTIVE_FILL : INACTIVE_FILL;
@@ -154,7 +159,10 @@ function movementPlanStyle(feature: FeatureLike): Style | Style[] {
         image: new CircleStyle({
           radius: active ? 10 : 8,
           fill: new Fill({ color: 'rgba(255, 255, 255, 0.8)' }),
-          stroke: new Stroke({ color, width: active ? 4 : 3 }),
+          stroke: new Stroke({
+            color: valid === false ? INVALID_COLOR : color,
+            width: active ? 4 : 3,
+          }),
         }),
       });
     default:
