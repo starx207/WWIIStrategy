@@ -10,4 +10,7 @@
       }
     }
   </nav>
+  @for (widget of headerWidgets; track widget) {
+    <ng-container *ngComponentOutlet="widget" />
+  }
 </header>

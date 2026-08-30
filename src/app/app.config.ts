@@ -15,6 +15,8 @@ import { CombatState } from './combat/combat-state';
 import { MapState } from './map/map-state';
 import { SettingsState } from './settings/settings-state';
 import { GameState } from './game/game-state';
+import { HEADER_WIDGETS } from './app-header/header-widget';
+import { InvalidMovementBadge } from './map/invalid-movement-badge/invalid-movement-badge';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -30,5 +32,6 @@ export const appConfig: ApplicationConfig = {
         keys: '*',
       })
     ),
+    { provide: HEADER_WIDGETS, useValue: InvalidMovementBadge, multi: true },
   ],
 };
