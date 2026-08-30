@@ -3,7 +3,7 @@ import { EffectiveMapUnit } from './effective-map-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { TerritoryName } from '../territories/territory-names';
 import { Coordinate } from 'ol/coordinate';
-import { MovementPhase } from '@ww2/game/turn-phase';
+import { MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
 
 export namespace MapActions {
   const ACTION_SOURCE = '[Map]';
@@ -65,5 +65,16 @@ export namespace MapActions {
       public territoryName: TerritoryName,
       public unit: MilitaryUnit,
     ) {}
+  }
+
+  /**
+   * Execute all movement plans for a phase: relocate each squad's units from its origin to the
+   * final step of its path, then discard those plans. Used for non-combat movement (and, after
+   * combat, for advancing survivors — see the combat orchestrator).
+   */
+  export class ApplyMovementPlans {
+    static readonly type = ACTION_SOURCE + ' Apply Movement Plans';
+
+    constructor(public phase: TurnPhase) {}
   }
 }

@@ -3,7 +3,8 @@ import { Store } from '@ngxs/store';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { GameActions } from '@ww2/game/game-actions';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
-import { TURN_PHASE_LABEL } from '@ww2/game/turn-phase';
+import { TURN_PHASE_LABEL, TurnPhase } from '@ww2/game/turn-phase';
+import { MapActions } from '@ww2/map/map-actions';
 import { NATIONALITY_LABEL } from '@ww2/shared/nationality-label';
 import { SessionSelectors, playerForNation } from '../../session/session-selectors';
 
@@ -39,6 +40,11 @@ export class PhaseControl {
   protected readonly phaseLabel = computed(() => TURN_PHASE_LABEL[this.turnPhase()]);
 
   protected nextPhase(): void {
+    // Execute non-combat movement as we leave that phase (combat movement is executed by the
+    // combat orchestrator during Conduct Combat, so its plans are not applied here).
+    if (this.turnPhase() === TurnPhase.NON_COMBAT_MOVEMENT) {
+      this.store.dispatch(new MapActions.ApplyMovementPlans(TurnPhase.NON_COMBAT_MOVEMENT));
+    }
     this.store.dispatch(new GameActions.AdvanceTurnPhase());
   }
 }

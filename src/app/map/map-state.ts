@@ -17,6 +17,7 @@ import {
 } from './rules/destination-rules';
 import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { isMovementPlanValid } from './rules/movement-validity';
+import { executeMovementPlans } from './rules/movement-execution';
 
 export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
 
@@ -291,6 +292,22 @@ export class MapState {
         ...state.unitsByTerritoryName,
         [action.territoryName]: [...existing, action.unit],
       },
+    });
+  }
+
+  @Action(MapActions.ApplyMovementPlans)
+  applyMovementPlans(context: MapStateContext, action: MapActions.ApplyMovementPlans) {
+    const state = context.getState();
+    const { unitsByTerritoryName, remainingPlans } = executeMovementPlans(
+      state.unitsByTerritoryName,
+      state.movementPlansBySquadId,
+      action.phase,
+    );
+
+    context.patchState({
+      unitsByTerritoryName,
+      movementPlansBySquadId: remainingPlans,
+      selectedSquad: undefined,
     });
   }
 }
