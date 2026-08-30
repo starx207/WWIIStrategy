@@ -1,0 +1,19 @@
+<main class="landing">
+  <div class="hero">
+    <h1>Axis &amp; Allies</h1>
+    <p class="subtitle">World War II Strategy</p>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="primary" (click)="startNewGame()">New Game</button>
+
+    <label class="file-button">
+      Continue Saved Game
+      <input type="file" accept=".json,application/json" (change)="onFileSelected($event)" hidden />
+    </label>
+  </div>
+
+  @if (loadError()) {
+    <p class="error">Could not load save: {{ loadError() }}</p>
+  }
+</main>

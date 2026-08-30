@@ -1,0 +1,72 @@
+.landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 3rem 1rem;
+  text-align: center;
+  background: radial-gradient(circle at 50% 20%, #2a3d52, #16202c);
+  color: #f4f1e8;
+}
+
+.hero {
+  h1 {
+    margin: 0;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .subtitle {
+    margin: 0.5rem 0 0;
+    font-size: 1.1rem;
+    opacity: 0.75;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(20rem, 90vw);
+}
+
+.primary,
+.file-button {
+  display: inline-block;
+  padding: 0.85rem 1rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-align: center;
+}
+
+.primary {
+  background: #c8a24a;
+  color: #16202c;
+
+  &:hover {
+    background: #d9b45c;
+  }
+}
+
+.file-button {
+  background: transparent;
+  border-color: rgba(244, 241, 232, 0.5);
+  color: #f4f1e8;
+
+  &:hover {
+    border-color: #f4f1e8;
+  }
+}
+
+.error {
+  color: #ff9b8a;
+  max-width: 30rem;
+}

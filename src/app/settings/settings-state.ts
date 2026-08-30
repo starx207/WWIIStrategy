@@ -25,21 +25,23 @@ export interface SettingsStateModel {
 
 export const DEFAULT_RULE_STATE: RuleState = {
   technologiesByNationality: {},
+  // National advantages are out of scope for v1: the effect code stays, but all advantages default
+  // to 'disabled' so none apply. TODO: expose a setup toggle and enable these in a later version.
   nationalAdvantages: [
     {
       id: 'russianWinter',
       nationality: Nationality.SOVIET_UNION,
-      state: 'active',
+      state: 'disabled',
     },
     {
       id: 'wolfPacks',
       nationality: Nationality.GERMANY,
-      state: 'enabled',
+      state: 'disabled',
     },
     {
       id: 'superfortresses',
       nationality: Nationality.UNITED_STATES,
-      state: 'enabled',
+      state: 'disabled',
     },
   ],
 };

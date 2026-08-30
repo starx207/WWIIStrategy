@@ -1,0 +1,66 @@
+<main class="setup">
+  <h1>New Game</h1>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Players</h2>
+      <button type="button" class="add" (click)="addPlayer()">+ Add player</button>
+    </div>
+
+    @for (player of players(); track player.id) {
+      <div class="player-row">
+        <input
+          type="text"
+          placeholder="Player name"
+          [value]="player.name"
+          (input)="setPlayerName(player.id, $any($event.target).value)"
+        />
+        <button
+          type="button"
+          class="remove"
+          [disabled]="players().length <= 2"
+          (click)="removePlayer(player.id)"
+          aria-label="Remove player"
+        >
+          &times;
+        </button>
+      </div>
+    }
+  </section>
+
+  <section class="panel">
+    <h2>Nation control</h2>
+    @for (nationality of nationalities; track nationality) {
+      <div class="nation-row">
+        <span class="nation-name">{{ nationLabel(nationality) }}</span>
+        <select
+          [value]="nationAssignments()[nationality]"
+          (change)="assignNation(nationality, $any($event.target).value)"
+        >
+          @for (player of players(); track player.id) {
+            <option [value]="player.id">{{ player.name || 'Unnamed player' }}</option>
+          }
+        </select>
+      </div>
+    }
+  </section>
+
+  <section class="panel">
+    <h2>House rules</h2>
+    <p class="hint">Technologies players may research this game.</p>
+    @for (techId of allTechIds; track techId) {
+      <label class="tech-row">
+        <input type="checkbox" [checked]="isTechAllowed(techId)" (change)="toggleTech(techId)" />
+        {{ techLabel(techId) }}
+      </label>
+    }
+    <p class="hint">National advantages are disabled in this version.</p>
+  </section>
+
+  <div class="setup-actions">
+    <button type="button" (click)="back()">Back</button>
+    <button type="button" class="primary" [disabled]="!canStart()" (click)="startGame()">
+      Start Game
+    </button>
+  </div>
+</main>

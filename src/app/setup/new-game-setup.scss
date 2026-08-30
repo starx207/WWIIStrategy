@@ -1,0 +1,133 @@
+.setup {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  h1 {
+    margin: 0;
+    text-align: center;
+  }
+}
+
+.panel {
+  border: 1px solid #d8d3c4;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  background: #fbfaf5;
+  // The app's global text color is near-white for the dark map; light panels need dark text.
+  color: #23201a;
+  font-family: system-ui, sans-serif;
+
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.05rem;
+    color: #23201a;
+  }
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.add {
+  border: 1px solid #2f6db3;
+  color: #2f6db3;
+  background: transparent;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.player-row,
+.nation-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.player-row input {
+  flex: 1;
+}
+
+.nation-row {
+  justify-content: space-between;
+}
+
+.nation-name {
+  font-weight: 600;
+}
+
+input[type='text'],
+select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #1a1a1a;
+  background: #fff;
+  font-family: system-ui, sans-serif;
+}
+
+.remove {
+  border: none;
+  background: transparent;
+  color: #b3402f;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:disabled {
+    color: #ccc;
+    cursor: not-allowed;
+  }
+}
+
+.tech-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  cursor: pointer;
+}
+
+.hint {
+  margin: 0.25rem 0;
+  font-size: 0.8rem;
+  color: #6b6455;
+}
+
+.setup-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  button {
+    padding: 0.6rem 1.25rem;
+    border-radius: 6px;
+    border: 1px solid #bbb;
+    background: #f0efe8;
+    color: #23201a;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+    font-size: 0.95rem;
+
+    &.primary {
+      background: #2f6db3;
+      border-color: #2f6db3;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
