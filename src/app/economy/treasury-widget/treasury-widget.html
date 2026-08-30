@@ -1,0 +1,9 @@
+<div class="treasury-widget">
+  @for (nationality of nationalities; track nationality) {
+    <div class="nation" [class.active]="nationality === activeNation()">
+      <span class="code">{{ label(nationality) }}</span>
+      <span class="ipc">{{ treasury(nationality) }}</span>
+      <span class="income">+{{ income(nationality) }}</span>
+    </div>
+  }
+</div>

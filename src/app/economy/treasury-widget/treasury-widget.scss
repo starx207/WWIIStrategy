@@ -1,0 +1,42 @@
+.treasury-widget {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-family: system-ui, sans-serif;
+}
+
+.nation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #1a1a1a;
+  line-height: 1.15;
+
+  &.active {
+    border-color: #c8a24a;
+    box-shadow: 0 0 0 1px #c8a24a;
+    background: #fff8e6;
+  }
+
+  .code {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #555;
+  }
+
+  .ipc {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .income {
+    font-size: 0.65rem;
+    color: #2f7d32;
+  }
+}

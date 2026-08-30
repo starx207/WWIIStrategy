@@ -16,8 +16,10 @@ import { MapState } from './map/map-state';
 import { SettingsState } from './settings/settings-state';
 import { GameState } from './game/game-state';
 import { SessionState } from './session/session-state';
+import { EconomyState } from './economy/economy-state';
 import { HEADER_WIDGETS } from './app-header/header-widget';
 import { InvalidMovementBadge } from './map/invalid-movement-badge/invalid-movement-badge';
+import { TreasuryWidget } from './economy/treasury-widget/treasury-widget';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -26,7 +28,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(),
     provideStore(
-      [CombatState, MapState, SettingsState, GameState, SessionState],
+      [CombatState, MapState, SettingsState, GameState, SessionState, EconomyState],
       withNgxsReduxDevtoolsPlugin(),
       withNgxsRouterPlugin(),
       // withNgxsStoragePlugin({
@@ -34,6 +36,7 @@ export const appConfig: ApplicationConfig = {
       //   storage: StorageOption.SessionStorage, // TODO: I want to use local storage in final version
       // })
     ),
+    { provide: HEADER_WIDGETS, useValue: TreasuryWidget, multi: true },
     { provide: HEADER_WIDGETS, useValue: InvalidMovementBadge, multi: true },
   ],
 };

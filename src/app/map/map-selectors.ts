@@ -2,7 +2,8 @@ import { Selector } from '@ngxs/store';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { MapState, MapStateModel, SquadMovementPlan } from './map-state';
-import { TerritoryName } from '../territories/territory-names';
+import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
+import { Nationality } from '@ww2/shared/nationality';
 import { calculateAdjacentDestinations } from './rules/movement-calculator';
 import { createResolvedRuleContext } from './rule-context.factory';
 import { RuleState } from '@ww2/settings/settings-state';
@@ -117,6 +118,13 @@ export class MapSelectors {
   @Selector([MapState])
   static invalidMovementPlanCount(state: MapStateModel): number {
     return Object.values(state.movementPlansBySquadId).filter((plan) => !plan.isValid).length;
+  }
+
+  @Selector([MapState])
+  static landTerritoryControllerByName(
+    state: MapStateModel,
+  ): Record<LandTerritoryName, Nationality> {
+    return state.landTerritoryControllerByName;
   }
 }
 
