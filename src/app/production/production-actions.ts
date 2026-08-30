@@ -1,5 +1,6 @@
 import { Nationality } from '@ww2/shared/nationality';
 import { UnitType } from '@ww2/shared/unit-type';
+import { TerritoryName } from '../territories/territory-names';
 
 export namespace ProductionActions {
   const ACTION_SOURCE = '[Production]';
@@ -35,5 +36,15 @@ export namespace ProductionActions {
   export class ConfirmPurchase {
     static readonly type = `${ACTION_SOURCE} Confirm Purchase`;
     constructor(public readonly nationality: Nationality) {}
+  }
+
+  /** Place one pending unit (by id) from the mobilization queue onto the board. */
+  export class PlaceUnit {
+    static readonly type = `${ACTION_SOURCE} Place Unit`;
+    constructor(
+      public readonly nationality: Nationality,
+      public readonly unitId: string,
+      public readonly territoryName: TerritoryName,
+    ) {}
   }
 }

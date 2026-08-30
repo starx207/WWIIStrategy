@@ -56,4 +56,14 @@ export namespace MapActions {
   export class RecalculateSquadLayoutCoordinates {
     static readonly type = ACTION_SOURCE + ' Recalculate Squad Layout Coordinates';
   }
+
+  /** Add a mobilized (newly-placed) unit to a territory. */
+  export class MobilizeUnit {
+    static readonly type = ACTION_SOURCE + ' Mobilize Unit';
+
+    constructor(
+      public territoryName: TerritoryName,
+      public unit: MilitaryUnit,
+    ) {}
+  }
 }

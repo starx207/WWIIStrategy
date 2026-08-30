@@ -281,6 +281,18 @@ export class MapState {
   recalculateSquadLayoutCoordinates(context: MapStateContext) {
     context.patchState({ squadLayoutCoordinatesBySquadId: {} });
   }
+
+  @Action(MapActions.MobilizeUnit)
+  mobilizeUnit(context: MapStateContext, action: MapActions.MobilizeUnit) {
+    const state = context.getState();
+    const existing = state.unitsByTerritoryName[action.territoryName] ?? [];
+    context.patchState({
+      unitsByTerritoryName: {
+        ...state.unitsByTerritoryName,
+        [action.territoryName]: [...existing, action.unit],
+      },
+    });
+  }
 }
 
 function withRecomputedCombatTypes(

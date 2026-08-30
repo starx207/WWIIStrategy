@@ -7,11 +7,12 @@ import { GameSelectors } from '@ww2/game/game-selectors';
 import { TurnPhase } from '@ww2/game/turn-phase';
 import { PurchasePanel } from '../../production/purchase-panel/purchase-panel';
 import { TechPanel } from '../../production/tech-panel/tech-panel';
+import { PlacementPanel } from '../../production/placement-panel/placement-panel';
 import { GameSessionService } from '../game-session.service';
 
 @Component({
   selector: 'ww2-game-shell',
-  imports: [AppHeader, GameMap, PurchasePanel, TechPanel],
+  imports: [AppHeader, GameMap, PurchasePanel, TechPanel, PlacementPanel],
   templateUrl: './game-shell.html',
   styleUrl: './game-shell.scss',
 })

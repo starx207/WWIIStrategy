@@ -7,6 +7,7 @@ import { createUnit } from '@ww2/shared/unit-factory';
 import { UNIT_COST_BY_TYPE } from '@ww2/economy/data/unit-cost';
 import { EconomySelectors } from '@ww2/economy/economy-selectors';
 import { EconomyActions } from '@ww2/economy/economy-actions';
+import { MapActions } from '@ww2/map/map-actions';
 import { ProductionActions } from './production-actions';
 
 export interface ProductionStateModel {
@@ -98,5 +99,24 @@ export class ProductionState {
     });
 
     this.store.dispatch(new EconomyActions.SpendIpc(action.nationality, cost));
+  }
+
+  @Action(ProductionActions.PlaceUnit)
+  placeUnit(ctx: ProductionStateContext, action: ProductionActions.PlaceUnit) {
+    const state = ctx.getState();
+    const pending = state.pendingPlacementsByNationality[action.nationality] ?? [];
+    const unit = pending.find((candidate) => candidate.id === action.unitId);
+    if (!unit) {
+      return;
+    }
+
+    ctx.patchState({
+      pendingPlacementsByNationality: {
+        ...state.pendingPlacementsByNationality,
+        [action.nationality]: pending.filter((candidate) => candidate.id !== action.unitId),
+      },
+    });
+
+    this.store.dispatch(new MapActions.MobilizeUnit(action.territoryName, unit));
   }
 }

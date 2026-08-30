@@ -9,6 +9,10 @@
   <ww2-tech-panel></ww2-tech-panel>
 }
 
+@if (turnPhase() === TurnPhase.PLACE_NEW_UNITS) {
+  <ww2-placement-panel></ww2-placement-panel>
+}
+
 <div class="game-controls">
   <button type="button" (click)="openSaveDialog()">Save Game</button>
   <button type="button" (click)="exitToMenu()">Main Menu</button>

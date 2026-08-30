@@ -126,6 +126,13 @@ export class MapSelectors {
   ): Record<LandTerritoryName, Nationality> {
     return state.landTerritoryControllerByName;
   }
+
+  @Selector([MapState])
+  static unitsByTerritoryName(
+    state: MapStateModel,
+  ): Partial<Record<TerritoryName, MilitaryUnit[]>> {
+    return state.unitsByTerritoryName;
+  }
 }
 
 function findTerritoryForUnitId(

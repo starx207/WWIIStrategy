@@ -1,0 +1,50 @@
+@if (activeNation(); as nation) {
+  <section class="placement-panel">
+    <header class="panel-head">
+      <h2>Mobilize Units</h2>
+      <span class="count">{{ pending().length }} to place</span>
+    </header>
+
+    <div class="body">
+      @if (pending().length === 0) {
+        <p class="empty">No units waiting to be placed. Advance to end the turn.</p>
+      } @else {
+        @if (capacityRows().length > 0) {
+          <div class="capacity">
+            <span class="cap-label">Complex capacity:</span>
+            @for (row of capacityRows(); track row.territory) {
+              <span class="cap-chip">{{ row.territory }} {{ row.placed }}/{{ row.capacity }}</span>
+            }
+          </div>
+        }
+
+        @for (group of pendingGroups(); track group.unitType) {
+          <div class="place-row">
+            <div class="unit">
+              <div class="icon">
+                <ww2-military-unit-icon [nationality]="nation" [unitType]="group.unitType" />
+              </div>
+              <span class="unit-name"
+                >{{ label(group.unitType) }} &times;{{ group.units.length }}</span
+              >
+            </div>
+
+            @if (destinationsFor(group.unitType).length > 0) {
+              <select
+                [value]="selectedDest(group.unitType)"
+                (change)="setDest(group.unitType, $any($event.target).value)"
+              >
+                @for (destination of destinationsFor(group.unitType); track destination.value) {
+                  <option [value]="destination.value">{{ destination.label }}</option>
+                }
+              </select>
+              <button type="button" class="primary" (click)="place(group.unitType)">Place</button>
+            } @else {
+              <span class="no-dest">No valid location</span>
+            }
+          </div>
+        }
+      }
+    </div>
+  </section>
+}
