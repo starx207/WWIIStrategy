@@ -1,0 +1,52 @@
+@if (activeNation(); as nation) {
+  <section class="purchase-panel">
+    <header class="panel-head">
+      <h2>Purchase Units</h2>
+      <div class="budget">
+        <span>Treasury: {{ treasury() }}</span>
+        <span>Spent: {{ totalCost() }}</span>
+        <span [class.negative]="remaining() < 0">Remaining: {{ remaining() }}</span>
+      </div>
+    </header>
+
+    <div class="unit-grid">
+      @for (unitType of unitTypes; track unitType) {
+        <div class="unit-card">
+          <div class="icon">
+            <ww2-military-unit-icon [nationality]="nation" [unitType]="unitType" />
+          </div>
+          <div class="name">{{ label(unitType) }}</div>
+          <div class="unit-cost">{{ cost(unitType) }} IPC</div>
+          <div class="qty-controls">
+            <button
+              type="button"
+              class="qty-btn"
+              [disabled]="quantityOf(unitType) === 0"
+              (click)="remove(unitType)"
+            >
+              &minus;
+            </button>
+            <span class="qty">{{ quantityOf(unitType) }}</span>
+            <button
+              type="button"
+              class="qty-btn"
+              [disabled]="!canAfford(unitType)"
+              (click)="add(unitType)"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <footer class="panel-foot">
+      <button type="button" class="secondary" [disabled]="cart().length === 0" (click)="clear()">
+        Clear
+      </button>
+      <button type="button" class="primary" [disabled]="cart().length === 0" (click)="confirm()">
+        Confirm Purchase ({{ totalCost() }} IPC)
+      </button>
+    </footer>
+  </section>
+}

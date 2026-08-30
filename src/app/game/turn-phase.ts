@@ -12,3 +12,13 @@ const MOVEMENT_PHASES_CONST = [TurnPhase.COMBAT_MOVEMENT, TurnPhase.NON_COMBAT_M
 export const MOVEMENT_PHASES: TurnPhase[] = [...MOVEMENT_PHASES_CONST];
 
 export type MovementPhase = (typeof MOVEMENT_PHASES_CONST)[number];
+
+/** Human-readable names for each turn phase (matching the rulebook's phase labels). */
+export const TURN_PHASE_LABEL: Record<TurnPhase, string> = {
+  [TurnPhase.PURCHASE_UNITS]: 'Purchase Units',
+  [TurnPhase.WEAPONS_DEVELOPMENT]: 'Develop Weapons',
+  [TurnPhase.COMBAT_MOVEMENT]: 'Combat Move',
+  [TurnPhase.COMBAT_RESOLUTION]: 'Conduct Combat',
+  [TurnPhase.NON_COMBAT_MOVEMENT]: 'Noncombat Move',
+  [TurnPhase.PLACE_NEW_UNITS]: 'Mobilize Units',
+};

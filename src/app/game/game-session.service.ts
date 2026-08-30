@@ -3,6 +3,9 @@ import { Store } from '@ngxs/store';
 import { Nationality } from '@ww2/shared/nationality';
 import { HouseRules, Player } from '../session/session-state';
 import { SessionActions } from '../session/session-actions';
+import { GameActions } from './game-actions';
+import { GamePhase } from './game-phase';
+import { TurnPhase } from './turn-phase';
 import { defaultSaveFileName, deserializeGame, serializeGame } from './game-serialization';
 
 export interface NewGameConfig {
@@ -26,12 +29,16 @@ export class GameSessionService {
    */
   private readonly pristineSnapshot = this.store.snapshot();
 
-  /** Reset all slices to defaults, then record the chosen players / rules. */
+  /** Reset all slices to defaults, then record the chosen players / rules and start the first turn. */
   startNewGame(config: NewGameConfig): void {
     this.store.reset(this.pristineSnapshot);
-    this.store.dispatch(
+    this.store.dispatch([
       new SessionActions.StartNewGame(config.players, config.nationAssignments, config.houseRules),
-    );
+      // A game begins with the Soviet Union's first turn. (Turn-order / starting-phase specifics
+      // are finalized in the turn-flow workstream.)
+      new GameActions.SetGamePhase(GamePhase.SOVIET_TURN),
+      new GameActions.SetTurnPhase(TurnPhase.PURCHASE_UNITS),
+    ]);
   }
 
   /** Load a game from the contents of a save file. Throws if the file is invalid. */

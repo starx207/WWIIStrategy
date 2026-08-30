@@ -1,0 +1,10 @@
+<div class="phase-control">
+  <div class="turn-info">
+    <span class="nation">{{ nationLabel() }}</span>
+    @if (playerName()) {
+      <span class="player">{{ playerName() }}</span>
+    }
+    <span class="phase">{{ phaseLabel() }}</span>
+  </div>
+  <button type="button" class="next" (click)="nextPhase()">Next Phase ▸</button>
+</div>

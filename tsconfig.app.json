@@ -12,7 +12,8 @@
       "@ww2/settings/*": ["./src/app/settings/*"],
       "@ww2/game/*": ["./src/app/game/*"],
       "@ww2/session/*": ["./src/app/session/*"],
-      "@ww2/economy/*": ["./src/app/economy/*"]
+      "@ww2/economy/*": ["./src/app/economy/*"],
+      "@ww2/production/*": ["./src/app/production/*"]
     }
   },
   "include": ["src/**/*.ts"],

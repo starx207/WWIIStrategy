@@ -1,6 +1,10 @@
 <ww2-app-header></ww2-app-header>
 <ww2-game-map></ww2-game-map>
 
+@if (turnPhase() === TurnPhase.PURCHASE_UNITS) {
+  <ww2-purchase-panel></ww2-purchase-panel>
+}
+
 <div class="game-controls">
   <button type="button" (click)="openSaveDialog()">Save Game</button>
   <button type="button" (click)="exitToMenu()">Main Menu</button>

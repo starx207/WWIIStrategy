@@ -1,0 +1,45 @@
+.phase-control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: system-ui, sans-serif;
+  color: #20262e;
+}
+
+.turn-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+
+  .nation {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .player {
+    font-size: 0.7rem;
+    color: #5a636e;
+  }
+
+  .phase {
+    font-size: 0.75rem;
+    color: #2f6db3;
+    font-weight: 600;
+  }
+}
+
+.next {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #2f6db3;
+  border-radius: 0.35rem;
+  background: #2f6db3;
+  color: #fff;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: #285f9c;
+  }
+}

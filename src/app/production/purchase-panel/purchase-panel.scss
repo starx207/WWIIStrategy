@@ -1,0 +1,155 @@
+.purchase-panel {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 20;
+  width: min(24rem, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  background: #fbfaf5;
+  color: #23201a;
+  font-family: system-ui, sans-serif;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid #d8d3c4;
+}
+
+.panel-head {
+  padding: 0.75rem 1rem 0.5rem;
+  border-bottom: 1px solid #e6e1d3;
+
+  h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.05rem;
+  }
+
+  .budget {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    color: #4a453b;
+
+    .negative {
+      color: #b3402f;
+      font-weight: 700;
+    }
+  }
+}
+
+.unit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  overflow-y: auto;
+}
+
+.unit-card {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 0.4rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid #e0dccf;
+  border-radius: 6px;
+  background: #fff;
+
+  .icon {
+    grid-row: 1 / span 2;
+    width: 2.2rem;
+    height: 2.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    ww2-military-unit-icon {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    // The icon component renders a raw <svg> via innerHTML; constrain it to the cell.
+    ::ng-deep .graphics-container,
+    ::ng-deep svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+
+  .name {
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .unit-cost {
+    grid-column: 2;
+    font-size: 0.72rem;
+    color: #6b6455;
+  }
+
+  .qty-controls {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .qty {
+    min-width: 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .qty-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #f0efe8;
+    color: #23201a;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.panel-foot {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem 0.75rem;
+  border-top: 1px solid #e6e1d3;
+
+  button {
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #bbb;
+    background: #f0efe8;
+    color: #23201a;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.primary {
+      background: #2f6db3;
+      border-color: #2f6db3;
+      color: #fff;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
