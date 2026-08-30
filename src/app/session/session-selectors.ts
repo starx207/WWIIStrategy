@@ -1,6 +1,6 @@
 import { Selector } from '@ngxs/store';
 import { Nationality } from '@ww2/shared/nationality';
-import { Player, SessionState, SessionStateModel } from './session-state';
+import { HouseRules, Player, SessionState, SessionStateModel } from './session-state';
 
 export class SessionSelectors {
   @Selector([SessionState])
@@ -26,6 +26,11 @@ export class SessionSelectors {
   @Selector([SessionState])
   static loadedFileName(state: SessionStateModel): string | null {
     return state.loadedFileName;
+  }
+
+  @Selector([SessionState])
+  static houseRules(state: SessionStateModel): HouseRules {
+    return state.houseRules;
   }
 }
 

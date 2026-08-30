@@ -1,0 +1,89 @@
+@if (activeNation()) {
+  <section class="tech-panel">
+    <header class="panel-head">
+      <h2>Develop Weapons</h2>
+      <div class="budget">
+        <span>Treasury: {{ treasury() }}</span>
+        <span>Research die: {{ 5 }} IPC each</span>
+      </div>
+    </header>
+
+    @if (ownedTechs().length > 0) {
+      <div class="owned">
+        <span class="owned-label">Researched:</span>
+        @for (tech of ownedTechs(); track tech) {
+          <span class="owned-chip">{{ label(tech) }}</span>
+        }
+      </div>
+    }
+
+    <div class="body">
+      @if (availableTechs().length === 0) {
+        <p class="all-done">All available technologies have been researched.</p>
+      } @else {
+        <p class="hint">Choose one development to pursue, then roll research dice.</p>
+        <div class="tech-list">
+          @for (tech of availableTechs(); track tech) {
+            <button
+              type="button"
+              class="tech-option"
+              [class.selected]="tech === selectedTech()"
+              [disabled]="hasRolled()"
+              (click)="selectTech(tech)"
+            >
+              <span class="tech-name">{{ label(tech) }}</span>
+              <span class="tech-target">roll a {{ target(tech) }}</span>
+              <span class="tech-effect">{{ effect(tech) }}</span>
+            </button>
+          }
+        </div>
+
+        @if (!hasRolled()) {
+          <div class="dice-buy">
+            <span>Dice:</span>
+            <button
+              type="button"
+              class="qty-btn"
+              [disabled]="diceCount() <= 1"
+              (click)="adjustDice(-1)"
+            >
+              &minus;
+            </button>
+            <span class="dice-count">{{ diceCount() }}</span>
+            <button
+              type="button"
+              class="qty-btn"
+              [disabled]="diceCount() >= maxDice()"
+              (click)="adjustDice(1)"
+            >
+              +
+            </button>
+            <span class="dice-cost">Cost: {{ cost() }} IPC</span>
+          </div>
+
+          @if (maxDice() < 1) {
+            <p class="all-done">Not enough IPCs to buy a research die.</p>
+          }
+
+          <button type="button" class="primary roll-btn" [disabled]="!canRoll()" (click)="roll()">
+            Roll {{ diceCount() }} {{ diceCount() === 1 ? 'die' : 'dice' }}
+          </button>
+        } @else {
+          <div class="results">
+            <div class="dice">
+              @for (result of rollResults(); track $index) {
+                <span class="die" [class.hit]="isHit(result)">{{ result }}</span>
+              }
+            </div>
+            @if (rollSuccess()) {
+              <p class="outcome success">Breakthrough! Technology acquired.</p>
+            } @else {
+              <p class="outcome fail">No breakthrough this turn.</p>
+            }
+            <p class="hint">Advance to the next phase to continue.</p>
+          </div>
+        }
+      }
+    </div>
+  </section>
+}

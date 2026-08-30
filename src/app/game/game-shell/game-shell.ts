@@ -6,11 +6,12 @@ import { GameMap } from '@ww2/map/game-map/game-map';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { TurnPhase } from '@ww2/game/turn-phase';
 import { PurchasePanel } from '../../production/purchase-panel/purchase-panel';
+import { TechPanel } from '../../production/tech-panel/tech-panel';
 import { GameSessionService } from '../game-session.service';
 
 @Component({
   selector: 'ww2-game-shell',
-  imports: [AppHeader, GameMap, PurchasePanel],
+  imports: [AppHeader, GameMap, PurchasePanel, TechPanel],
   templateUrl: './game-shell.html',
   styleUrl: './game-shell.scss',
 })

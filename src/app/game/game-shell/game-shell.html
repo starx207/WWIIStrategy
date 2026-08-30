@@ -5,6 +5,10 @@
   <ww2-purchase-panel></ww2-purchase-panel>
 }
 
+@if (turnPhase() === TurnPhase.WEAPONS_DEVELOPMENT) {
+  <ww2-tech-panel></ww2-tech-panel>
+}
+
 <div class="game-controls">
   <button type="button" (click)="openSaveDialog()">Save Game</button>
   <button type="button" (click)="exitToMenu()">Main Menu</button>

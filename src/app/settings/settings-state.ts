@@ -76,4 +76,24 @@ export class SettingsState {
       }),
     );
   }
+
+  @Action(SettingsActions.GrantTechnology)
+  grantTechnology(ctx: SettingsStateContext, action: SettingsActions.GrantTechnology) {
+    const current = ctx.getState().rules.technologiesByNationality;
+    const owned = current[action.nationality] ?? [];
+    if (owned.includes(action.technologyId)) {
+      return;
+    }
+
+    ctx.setState(
+      patch<SettingsStateModel>({
+        rules: patch<RuleState>({
+          technologiesByNationality: {
+            ...current,
+            [action.nationality]: [...owned, action.technologyId],
+          },
+        }),
+      }),
+    );
+  }
 }
