@@ -26,7 +26,12 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { mapMovementPlanLayer } from '../layers/movement-plan-layer';
 import { GameActions } from '@ww2/game/game-actions';
 import { GameSelectors } from '@ww2/game/game-selectors';
+import { nationalityForGamePhase } from '@ww2/game/game-phase';
 import { MOVEMENT_PHASES, MovementPhase } from '@ww2/game/turn-phase';
+import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
+import { LandTerritoryName } from '../../territories/territory-names';
+import { parseSquadId } from '../rules/movement-execution';
+import { canUnloadTo, findLoadableTransport } from '../rules/amphibious';
 
 @Component({
   selector: 'ww2-game-map',
@@ -67,6 +72,13 @@ export class GameMap implements OnInit, OnDestroy {
     MapSelectors.hasMovementPlansWithPath,
   );
   private readonly currentTurnPhase = this.store.selectSignal(GameSelectors.turnPhase);
+  private readonly gamePhase = this.store.selectSignal(GameSelectors.gamePhase);
+  private readonly unitsByTerritoryName = this.store.selectSignal(
+    MapSelectors.unitsByTerritoryName,
+  );
+  private readonly cargoByCarrierUnitId = this.store.selectSignal(
+    MapSelectors.cargoByCarrierUnitId,
+  );
 
   private map!: OlMap;
   private cleanupFns: ((() => void) | undefined)[] = [];
@@ -153,6 +165,12 @@ export class GameMap implements OnInit, OnDestroy {
         return typeof territoryName === 'string' ? territoryName : undefined;
       });
 
+      if (clickedTerritory && this.tryLoadOrUnload(clickedTerritory)) {
+        this.selectedZoneId = undefined;
+        territoriesLayer.changed();
+        return;
+      }
+
       if (clickedTerritory && this.nextAdjacentDestinations().includes(clickedTerritory)) {
         this.selectedZoneId = undefined;
         this.store.dispatch(
@@ -205,6 +223,57 @@ export class GameMap implements OnInit, OnDestroy {
     return typeof territoryName === 'string' && TERRITORY_INFO_BY_NAME[territoryName].kind === 'sea'
       ? 'sea'
       : 'land';
+  }
+
+  /**
+   * Handle a territory click as a transport load (land squad → adjacent transport) or unload
+   * (loaded transport → adjacent land: friendly unload or amphibious assault). Returns true when
+   * the click was consumed as a cargo action.
+   */
+  private tryLoadOrUnload(clickedTerritory: TerritoryName): boolean {
+    if (![...MOVEMENT_PHASES].includes(this.currentTurnPhase())) {
+      return false;
+    }
+    const selected = this.selectedSquad();
+    if (!selected) {
+      return false;
+    }
+    const parsed = parseSquadId(selected.id);
+    const selectedTerritory = selected.id.split('|')[1] as TerritoryName | undefined;
+    const nation = nationalityForGamePhase(this.gamePhase());
+    if (!parsed || !selectedTerritory || !nation) {
+      return false;
+    }
+
+    if (LAND_UNIT_TYPES.includes(parsed.unitType)) {
+      const transportId = findLoadableTransport({
+        fromTerritory: selectedTerritory,
+        seaZone: clickedTerritory,
+        cargoUnitCount: selected.unitIds.length,
+        nation,
+        unitsByTerritory: this.unitsByTerritoryName(),
+        cargoByCarrierUnitId: this.cargoByCarrierUnitId(),
+      });
+      if (transportId) {
+        this.store.dispatch(
+          new MapActions.LoadCargo(transportId, selected.unitIds, selectedTerritory),
+        );
+        return true;
+      }
+    }
+
+    if (parsed.unitType === UnitType.TRANSPORT) {
+      const transportId = selected.unitIds[0];
+      const hasCargo = (this.cargoByCarrierUnitId()[transportId] ?? []).length > 0;
+      if (hasCargo && canUnloadTo(selectedTerritory, clickedTerritory)) {
+        this.store.dispatch(
+          new MapActions.UnloadCargo(transportId, clickedTerritory as LandTerritoryName),
+        );
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private onSquadSelected(squad: MilitaryUnitSquad<MilitaryUnit>) {

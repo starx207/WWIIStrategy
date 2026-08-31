@@ -1,9 +1,54 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
+import { UnitType } from '@ww2/shared/unit-type';
 import { LandTerritoryName, TerritoryName } from '../../territories/territory-names';
-import { CargoByCarrierUnitId } from './carrier-cargo';
+import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
+import { ADJACENT_TERRITORIES_BY_NAME } from '../../territories/territory-adjacency';
+import { CargoByCarrierUnitId, remainingCapacity } from './carrier-cargo';
 
 type UnitsByTerritory = Partial<Record<TerritoryName, MilitaryUnit[]>>;
 type AmphibiousAssaults = Partial<Record<LandTerritoryName, string[]>>;
+
+function isAdjacent(a: TerritoryName, b: TerritoryName): boolean {
+  return (ADJACENT_TERRITORIES_BY_NAME[a] ?? []).includes(b);
+}
+
+/**
+ * Find a same-nationality transport in `seaZone` (adjacent to `fromTerritory`) with room for
+ * `cargoUnitCount` more land units, or undefined if none qualifies. Used to decide whether clicking
+ * a sea zone with a land squad selected should load it.
+ */
+export function findLoadableTransport(params: {
+  fromTerritory: TerritoryName;
+  seaZone: TerritoryName;
+  cargoUnitCount: number;
+  nation: Nationality;
+  unitsByTerritory: UnitsByTerritory;
+  cargoByCarrierUnitId: CargoByCarrierUnitId;
+}): string | undefined {
+  const { fromTerritory, seaZone, cargoUnitCount, nation } = params;
+  if (TERRITORY_INFO_BY_NAME[seaZone].kind !== 'sea' || !isAdjacent(fromTerritory, seaZone)) {
+    return undefined;
+  }
+  const transport = (params.unitsByTerritory[seaZone] ?? []).find(
+    (unit) =>
+      unit.type === UnitType.TRANSPORT &&
+      unit.nationality === nation &&
+      remainingCapacity(UnitType.TRANSPORT, params.cargoByCarrierUnitId[unit.id]) >= cargoUnitCount,
+  );
+  return transport?.id;
+}
+
+/** Whether a loaded transport can unload onto `targetTerritory` (adjacent land). */
+export function canUnloadTo(
+  transportTerritory: TerritoryName,
+  targetTerritory: TerritoryName,
+): boolean {
+  return (
+    TERRITORY_INFO_BY_NAME[targetTerritory].kind === 'land' &&
+    isAdjacent(transportTerritory, targetTerritory)
+  );
+}
 
 /** All unit ids currently staged for an amphibious assault. */
 export function allAmphibiousUnitIds(amphibious: AmphibiousAssaults): Set<string> {
