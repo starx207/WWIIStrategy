@@ -17,11 +17,18 @@ import {
   buildBattleSetup,
   computeAntiAircraftFire,
   computePendingBattles,
+  computeShoreBombardment,
 } from './combat-orchestration';
 
 export interface AntiAircraftReportEntry {
   territory: string;
   shotDown: number;
+}
+
+export interface ShoreBombardmentReport {
+  territory: string;
+  ships: number;
+  hits: number;
 }
 
 /**
@@ -39,6 +46,9 @@ export class CombatOrchestrator {
   /** Summary of the most recent anti-aircraft fire (aircraft downed over each territory). */
   readonly antiAircraftReport = signal<AntiAircraftReportEntry[]>([]);
 
+  /** Shore bombardment that supported the current amphibious assault, if any. */
+  readonly shoreBombardmentReport = signal<ShoreBombardmentReport | null>(null);
+
   private originByUnitId: BattleSetup['originByUnitId'] = {};
   private returnByUnitId: BattleSetup['returnByUnitId'] = {};
   private attackingSquadIds: string[] = [];
@@ -49,6 +59,7 @@ export class CombatOrchestrator {
     this.returnByUnitId = {};
     this.attackingSquadIds = [];
     this.antiAircraftReport.set([]);
+    this.shoreBombardmentReport.set(null);
     this.activeBattleTerritory.set(null);
   }
 
@@ -135,6 +146,27 @@ export class CombatOrchestrator {
     this.returnByUnitId = returnByUnitId;
     this.attackingSquadIds = attackingSquadIds;
 
+    // Shore bombardment supports an amphibious assault: friendly battleships in the launching sea
+    // zones fire before the land battle, thinning the defenders.
+    let battleDefenders = defenders;
+    if (!retreatAllowed) {
+      const bombardment = computeShoreBombardment({
+        nation,
+        amphibiousUnitIds: amphibious[territory as LandTerritoryName] ?? [],
+        defenders,
+        unitsByTerritory: units,
+        rollDie: () => Math.floor(Math.random() * 6) + 1,
+      });
+      battleDefenders = bombardment.remainingDefenders;
+      this.shoreBombardmentReport.set(
+        bombardment.shipsBombarding > 0
+          ? { territory, ships: bombardment.shipsBombarding, hits: bombardment.hits }
+          : null,
+      );
+    } else {
+      this.shoreBombardmentReport.set(null);
+    }
+
     // Remove the attacking units from their origin territories — they've committed to the assault.
     const attackerIds = new Set(attackers.map((unit) => unit.id));
     for (const origin of new Set(Object.values(originByUnitId))) {
@@ -143,7 +175,7 @@ export class CombatOrchestrator {
     }
 
     this.store.dispatch(
-      new CombatActions.PreparingBattlefield(territory, attackers, defenders, retreatAllowed),
+      new CombatActions.PreparingBattlefield(territory, attackers, battleDefenders, retreatAllowed),
     );
     this.activeBattleTerritory.set(territory);
   }

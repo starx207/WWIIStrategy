@@ -196,6 +196,66 @@ function hasEnemyAntiAir(
   );
 }
 
+/** Battleship shore-bombardment attack value (hits on this or lower). */
+const SHORE_BOMBARDMENT_ATTACK = 4;
+
+export interface ShoreBombardmentResult {
+  /** Defender army after bombardment casualties are removed. */
+  remainingDefenders: MilitaryUnit[];
+  shipsBombarding: number;
+  hits: number;
+}
+
+/**
+ * Resolve battleship shore bombardment supporting an amphibious assault: each friendly battleship
+ * in a sea zone the assault launches from fires one shot (hitting on a 4 or less); each hit removes
+ * a defending combat unit before the land battle. `rollDie` returns 1-6 (injected for testability).
+ */
+export function computeShoreBombardment(params: {
+  nation: Nationality;
+  amphibiousUnitIds: string[];
+  defenders: MilitaryUnit[];
+  unitsByTerritory: UnitsByTerritory;
+  rollDie: () => number;
+}): ShoreBombardmentResult {
+  const { nation, amphibiousUnitIds, defenders, unitsByTerritory, rollDie } = params;
+
+  // The sea zones the amphibious units are launching from.
+  const seaZones = new Set<TerritoryName>();
+  for (const unitId of amphibiousUnitIds) {
+    const located = findUnitLocation(unitId, unitsByTerritory);
+    if (located) {
+      seaZones.add(located.territory);
+    }
+  }
+
+  let shipsBombarding = 0;
+  let hits = 0;
+  for (const seaZone of seaZones) {
+    for (const unit of unitsByTerritory[seaZone] ?? []) {
+      if (
+        unit.type === UnitType.BATTLESHIP &&
+        NATION_ALLIANCE[unit.nationality] === NATION_ALLIANCE[nation]
+      ) {
+        shipsBombarding += 1;
+        if (rollDie() <= SHORE_BOMBARDMENT_ATTACK) {
+          hits += 1;
+        }
+      }
+    }
+  }
+
+  // Apply hits to defending combat units (AA guns / factories are not battle casualties).
+  const combatDefenderIds = defenders
+    .filter((unit) => !NEUTRAL_UNIT_TYPES.includes(unit.type))
+    .slice(0, hits)
+    .map((unit) => unit.id);
+  const casualties = new Set(combatDefenderIds);
+  const remainingDefenders = defenders.filter((unit) => !casualties.has(unit.id));
+
+  return { remainingDefenders, shipsBombarding, hits };
+}
+
 export interface AntiAircraftResult {
   /** Ids of aircraft shot down while flying over enemy anti-aircraft guns. */
   shotDownUnitIds: string[];

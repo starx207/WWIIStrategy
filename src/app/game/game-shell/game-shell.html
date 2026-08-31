@@ -19,6 +19,14 @@
 
 @if (battleActive()) {
   <div class="battle-overlay">
+    @if (shoreBombardment(); as bombardment) {
+      <div class="shore-bombardment-banner">
+        Shore bombardment: {{ bombardment.ships }} battleship{{
+          bombardment.ships === 1 ? '' : 's'
+        }}
+        scored {{ bombardment.hits }} hit{{ bombardment.hits === 1 ? '' : 's' }} on the defenders.
+      </div>
+    }
     <ww2-battle-board (battleAcknowledged)="onBattleAcknowledged()"></ww2-battle-board>
   </div>
 }

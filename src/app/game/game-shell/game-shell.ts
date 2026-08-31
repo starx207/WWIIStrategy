@@ -44,6 +44,7 @@ export class GameShell {
   protected readonly battleActive = computed(
     () => this.combatOrchestrator.activeBattleTerritory() !== null,
   );
+  protected readonly shoreBombardment = this.combatOrchestrator.shoreBombardmentReport;
   protected readonly handoffPending = this.turnFlow.handoffPending;
   protected readonly victoryResult = this.turnFlow.victoryResult;
 
