@@ -247,6 +247,20 @@ export class CombatState {
       );
     }
 
+    // If the firing side has already scored enough hits to wipe out the opposing army, its
+    // remaining units don't need to fire — end its firing early (hits are clamped to capacity, so
+    // further shots can't change the result).
+    const opposingCapacity = this.getTotalRemainingHitPoints(
+      opposingArmy,
+      state.unitDamageById,
+      ruleContext,
+    );
+    if (action.role === 'attack' && defenderHitsToAssign.length >= opposingCapacity) {
+      attackerReadyToFireIds = [];
+    } else if (action.role === 'defend' && attackerHitsToAssign.length >= opposingCapacity) {
+      defenderReadyToFireIds = [];
+    }
+
     const updatedState: CombatStateModel = {
       ...state,
       attackerReadyToFireIds,
@@ -578,14 +592,78 @@ export class CombatState {
         ? CombatPhase.OPENING_FIRE_CASUALTIES
         : CombatPhase.COMBAT_CASUALTIES;
 
-    context.setState({
+    // A side that is completely wiped out has no casualty choice to make — every unit dies. Assign
+    // those casualties automatically and skip its selection step (falls back to manual selection
+    // for any side that isn't a clean total wipe).
+    const ruleContext = createResolvedRuleContext(
+      state,
+      this.store.selectSnapshot(SettingsSelectors.rules),
+    );
+    const attackerAutoWipe = this.buildTotalWipeAssignment(state, 'attack', ruleContext);
+    const defenderAutoWipe = this.buildTotalWipeAssignment(state, 'defend', ruleContext);
+
+    const casualtyState: CombatStateModel = {
       ...state,
       currentPhase: casualtyPhase,
       attackerReadyToFireIds: [],
       defenderReadyToFireIds: [],
-      attackerCasualtiesConfirmed: state.attackerHitsToAssign.length === 0,
-      defenderCasualtiesConfirmed: state.defenderHitsToAssign.length === 0,
-    });
+      attackerAssignedHitsByUnitId: attackerAutoWipe ?? {},
+      defenderAssignedHitsByUnitId: defenderAutoWipe ?? {},
+      attackerCasualtiesConfirmed:
+        state.attackerHitsToAssign.length === 0 || attackerAutoWipe !== null,
+      defenderCasualtiesConfirmed:
+        state.defenderHitsToAssign.length === 0 || defenderAutoWipe !== null,
+    };
+
+    if (casualtyState.attackerCasualtiesConfirmed && casualtyState.defenderCasualtiesConfirmed) {
+      this.resolveConfirmedCasualties(context, casualtyState);
+      return;
+    }
+
+    context.setState(casualtyState);
+  }
+
+  /**
+   * Build the forced casualty assignment for a side that is completely wiped out this round: every
+   * hittable unit takes hits up to its remaining hit points. Returns null unless this is a clean
+   * total wipe (hits at least cover the army's remaining capacity and every hit can be assigned),
+   * in which case the caller falls back to manual casualty selection.
+   */
+  private buildTotalWipeAssignment(
+    state: CombatStateModel,
+    role: CombatRole,
+    ruleContext: RuleContext,
+  ): HitAssignmentMap | null {
+    const hitsToAssign =
+      role === 'attack' ? state.attackerHitsToAssign : state.defenderHitsToAssign;
+    if (hitsToAssign.length === 0) {
+      return null;
+    }
+
+    const army = role === 'attack' ? state.attackingArmy : state.defendingArmy;
+    const capacity = this.getTotalRemainingHitPoints(army, state.unitDamageById, ruleContext);
+    if (capacity === 0 || hitsToAssign.length < capacity) {
+      return null;
+    }
+
+    const assignments: HitAssignmentMap = {};
+    let pending = [...hitsToAssign];
+    for (const unit of army) {
+      let remaining = getHitPoints(unit, ruleContext) - (state.unitDamageById[unit.id] ?? 0);
+      while (remaining > 0) {
+        const consumed = this.consumeHitForUnit(pending, unit);
+        if (!consumed) {
+          break;
+        }
+        assignments[unit.id] = [...(assignments[unit.id] ?? []), consumed.hit];
+        pending = consumed.remainingHits;
+        remaining--;
+      }
+    }
+
+    // Only treat it as an automatic wipe if every hit was cleanly assigned; otherwise defer to the
+    // player (e.g. leftover restricted hits with no valid target).
+    return pending.length === 0 ? assignments : null;
   }
 
   private resolveConfirmedCasualties(context: CombatStateContext, state: CombatStateModel) {

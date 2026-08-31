@@ -280,6 +280,10 @@ export class GameMap implements OnInit, OnDestroy {
     const phase = this.currentTurnPhase();
 
     if ([...MOVEMENT_PHASES].includes(phase)) {
+      // Only the active nation may move units — ignore clicks on any other nation's squads.
+      if (squad.nationality !== nationalityForGamePhase(this.gamePhase())) {
+        return;
+      }
       const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
       const hasMovementPlans = this.hasMovementPlansWithPath();
       this.store.dispatch(
