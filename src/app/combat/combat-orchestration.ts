@@ -1,6 +1,6 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
-import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES } from '@ww2/shared/unit-type';
+import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { TurnPhase } from '@ww2/game/turn-phase';
 import { TerritoryName } from '../territories/territory-names';
 import { SquadMovementPlan } from '@ww2/map/map-state';
@@ -136,4 +136,65 @@ export function buildBattleSetup(
 
   const defenders = (unitsByTerritory[territory] ?? []).filter((unit) => isEnemy(unit, nation));
   return { attackers, defenders, originByUnitId, returnByUnitId, attackingSquadIds };
+}
+
+function hasEnemyAntiAir(
+  territory: TerritoryName,
+  nation: Nationality,
+  unitsByTerritory: UnitsByTerritory,
+): boolean {
+  return (unitsByTerritory[territory] ?? []).some(
+    (unit) => isEnemy(unit, nation) && unit.type === UnitType.ANTI_AIR_GUN,
+  );
+}
+
+export interface AntiAircraftResult {
+  /** Ids of aircraft shot down while flying over enemy anti-aircraft guns. */
+  shotDownUnitIds: string[];
+  /** How many aircraft each territory's AA gun shot down. */
+  reportByTerritory: Record<string, number>;
+}
+
+/**
+ * Resolve anti-aircraft fire over the fly-over territories of aircraft combat moves (the steps
+ * marked `under-fire`). Each AA gun fires once at each aircraft that passes over, hitting on a 1;
+ * a hit downs the aircraft. `rollDie` returns 1-6 (injected for testability). Pure function — the
+ * caller removes the returned unit ids from the map.
+ */
+export function computeAntiAircraftFire(params: {
+  nation: Nationality;
+  unitsByTerritory: UnitsByTerritory;
+  plans: SquadMovementPlan[];
+  rollDie: () => number;
+}): AntiAircraftResult {
+  const { nation, unitsByTerritory, plans, rollDie } = params;
+  const shotDownUnitIds: string[] = [];
+  const reportByTerritory: Record<string, number> = {};
+
+  for (const plan of combatMovePlans(plans)) {
+    if (!isAirPlan(plan)) {
+      continue;
+    }
+    const flyOverTerritories = plan.path
+      .filter((step) => step.combatType === 'under-fire')
+      .map((step) => step.territoryName);
+    if (flyOverTerritories.length === 0) {
+      continue;
+    }
+
+    for (const aircraft of movingUnitsForPlan(plan, unitsByTerritory)) {
+      for (const territory of flyOverTerritories) {
+        if (!hasEnemyAntiAir(territory, nation, unitsByTerritory)) {
+          continue;
+        }
+        if (rollDie() <= 1) {
+          shotDownUnitIds.push(aircraft.id);
+          reportByTerritory[territory] = (reportByTerritory[territory] ?? 0) + 1;
+          break; // Downed — it flies over no further territories.
+        }
+      }
+    }
+  }
+
+  return { shotDownUnitIds, reportByTerritory };
 }

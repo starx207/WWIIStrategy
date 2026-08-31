@@ -15,8 +15,14 @@ import {
   BattleSetup,
   PendingBattle,
   buildBattleSetup,
+  computeAntiAircraftFire,
   computePendingBattles,
 } from './combat-orchestration';
+
+export interface AntiAircraftReportEntry {
+  territory: string;
+  shotDown: number;
+}
 
 /**
  * Drives the Conduct Combat phase: derives the list of battles from combat-move plans, launches
@@ -30,6 +36,9 @@ export class CombatOrchestrator {
   /** The territory whose battle is currently on the board, or null when no battle is showing. */
   readonly activeBattleTerritory = signal<TerritoryName | null>(null);
 
+  /** Summary of the most recent anti-aircraft fire (aircraft downed over each territory). */
+  readonly antiAircraftReport = signal<AntiAircraftReportEntry[]>([]);
+
   private originByUnitId: BattleSetup['originByUnitId'] = {};
   private returnByUnitId: BattleSetup['returnByUnitId'] = {};
   private attackingSquadIds: string[] = [];
@@ -39,7 +48,47 @@ export class CombatOrchestrator {
     this.originByUnitId = {};
     this.returnByUnitId = {};
     this.attackingSquadIds = [];
+    this.antiAircraftReport.set([]);
     this.activeBattleTerritory.set(null);
+  }
+
+  /**
+   * Resolve anti-aircraft fire over the aircraft fly-over territories (called when leaving the
+   * combat-move phase, before battles). Downed aircraft are removed from the map.
+   */
+  resolveAntiAircraftFire(): void {
+    const nation = this.activeNation();
+    if (!nation) {
+      this.antiAircraftReport.set([]);
+      return;
+    }
+
+    const units = this.store.selectSnapshot(MapSelectors.unitsByTerritoryName);
+    const plans = this.store.selectSnapshot(MapSelectors.movementPlans);
+    const { shotDownUnitIds, reportByTerritory } = computeAntiAircraftFire({
+      nation,
+      unitsByTerritory: units,
+      plans,
+      rollDie: () => Math.floor(Math.random() * 6) + 1,
+    });
+
+    const downed = new Set(shotDownUnitIds);
+    if (downed.size > 0) {
+      for (const [territory, territoryUnits] of Object.entries(units)) {
+        if ((territoryUnits ?? []).some((unit) => downed.has(unit.id))) {
+          this.store.dispatch(
+            new MapActions.SetTerritoryUnits(
+              territory as TerritoryName,
+              (territoryUnits ?? []).filter((unit) => !downed.has(unit.id)),
+            ),
+          );
+        }
+      }
+    }
+
+    this.antiAircraftReport.set(
+      Object.entries(reportByTerritory).map(([territory, shotDown]) => ({ territory, shotDown })),
+    );
   }
 
   private activeNation(): Nationality | undefined {

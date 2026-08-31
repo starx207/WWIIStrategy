@@ -23,6 +23,8 @@ export class ConductCombatPanel {
 
   private readonly activeNation = computed(() => nationalityForGamePhase(this.gamePhase()));
 
+  protected readonly antiAircraftReport = this.orchestrator.antiAircraftReport;
+
   protected readonly battles = computed(() => {
     const nation = this.activeNation();
     return nation ? computePendingBattles(nation, this.plans(), this.units()) : [];
