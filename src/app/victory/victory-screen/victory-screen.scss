@@ -1,0 +1,69 @@
+.victory {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f4f1e8;
+  font-family: system-ui, sans-serif;
+  background: radial-gradient(circle at 50% 20%, #2a3d52, #12161d);
+
+  &.axis {
+    background: radial-gradient(circle at 50% 20%, #5a2d2d, #1a1010);
+  }
+
+  &.allies {
+    background: radial-gradient(circle at 50% 20%, #2d3f5a, #10141a);
+  }
+}
+
+.card {
+  text-align: center;
+  padding: 3rem;
+  max-width: 34rem;
+
+  .eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.8rem;
+    opacity: 0.75;
+  }
+
+  h1 {
+    margin: 0.5rem 0 1rem;
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+  }
+
+  .detail {
+    margin: 0 0 1.5rem;
+    font-size: 1.1rem;
+    opacity: 0.9;
+  }
+
+  .final {
+    display: flex;
+    gap: 2.5rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+
+  .menu {
+    padding: 0.85rem 1.5rem;
+    border-radius: 6px;
+    border: none;
+    background: #c8a24a;
+    color: #16202c;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: #d9b45c;
+    }
+  }
+}

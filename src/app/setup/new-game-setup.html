@@ -47,6 +47,18 @@
 
   <section class="panel">
     <h2>House rules</h2>
+
+    <p class="hint">Victory condition (victory cities needed to win).</p>
+    <select
+      class="victory-select"
+      [value]="victoryCondition()"
+      (change)="setVictoryCondition($any($event.target).value)"
+    >
+      @for (condition of victoryConditions; track condition) {
+        <option [value]="condition">{{ victoryLabel(condition) }}</option>
+      }
+    </select>
+
     <p class="hint">Technologies players may research this game.</p>
     @for (techId of allTechIds; track techId) {
       <label class="tech-row">

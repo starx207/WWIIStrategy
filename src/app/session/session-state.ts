@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Action, State, StateContext } from '@ngxs/store';
 import { Nationality } from '@ww2/shared/nationality';
 import { TechnologyId } from '@ww2/settings/settings-state';
+import { VictoryCondition } from '@ww2/victory/data/victory-cities';
 import { SessionActions } from './session-actions';
 
 export interface Player {
@@ -12,6 +13,8 @@ export interface Player {
 export interface HouseRules {
   /** Technologies players are permitted to research this game. */
   allowedTechIds: TechnologyId[];
+  /** Victory-city count required to win (minor 8, major 10, total 12). */
+  victoryCondition: VictoryCondition;
 }
 
 export interface SessionStateModel {
@@ -32,7 +35,7 @@ const DEFAULT_STATE: SessionStateModel = {
   started: false,
   players: [],
   nationAssignments: {},
-  houseRules: { allowedTechIds: [...ALL_TECH_IDS] },
+  houseRules: { allowedTechIds: [...ALL_TECH_IDS], victoryCondition: 'minor' },
   roundNumber: 1,
   loadedFileName: null,
 };

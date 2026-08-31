@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { NATIONALITIES, Nationality } from '@ww2/shared/nationality';
 import { TechnologyId } from '@ww2/settings/settings-state';
+import { VICTORY_CONDITION_LABEL, VictoryCondition } from '@ww2/victory/data/victory-cities';
 import { ALL_TECH_IDS } from '../session/session-state';
 import { GameSessionService } from '../game/game-session.service';
 
@@ -54,6 +55,17 @@ export class NewGameSetup {
   );
 
   protected readonly allowedTechIds = signal<Set<TechnologyId>>(new Set(ALL_TECH_IDS));
+
+  protected readonly victoryConditions: VictoryCondition[] = ['minor', 'major', 'total'];
+  protected readonly victoryCondition = signal<VictoryCondition>('minor');
+
+  protected victoryLabel(condition: VictoryCondition): string {
+    return VICTORY_CONDITION_LABEL[condition];
+  }
+
+  protected setVictoryCondition(condition: VictoryCondition): void {
+    this.victoryCondition.set(condition);
+  }
 
   protected readonly canStart = computed(() => {
     const players = this.players();
@@ -141,7 +153,10 @@ export class NewGameSetup {
     this.session.startNewGame({
       players,
       nationAssignments: this.nationAssignments(),
-      houseRules: { allowedTechIds: [...this.allowedTechIds()] },
+      houseRules: {
+        allowedTechIds: [...this.allowedTechIds()],
+        victoryCondition: this.victoryCondition(),
+      },
     });
     await this.router.navigateByUrl('/game');
   }

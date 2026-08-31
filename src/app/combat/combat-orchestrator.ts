@@ -31,6 +31,12 @@ export class CombatOrchestrator {
 
   private originByUnitId: BattleSetup['originByUnitId'] = {};
 
+  /** Clear any in-progress battle state (called when starting or loading a game). */
+  reset(): void {
+    this.originByUnitId = {};
+    this.activeBattleTerritory.set(null);
+  }
+
   private activeNation(): Nationality | undefined {
     return nationalityForGamePhase(this.store.selectSnapshot(GameSelectors.gamePhase));
   }

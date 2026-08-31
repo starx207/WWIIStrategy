@@ -133,6 +133,13 @@ export class MapSelectors {
   ): Partial<Record<TerritoryName, MilitaryUnit[]>> {
     return state.unitsByTerritoryName;
   }
+
+  @Selector([MapState])
+  static pendingCapturesByTerritory(
+    state: MapStateModel,
+  ): Partial<Record<LandTerritoryName, Nationality>> {
+    return state.pendingCapturesByTerritory;
+  }
 }
 
 function findTerritoryForUnitId(

@@ -30,3 +30,11 @@ export const NATIONALITIES_IN_TURN_ORDER: Nationality[] = [
 export function nationalityForGamePhase(phase: GamePhase): Nationality | undefined {
   return NATIONALITY_BY_GAME_PHASE[phase];
 }
+
+/** The game phase for a nation's turn (inverse of nationalityForGamePhase). */
+export function gamePhaseForNationality(nation: Nationality): GamePhase {
+  const match = Object.entries(NATIONALITY_BY_GAME_PHASE).find(
+    ([, phaseNation]) => phaseNation === nation,
+  );
+  return match ? (Number(match[0]) as GamePhase) : GamePhase.SOVIET_TURN;
+}

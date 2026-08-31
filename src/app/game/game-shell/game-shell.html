@@ -23,6 +23,14 @@
   </div>
 }
 
+@if (handoffPending()) {
+  <ww2-handoff-screen></ww2-handoff-screen>
+}
+
+@if (victoryResult()) {
+  <ww2-victory-screen></ww2-victory-screen>
+}
+
 <div class="game-controls">
   <button type="button" (click)="openSaveDialog()">Save Game</button>
   <button type="button" (click)="exitToMenu()">Main Menu</button>

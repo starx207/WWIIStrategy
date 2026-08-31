@@ -6,6 +6,8 @@ import { SessionActions } from '../session/session-actions';
 import { GameActions } from './game-actions';
 import { GamePhase } from './game-phase';
 import { TurnPhase } from './turn-phase';
+import { TurnFlowService } from './turn-flow.service';
+import { CombatOrchestrator } from '@ww2/combat/combat-orchestrator';
 import { defaultSaveFileName, deserializeGame, serializeGame } from './game-serialization';
 
 export interface NewGameConfig {
@@ -22,6 +24,8 @@ export interface NewGameConfig {
 @Injectable({ providedIn: 'root' })
 export class GameSessionService {
   private readonly store = inject(Store);
+  private readonly turnFlow = inject(TurnFlowService);
+  private readonly combatOrchestrator = inject(CombatOrchestrator);
 
   /**
    * The default state of every slice, captured the first time this service is constructed —
@@ -32,6 +36,8 @@ export class GameSessionService {
   /** Reset all slices to defaults, then record the chosen players / rules and start the first turn. */
   startNewGame(config: NewGameConfig): void {
     this.store.reset(this.pristineSnapshot);
+    this.turnFlow.reset();
+    this.combatOrchestrator.reset();
     this.store.dispatch([
       new SessionActions.StartNewGame(config.players, config.nationAssignments, config.houseRules),
       // A game begins with the Soviet Union's first turn. (Turn-order / starting-phase specifics
@@ -45,6 +51,8 @@ export class GameSessionService {
   loadFromFile(fileName: string, json: string): void {
     const state = deserializeGame(json);
     this.store.reset(state);
+    this.turnFlow.reset();
+    this.combatOrchestrator.reset();
     this.store.dispatch(new SessionActions.SetLoadedFileName(fileName));
   }
 

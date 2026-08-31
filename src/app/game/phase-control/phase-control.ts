@@ -1,12 +1,13 @@
 import { Component, computed, inject } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { GameSelectors } from '@ww2/game/game-selectors';
-import { GameActions } from '@ww2/game/game-actions';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
 import { TURN_PHASE_LABEL, TurnPhase } from '@ww2/game/turn-phase';
-import { MapActions } from '@ww2/map/map-actions';
+import { MapSelectors } from '@ww2/map/map-selectors';
 import { NATIONALITY_LABEL } from '@ww2/shared/nationality-label';
+import { computePendingBattles } from '@ww2/combat/combat-orchestration';
 import { SessionSelectors, playerForNation } from '../../session/session-selectors';
+import { TurnFlowService } from '../turn-flow.service';
 
 @Component({
   selector: 'ww2-phase-control',
@@ -16,11 +17,17 @@ import { SessionSelectors, playerForNation } from '../../session/session-selecto
 })
 export class PhaseControl {
   private readonly store = inject(Store);
+  private readonly turnFlow = inject(TurnFlowService);
 
   private readonly gamePhase = this.store.selectSignal(GameSelectors.gamePhase);
   private readonly turnPhase = this.store.selectSignal(GameSelectors.turnPhase);
   private readonly players = this.store.selectSignal(SessionSelectors.players);
   private readonly nationAssignments = this.store.selectSignal(SessionSelectors.nationAssignments);
+  private readonly invalidMoveCount = this.store.selectSignal(
+    MapSelectors.invalidMovementPlanCount,
+  );
+  private readonly plans = this.store.selectSignal(MapSelectors.movementPlans);
+  private readonly units = this.store.selectSignal(MapSelectors.unitsByTerritoryName);
 
   protected readonly activeNation = computed(() => nationalityForGamePhase(this.gamePhase()));
 
@@ -39,12 +46,35 @@ export class PhaseControl {
 
   protected readonly phaseLabel = computed(() => TURN_PHASE_LABEL[this.turnPhase()]);
 
-  protected nextPhase(): void {
-    // Execute non-combat movement as we leave that phase (combat movement is executed by the
-    // combat orchestrator during Conduct Combat, so its plans are not applied here).
-    if (this.turnPhase() === TurnPhase.NON_COMBAT_MOVEMENT) {
-      this.store.dispatch(new MapActions.ApplyMovementPlans(TurnPhase.NON_COMBAT_MOVEMENT));
+  protected readonly blockers = computed<string[]>(() => {
+    const phase = this.turnPhase();
+    const list: string[] = [];
+
+    if (phase === TurnPhase.COMBAT_MOVEMENT || phase === TurnPhase.NON_COMBAT_MOVEMENT) {
+      const invalid = this.invalidMoveCount();
+      if (invalid > 0) {
+        list.push(`${invalid} invalid move${invalid === 1 ? '' : 's'}`);
+      }
     }
-    this.store.dispatch(new GameActions.AdvanceTurnPhase());
+
+    if (phase === TurnPhase.COMBAT_RESOLUTION) {
+      const nation = this.activeNation();
+      const battles = nation ? computePendingBattles(nation, this.plans(), this.units()).length : 0;
+      if (battles > 0) {
+        list.push(`${battles} unresolved battle${battles === 1 ? '' : 's'}`);
+      }
+    }
+
+    return list;
+  });
+
+  protected readonly canAdvance = computed(() => this.blockers().length === 0);
+
+  protected readonly advanceLabel = computed(() =>
+    this.turnPhase() === TurnPhase.PLACE_NEW_UNITS ? 'End Turn' : 'Next Phase ▸',
+  );
+
+  protected nextPhase(): void {
+    this.turnFlow.advancePhase();
   }
 }

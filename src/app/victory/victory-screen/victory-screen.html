@@ -1,0 +1,22 @@
+@if (result(); as status) {
+  <div
+    class="victory"
+    [class.axis]="winnerClass() === 'axis'"
+    [class.allies]="winnerClass() === 'allies'"
+  >
+    <div class="card">
+      <p class="eyebrow">{{ conditionLabel() }}</p>
+      <h1>{{ winnerLabel() }} Victory!</h1>
+      <p class="detail">
+        The {{ winnerLabel() }} controlled
+        {{ winnerClass() === 'axis' ? status.axisCities : status.alliesCities }} of the
+        {{ status.threshold }} victory cities needed.
+      </p>
+      <div class="final">
+        <span>Allies {{ status.alliesCities }}</span>
+        <span>Axis {{ status.axisCities }}</span>
+      </div>
+      <button type="button" class="menu" (click)="toMenu()">Main Menu</button>
+    </div>
+  </div>
+}

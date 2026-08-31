@@ -11,6 +11,9 @@ import { PlacementPanel } from '../../production/placement-panel/placement-panel
 import { ConductCombatPanel } from '../../combat/conduct-combat-panel/conduct-combat-panel';
 import { BattleBoard } from '../../combat/battle-board/battle-board';
 import { CombatOrchestrator } from '../../combat/combat-orchestrator';
+import { HandoffScreen } from '../handoff/handoff-screen';
+import { VictoryScreen } from '../../victory/victory-screen/victory-screen';
+import { TurnFlowService } from '../turn-flow.service';
 import { GameSessionService } from '../game-session.service';
 
 @Component({
@@ -23,6 +26,8 @@ import { GameSessionService } from '../game-session.service';
     PlacementPanel,
     ConductCombatPanel,
     BattleBoard,
+    HandoffScreen,
+    VictoryScreen,
   ],
   templateUrl: './game-shell.html',
   styleUrl: './game-shell.scss',
@@ -32,12 +37,15 @@ export class GameShell {
   private readonly router = inject(Router);
   private readonly store = inject(Store);
   private readonly combatOrchestrator = inject(CombatOrchestrator);
+  private readonly turnFlow = inject(TurnFlowService);
 
   protected readonly TurnPhase = TurnPhase;
   protected readonly turnPhase = this.store.selectSignal(GameSelectors.turnPhase);
   protected readonly battleActive = computed(
     () => this.combatOrchestrator.activeBattleTerritory() !== null,
   );
+  protected readonly handoffPending = this.turnFlow.handoffPending;
+  protected readonly victoryResult = this.turnFlow.victoryResult;
 
   protected onBattleAcknowledged(): void {
     this.combatOrchestrator.finishBattle();

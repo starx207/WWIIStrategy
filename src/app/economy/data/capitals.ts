@@ -12,3 +12,12 @@ export const CAPITAL_BY_NATION: Record<Nationality, LandTerritoryName> = {
   [Nationality.JAPAN]: 'Japan',
   [Nationality.UNITED_STATES]: 'Eastern United States',
 };
+
+/** The nation whose capital a territory is, if any (inverse of CAPITAL_BY_NATION). */
+export const CAPITAL_OWNER_BY_TERRITORY: Partial<Record<LandTerritoryName, Nationality>> =
+  Object.fromEntries(
+    Object.entries(CAPITAL_BY_NATION).map(([nation, territory]) => [
+      territory,
+      nation as Nationality,
+    ]),
+  );

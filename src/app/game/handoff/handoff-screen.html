@@ -1,0 +1,28 @@
+<div class="handoff">
+  <div class="card">
+    <p class="round">Round {{ round() }}</p>
+    <h1>Pass the device</h1>
+    <p class="next">
+      to <strong>{{ nextPlayerName() || 'the next player' }}</strong>
+      <span class="nation">({{ nextNationLabel() }})</span>
+    </p>
+
+    <div class="victory-progress">
+      <h2>Victory cities</h2>
+      <div class="counts">
+        <div class="side allies">
+          <span class="label">Allies</span>
+          <span class="value">{{ alliesCities() }} / {{ threshold() }}</span>
+        </div>
+        <div class="side axis">
+          <span class="label">Axis</span>
+          <span class="value">{{ axisCities() }} / {{ threshold() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="begin" (click)="begin()">
+      Begin {{ nextNationLabel() }}'s turn
+    </button>
+  </div>
+</div>
