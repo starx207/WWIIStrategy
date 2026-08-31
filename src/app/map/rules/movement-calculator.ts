@@ -36,9 +36,18 @@ const distanceToClosestAirfield = (
 
       const territoryInfo = TERRITORY_INFO_BY_NAME[territory];
       if (territoryInfo.kind === 'sea') {
-        // TODO: will also need to implement the aircraft carrier rule later on. First need to implement the concept of
-        //       some units acting as "cargo" for other units. Once implemented, friendly(? or same nationality) aircraft carriers are considered
-        //       valid airfields (if they're not at capacity) if they are within range of the target territory (based on the carrier's remaining movement)
+        // A friendly aircraft carrier in a sea zone acts as an airfield fighters can land on.
+        // v1 simplification: carrier fighter-capacity and repositioning the carrier to pick up a
+        // returning fighter are not yet modeled. TODO: enforce the 2-fighter capacity and account
+        // for the carrier's own movement.
+        const hasFriendlyCarrier = (context.unitsByTerritory[territory] ?? []).some(
+          (unit) =>
+            unit.type === UnitType.AIRCRAFT_CARRIER &&
+            NATION_ALLIANCE[unit.nationality] === requiredAlliance,
+        );
+        if (hasFriendlyCarrier) {
+          return distance;
+        }
       } else {
         // Land territories are considered airfields if they're controlled by the unit's allies.
         const territoryAlliance =
