@@ -14,16 +14,35 @@ export interface PendingBattle {
   defenderCount: number;
 }
 
+type AmphibiousAssaults = Partial<Record<string, string[]>>;
+
 export interface BattleSetup {
   attackers: MilitaryUnit[];
   defenders: MilitaryUnit[];
   /** Physical origin of each attacker — where it is pulled from when the battle starts. */
   originByUnitId: Record<string, TerritoryName>;
   /** Where each attacker goes when it does NOT occupy the contested territory: land/sea units to
-   * their origin, aircraft to their landing airfield (the plan's final step). */
+   * their origin, aircraft to their landing airfield (the plan's final step). Amphibious attackers
+   * have no return — they occupy on capture, otherwise they are lost. */
   returnByUnitId: Record<string, TerritoryName>;
   /** Ids of the movement plans feeding this battle (removed once it resolves). */
   attackingSquadIds: string[];
+  /** False when amphibious units are assaulting — the attacker may not retreat. */
+  retreatAllowed: boolean;
+}
+
+/** Locate a unit and its territory by id. */
+function findUnitLocation(
+  unitId: string,
+  unitsByTerritory: UnitsByTerritory,
+): { unit: MilitaryUnit; territory: TerritoryName } | undefined {
+  for (const [territory, units] of Object.entries(unitsByTerritory)) {
+    const unit = (units ?? []).find((candidate) => candidate.id === unitId);
+    if (unit) {
+      return { unit, territory: territory as TerritoryName };
+    }
+  }
+  return undefined;
 }
 
 function isEnemy(unit: MilitaryUnit, nation: Nationality): boolean {
@@ -79,12 +98,18 @@ export function computePendingBattles(
   nation: Nationality,
   plans: SquadMovementPlan[],
   unitsByTerritory: UnitsByTerritory,
+  amphibiousAssaults: AmphibiousAssaults = {},
 ): PendingBattle[] {
   const attacked = new Set<TerritoryName>();
   for (const plan of combatMovePlans(plans)) {
     const territory = attackedTerritoryForPlan(plan);
     if (territory) {
       attacked.add(territory);
+    }
+  }
+  for (const [territory, ids] of Object.entries(amphibiousAssaults)) {
+    if ((ids ?? []).length > 0) {
+      attacked.add(territory as TerritoryName);
     }
   }
 
@@ -98,11 +123,16 @@ export function computePendingBattles(
     if (combatDefenders.length === 0) {
       continue;
     }
-    const attackerCount = plansAttacking(plans, territory).reduce(
+    const planAttackers = plansAttacking(plans, territory).reduce(
       (total, plan) => total + movingUnitsForPlan(plan, unitsByTerritory).length,
       0,
     );
-    battles.push({ territory, attackerCount, defenderCount: combatDefenders.length });
+    const amphibiousAttackers = (amphibiousAssaults[territory] ?? []).length;
+    battles.push({
+      territory,
+      attackerCount: planAttackers + amphibiousAttackers,
+      defenderCount: combatDefenders.length,
+    });
   }
   return battles;
 }
@@ -114,6 +144,7 @@ export function buildBattleSetup(
   nation: Nationality,
   plans: SquadMovementPlan[],
   unitsByTerritory: UnitsByTerritory,
+  amphibiousAssaults: AmphibiousAssaults = {},
 ): BattleSetup {
   const attackers: MilitaryUnit[] = [];
   const originByUnitId: Record<string, TerritoryName> = {};
@@ -134,8 +165,25 @@ export function buildBattleSetup(
     }
   }
 
+  // Amphibious attackers assault from their transports' sea zones; they have no retreat/return.
+  const amphibiousIds = amphibiousAssaults[territory] ?? [];
+  for (const unitId of amphibiousIds) {
+    const located = findUnitLocation(unitId, unitsByTerritory);
+    if (located) {
+      attackers.push(located.unit);
+      originByUnitId[unitId] = located.territory;
+    }
+  }
+
   const defenders = (unitsByTerritory[territory] ?? []).filter((unit) => isEnemy(unit, nation));
-  return { attackers, defenders, originByUnitId, returnByUnitId, attackingSquadIds };
+  return {
+    attackers,
+    defenders,
+    originByUnitId,
+    returnByUnitId,
+    attackingSquadIds,
+    retreatAllowed: amphibiousIds.length === 0,
+  };
 }
 
 function hasEnemyAntiAir(

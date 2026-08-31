@@ -78,6 +78,8 @@ export interface CombatStateModel {
   canCaptureTerritory: boolean;
   resolutionSummary: BattleResolutionSummary | null;
   round: number;
+  /** Whether the attacker may retreat (false for amphibious assaults). */
+  retreatAllowed: boolean;
 }
 
 const DEFAULT_STATE: CombatStateModel = {
@@ -99,6 +101,7 @@ const DEFAULT_STATE: CombatStateModel = {
   canCaptureTerritory: false,
   resolutionSummary: null,
   round: 0,
+  retreatAllowed: true,
 };
 
 type CombatStateContext = StateContext<CombatStateModel>;
@@ -123,6 +126,7 @@ export class CombatState {
       territory: action.territory,
       attackingArmy,
       defendingArmy,
+      retreatAllowed: action.retreatAllowed,
       unitDamageById: this.buildInitialDamageMap(attackingArmy, defendingArmy),
     };
 
@@ -420,7 +424,11 @@ export class CombatState {
   @Action(CombatActions.Retreat)
   retreat(context: CombatStateContext) {
     const state = context.getState();
-    if (state.currentPhase !== CombatPhase.REGROUP || state.outcome !== 'ongoing') {
+    if (
+      state.currentPhase !== CombatPhase.REGROUP ||
+      state.outcome !== 'ongoing' ||
+      !state.retreatAllowed
+    ) {
       return;
     }
 

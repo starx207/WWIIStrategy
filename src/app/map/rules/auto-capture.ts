@@ -37,10 +37,26 @@ export function hasNonNeutralEnemy(
   );
 }
 
+type AmphibiousAssaults = Partial<Record<LandTerritoryName, string[]>>;
+
 export interface AutoCaptureResult {
   unitsByTerritoryName: UnitsByTerritory;
   pendingCapturesByTerritory: Partial<Record<LandTerritoryName, Nationality>>;
   movementPlansBySquadId: Record<string, SquadMovementPlan>;
+  amphibiousAssaultsByTerritory: AmphibiousAssaults;
+}
+
+function removeUnitById(units: UnitsByTerritory, unitId: string): MilitaryUnit | undefined {
+  for (const [territory, territoryUnits] of Object.entries(units)) {
+    const found = (territoryUnits ?? []).find((unit) => unit.id === unitId);
+    if (found) {
+      units[territory as TerritoryName] = (territoryUnits ?? []).filter(
+        (unit) => unit.id !== unitId,
+      );
+      return found;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -56,10 +72,12 @@ export function resolveAutomaticCaptures(params: {
   movementPlansBySquadId: Record<string, SquadMovementPlan>;
   landControl: LandControlMap;
   pendingCapturesByTerritory: Partial<Record<LandTerritoryName, Nationality>>;
+  amphibiousAssaultsByTerritory: AmphibiousAssaults;
 }): AutoCaptureResult {
   const { nation, landControl } = params;
   const units: UnitsByTerritory = { ...params.unitsByTerritoryName };
   const captures = { ...params.pendingCapturesByTerritory };
+  const amphibious: AmphibiousAssaults = { ...params.amphibiousAssaultsByTerritory };
   const remainingPlans: Record<string, SquadMovementPlan> = {};
 
   for (const [squadId, plan] of Object.entries(params.movementPlansBySquadId)) {
@@ -116,9 +134,25 @@ export function resolveAutomaticCaptures(params: {
     captures[destination] = nation;
   }
 
+  // Amphibious assaults onto undefended coasts: the staged units land and capture without a battle.
+  for (const [territory, unitIds] of Object.entries(amphibious)) {
+    const landTerritory = territory as LandTerritoryName;
+    if (!unitIds || unitIds.length === 0 || hasNonNeutralEnemy(landTerritory, nation, units)) {
+      continue;
+    }
+    const landing = unitIds
+      .map((unitId) => removeUnitById(units, unitId))
+      .filter((unit): unit is MilitaryUnit => unit !== undefined);
+    const friendlyAtTarget = (units[landTerritory] ?? []).filter((unit) => !isEnemy(unit, nation));
+    units[landTerritory] = [...friendlyAtTarget, ...landing];
+    captures[landTerritory] = nation;
+    amphibious[landTerritory] = [];
+  }
+
   return {
     unitsByTerritoryName: units,
     pendingCapturesByTerritory: captures,
     movementPlansBySquadId: remainingPlans,
+    amphibiousAssaultsByTerritory: amphibious,
   };
 }

@@ -28,6 +28,7 @@ export class PhaseControl {
   );
   private readonly plans = this.store.selectSignal(MapSelectors.movementPlans);
   private readonly units = this.store.selectSignal(MapSelectors.unitsByTerritoryName);
+  private readonly amphibious = this.store.selectSignal(MapSelectors.amphibiousAssaultsByTerritory);
 
   protected readonly activeNation = computed(() => nationalityForGamePhase(this.gamePhase()));
 
@@ -59,7 +60,9 @@ export class PhaseControl {
 
     if (phase === TurnPhase.COMBAT_RESOLUTION) {
       const nation = this.activeNation();
-      const battles = nation ? computePendingBattles(nation, this.plans(), this.units()).length : 0;
+      const battles = nation
+        ? computePendingBattles(nation, this.plans(), this.units(), this.amphibious()).length
+        : 0;
       if (battles > 0) {
         list.push(`${battles} unresolved battle${battles === 1 ? '' : 's'}`);
       }

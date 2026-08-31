@@ -409,13 +409,22 @@ export class MapState {
       movementPlansBySquadId: state.movementPlansBySquadId,
       landControl: state.landTerritoryControllerByName,
       pendingCapturesByTerritory: state.pendingCapturesByTerritory,
+      amphibiousAssaultsByTerritory: state.amphibiousAssaultsByTerritory,
     });
 
     context.patchState({
       unitsByTerritoryName: result.unitsByTerritoryName,
       pendingCapturesByTerritory: result.pendingCapturesByTerritory,
       movementPlansBySquadId: result.movementPlansBySquadId,
+      amphibiousAssaultsByTerritory: result.amphibiousAssaultsByTerritory,
     });
+  }
+
+  @Action(MapActions.ClearAmphibiousAssault)
+  clearAmphibiousAssault(context: MapStateContext, action: MapActions.ClearAmphibiousAssault) {
+    const state = context.getState();
+    const { [action.territoryName]: _cleared, ...rest } = state.amphibiousAssaultsByTerritory;
+    context.patchState({ amphibiousAssaultsByTerritory: rest });
   }
 
   @Action(MapActions.LoadCargo)

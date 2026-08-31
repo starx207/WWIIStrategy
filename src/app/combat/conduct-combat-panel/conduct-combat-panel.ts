@@ -20,6 +20,7 @@ export class ConductCombatPanel {
   private readonly gamePhase = this.store.selectSignal(GameSelectors.gamePhase);
   private readonly plans = this.store.selectSignal(MapSelectors.movementPlans);
   private readonly units = this.store.selectSignal(MapSelectors.unitsByTerritoryName);
+  private readonly amphibious = this.store.selectSignal(MapSelectors.amphibiousAssaultsByTerritory);
 
   private readonly activeNation = computed(() => nationalityForGamePhase(this.gamePhase()));
 
@@ -27,7 +28,9 @@ export class ConductCombatPanel {
 
   protected readonly battles = computed(() => {
     const nation = this.activeNation();
-    return nation ? computePendingBattles(nation, this.plans(), this.units()) : [];
+    return nation
+      ? computePendingBattles(nation, this.plans(), this.units(), this.amphibious())
+      : [];
   });
 
   protected resolve(territory: TerritoryName): void {

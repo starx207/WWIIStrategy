@@ -67,6 +67,7 @@ export class BattleBoard {
     CombatSelectors.canConfirmCasualties('defend'),
   );
   protected resolutionSummary = this.store.selectSignal(CombatSelectors.resolutionSummary);
+  protected retreatAllowed = this.store.selectSignal(CombatSelectors.retreatAllowed);
 
   activeBattalion = signal<Battalion | undefined>(undefined);
   activeUnits = signal<MilitaryUnit[]>([]);

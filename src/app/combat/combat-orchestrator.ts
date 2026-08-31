@@ -105,6 +105,7 @@ export class CombatOrchestrator {
       nation,
       this.store.selectSnapshot(MapSelectors.movementPlans),
       this.store.selectSnapshot(MapSelectors.unitsByTerritoryName),
+      this.store.selectSnapshot(MapSelectors.amphibiousAssaultsByTerritory),
     );
   }
 
@@ -117,8 +118,15 @@ export class CombatOrchestrator {
 
     const units = this.store.selectSnapshot(MapSelectors.unitsByTerritoryName);
     const plans = this.store.selectSnapshot(MapSelectors.movementPlans);
-    const { attackers, defenders, originByUnitId, returnByUnitId, attackingSquadIds } =
-      buildBattleSetup(territory, nation, plans, units);
+    const amphibious = this.store.selectSnapshot(MapSelectors.amphibiousAssaultsByTerritory);
+    const {
+      attackers,
+      defenders,
+      originByUnitId,
+      returnByUnitId,
+      attackingSquadIds,
+      retreatAllowed,
+    } = buildBattleSetup(territory, nation, plans, units, amphibious);
     if (attackers.length === 0 || defenders.length === 0) {
       return;
     }
@@ -134,7 +142,9 @@ export class CombatOrchestrator {
       this.store.dispatch(new MapActions.SetTerritoryUnits(origin, remaining));
     }
 
-    this.store.dispatch(new CombatActions.PreparingBattlefield(territory, attackers, defenders));
+    this.store.dispatch(
+      new CombatActions.PreparingBattlefield(territory, attackers, defenders, retreatAllowed),
+    );
     this.activeBattleTerritory.set(territory);
   }
 
@@ -175,6 +185,10 @@ export class CombatOrchestrator {
 
     this.returnSurvivors(departing);
     this.store.dispatch(new MapActions.RemoveMovementPlans(this.attackingSquadIds));
+    if (isLand) {
+      // Clear any amphibious assault staged against this territory now that it's resolved.
+      this.store.dispatch(new MapActions.ClearAmphibiousAssault(territory as LandTerritoryName));
+    }
 
     this.originByUnitId = {};
     this.returnByUnitId = {};

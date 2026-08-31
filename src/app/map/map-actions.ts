@@ -164,4 +164,11 @@ export namespace MapActions {
       public targetTerritory: LandTerritoryName,
     ) {}
   }
+
+  /** Clear the staged amphibious assault for a territory once its battle has resolved. */
+  export class ClearAmphibiousAssault {
+    static readonly type = ACTION_SOURCE + ' Clear Amphibious Assault';
+
+    constructor(public territoryName: LandTerritoryName) {}
+  }
 }

@@ -21,6 +21,8 @@ export namespace CombatActions {
       public territory: string,
       public attackers: MilitaryUnit[],
       public defenders: MilitaryUnit[],
+      /** False for an amphibious assault — the attacker may not retreat. */
+      public retreatAllowed: boolean = true,
     ) {}
   }
 

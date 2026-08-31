@@ -102,6 +102,11 @@ export class CombatSelectors {
     return state.territory;
   }
 
+  @Selector([CombatState])
+  static retreatAllowed(state: CombatStateModel): boolean {
+    return state.retreatAllowed;
+  }
+
   /** Raw surviving attacker units (not the effective-combat view) — used to apply results to the map. */
   @Selector([CombatState])
   static rawAttackingArmy(state: CombatStateModel): MilitaryUnit[] {
