@@ -1,12 +1,45 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { UnitType } from '@ww2/shared/unit-type';
+import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { TerritoryName } from '../../territories/territory-names';
 
 /** Fighters an aircraft carrier can carry. */
 export const CARRIER_CAPACITY = 2;
 
-/** Maps a carrier unit id to the ids of the fighters loaded on it. */
+/** Land units a transport can carry. */
+export const TRANSPORT_CAPACITY = 2;
+
+/** Maps a carrying unit id (carrier or transport) to the ids of the units loaded on it. */
 export type CargoByCarrierUnitId = Record<string, string[]>;
+
+/** How many units a carrying unit can hold (0 if it can't carry anything). */
+export function cargoCapacity(carryingUnitType: UnitType): number {
+  if (carryingUnitType === UnitType.AIRCRAFT_CARRIER) {
+    return CARRIER_CAPACITY;
+  }
+  if (carryingUnitType === UnitType.TRANSPORT) {
+    return TRANSPORT_CAPACITY;
+  }
+  return 0;
+}
+
+/** Whether a carrying unit can carry a given cargo type: carriers hold fighters, transports hold land units. */
+export function canCarry(carryingUnitType: UnitType, cargoUnitType: UnitType): boolean {
+  if (carryingUnitType === UnitType.AIRCRAFT_CARRIER) {
+    return cargoUnitType === UnitType.FIGHTER_JET;
+  }
+  if (carryingUnitType === UnitType.TRANSPORT) {
+    return LAND_UNIT_TYPES.includes(cargoUnitType);
+  }
+  return false;
+}
+
+/** Remaining capacity of a carrying unit given its current cargo. */
+export function remainingCapacity(
+  carryingUnitType: UnitType,
+  currentCargo: string[] | undefined,
+): number {
+  return cargoCapacity(carryingUnitType) - (currentCargo?.length ?? 0);
+}
 
 /**
  * Load same-nationality fighters onto the carriers in each territory (up to capacity), for the

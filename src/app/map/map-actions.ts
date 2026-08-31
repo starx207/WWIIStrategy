@@ -140,4 +140,28 @@ export namespace MapActions {
 
     constructor(public nationality: Nationality) {}
   }
+
+  /** Load land units from a coast onto a transport in an adjacent sea zone. */
+  export class LoadCargo {
+    static readonly type = ACTION_SOURCE + ' Load Cargo';
+
+    constructor(
+      public transportId: string,
+      public unitIds: string[],
+      public fromTerritory: TerritoryName,
+    ) {}
+  }
+
+  /**
+   * Unload a transport's cargo onto an adjacent land territory. A friendly target is occupied
+   * immediately; a hostile target stages an amphibious assault resolved during Conduct Combat.
+   */
+  export class UnloadCargo {
+    static readonly type = ACTION_SOURCE + ' Unload Cargo';
+
+    constructor(
+      public transportId: string,
+      public targetTerritory: LandTerritoryName,
+    ) {}
+  }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Action, State, StateContext } from '@ngxs/store';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { Nationality } from '@ww2/shared/nationality';
+import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
 import {
   INITIAL_CARGO_BY_CARRIER_UNIT_ID,
   INITIAL_LAND_TERRITORY_CONTROL,
@@ -21,6 +21,7 @@ import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { isMovementPlanValid } from './rules/movement-validity';
 import { executeMovementPlans } from './rules/movement-execution';
 import { resolveAutomaticCaptures } from './rules/auto-capture';
+import { loadCargo, stageAmphibiousAssault, unloadToTerritory } from './rules/amphibious';
 
 export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
 
@@ -50,8 +51,10 @@ export interface MapStateModel {
   landTerritoryControllerByName: Record<LandTerritoryName, Nationality>;
   // Captures recorded during combat; transferred into landTerritoryControllerByName at end of turn.
   pendingCapturesByTerritory: Partial<Record<LandTerritoryName, Nationality>>;
-  // Fighters loaded on carriers: carrier unit id -> loaded fighter unit ids.
+  // Fighters loaded on carriers / land units loaded on transports: carrying unit id -> cargo ids.
   cargoByCarrierUnitId: CargoByCarrierUnitId;
+  // Land units staged for an amphibious assault on a hostile coast: territory -> attacking unit ids.
+  amphibiousAssaultsByTerritory: Partial<Record<LandTerritoryName, string[]>>;
   squadLayoutCoordinatesBySquadId: Record<string, Coordinate>;
   selectedSquad?: {
     id: string;
@@ -65,6 +68,7 @@ const DEFAULT_STATE: MapStateModel = {
   landTerritoryControllerByName: INITIAL_LAND_TERRITORY_CONTROL,
   pendingCapturesByTerritory: {},
   cargoByCarrierUnitId: INITIAL_CARGO_BY_CARRIER_UNIT_ID,
+  amphibiousAssaultsByTerritory: {},
   squadLayoutCoordinatesBySquadId: {},
   movementPlansBySquadId: {},
 };
@@ -413,6 +417,82 @@ export class MapState {
       movementPlansBySquadId: result.movementPlansBySquadId,
     });
   }
+
+  @Action(MapActions.LoadCargo)
+  loadCargo(context: MapStateContext, action: MapActions.LoadCargo) {
+    const state = context.getState();
+    const transportTerritory = findTerritoryForUnitId(state, action.transportId);
+    if (!transportTerritory) {
+      return;
+    }
+
+    const result = loadCargo({
+      unitsByTerritory: state.unitsByTerritoryName,
+      cargoByCarrierUnitId: state.cargoByCarrierUnitId,
+      transportId: action.transportId,
+      transportTerritory,
+      unitIds: action.unitIds,
+      fromTerritory: action.fromTerritory,
+    });
+
+    context.patchState({
+      unitsByTerritoryName: result.unitsByTerritoryName,
+      cargoByCarrierUnitId: result.cargoByCarrierUnitId,
+      selectedSquad: undefined,
+    });
+  }
+
+  @Action(MapActions.UnloadCargo)
+  unloadCargo(context: MapStateContext, action: MapActions.UnloadCargo) {
+    const state = context.getState();
+    const transport = findUnitById(state, action.transportId);
+    const transportTerritory = findTerritoryForUnitId(state, action.transportId);
+    if (!transport || !transportTerritory) {
+      return;
+    }
+
+    const controller = state.landTerritoryControllerByName[action.targetTerritory];
+    const hostile =
+      controller !== undefined &&
+      NATION_ALLIANCE[controller] !== NATION_ALLIANCE[transport.nationality];
+
+    if (hostile) {
+      const result = stageAmphibiousAssault({
+        cargoByCarrierUnitId: state.cargoByCarrierUnitId,
+        amphibiousAssaultsByTerritory: state.amphibiousAssaultsByTerritory,
+        transportId: action.transportId,
+        targetTerritory: action.targetTerritory,
+      });
+      context.patchState({
+        cargoByCarrierUnitId: result.cargoByCarrierUnitId,
+        amphibiousAssaultsByTerritory: result.amphibiousAssaultsByTerritory,
+        selectedSquad: undefined,
+      });
+    } else {
+      const result = unloadToTerritory({
+        unitsByTerritory: state.unitsByTerritoryName,
+        cargoByCarrierUnitId: state.cargoByCarrierUnitId,
+        transportId: action.transportId,
+        transportTerritory,
+        targetTerritory: action.targetTerritory,
+      });
+      context.patchState({
+        unitsByTerritoryName: result.unitsByTerritoryName,
+        cargoByCarrierUnitId: result.cargoByCarrierUnitId,
+        selectedSquad: undefined,
+      });
+    }
+  }
+}
+
+function findUnitById(state: MapStateModel, unitId: string): MilitaryUnit | undefined {
+  for (const units of Object.values(state.unitsByTerritoryName)) {
+    const found = units?.find((unit) => unit.id === unitId);
+    if (found) {
+      return found;
+    }
+  }
+  return undefined;
 }
 
 function withRecomputedCombatTypes(

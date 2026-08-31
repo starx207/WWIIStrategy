@@ -6,6 +6,7 @@ import { LandTerritoryName, TerritoryName } from '../territories/territory-names
 import { Nationality } from '@ww2/shared/nationality';
 import { UnitType } from '@ww2/shared/unit-type';
 import { CargoByCarrierUnitId, allCargoUnitIds } from './rules/carrier-cargo';
+import { allAmphibiousUnitIds } from './rules/amphibious';
 import { calculateAdjacentDestinations } from './rules/movement-calculator';
 import { createResolvedRuleContext } from './rule-context.factory';
 import { RuleState } from '@ww2/settings/settings-state';
@@ -24,11 +25,20 @@ export class MapSelectors {
   static squadsByTerritoryName(
     state: MapStateModel,
   ): Record<TerritoryName, MilitaryUnitSquad<MilitaryUnit>[]> {
+    const hiddenUnitIds = new Set([
+      ...allCargoUnitIds(state.cargoByCarrierUnitId),
+      ...allAmphibiousUnitIds(state.amphibiousAssaultsByTerritory),
+    ]);
     return Object.fromEntries(
       Object.entries(state.unitsByTerritoryName)
         .map(([territoryName, units]) => [
           territoryName,
-          createMapSquads(territoryName as TerritoryName, units ?? [], state.cargoByCarrierUnitId),
+          createMapSquads(
+            territoryName as TerritoryName,
+            units ?? [],
+            state.cargoByCarrierUnitId,
+            hiddenUnitIds,
+          ),
         ])
         .filter(([, squads]) => squads.length > 0),
     ) as Record<TerritoryName, MilitaryUnitSquad<MilitaryUnit>[]>;
@@ -37,6 +47,13 @@ export class MapSelectors {
   @Selector([MapState])
   static cargoByCarrierUnitId(state: MapStateModel): CargoByCarrierUnitId {
     return state.cargoByCarrierUnitId;
+  }
+
+  @Selector([MapState])
+  static amphibiousAssaultsByTerritory(
+    state: MapStateModel,
+  ): Partial<Record<LandTerritoryName, string[]>> {
+    return state.amphibiousAssaultsByTerritory;
   }
 
   @Selector([MapState])
@@ -169,10 +186,10 @@ function createMapSquads(
   territoryName: TerritoryName,
   units: MilitaryUnit[],
   cargoByCarrierUnitId: CargoByCarrierUnitId,
+  hiddenUnitIds: Set<string>,
 ): MilitaryUnitSquad<MilitaryUnit>[] {
-  // Fighters loaded on a carrier are shown on the carrier, not as their own squad.
-  const cargoIds = allCargoUnitIds(cargoByCarrierUnitId);
-  const renderableUnits = units.filter((unit) => !cargoIds.has(unit.id));
+  // Loaded cargo (and units staged for an amphibious assault) are shown on their carrier / not at all.
+  const renderableUnits = units.filter((unit) => !hiddenUnitIds.has(unit.id));
 
   const groups = renderableUnits.reduce<SquadGroups>((currentGroups, unit) => {
     const groupKey = `${unit.nationality}|${unit.type}`;
