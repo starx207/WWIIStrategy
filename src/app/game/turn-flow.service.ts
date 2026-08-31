@@ -90,6 +90,12 @@ export class TurnFlowService {
     }
 
     const phase = this.turnPhase();
+    const nation = this.currentNation();
+
+    // Leaving combat movement: resolve undefended captures and blitz before battles are shown.
+    if (phase === TurnPhase.COMBAT_MOVEMENT && nation) {
+      this.store.dispatch(new MapActions.ResolveAutomaticCaptures(nation));
+    }
 
     if (phase === TurnPhase.NON_COMBAT_MOVEMENT) {
       this.store.dispatch(new MapActions.ApplyMovementPlans(TurnPhase.NON_COMBAT_MOVEMENT));

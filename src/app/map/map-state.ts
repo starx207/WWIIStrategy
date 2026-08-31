@@ -18,6 +18,7 @@ import {
 import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { isMovementPlanValid } from './rules/movement-validity';
 import { executeMovementPlans } from './rules/movement-execution';
+import { resolveAutomaticCaptures } from './rules/auto-capture';
 
 export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
 
@@ -374,6 +375,24 @@ export class MapState {
       }
     }
     context.patchState({ movementPlansBySquadId: remainingPlans });
+  }
+
+  @Action(MapActions.ResolveAutomaticCaptures)
+  resolveAutomaticCaptures(context: MapStateContext, action: MapActions.ResolveAutomaticCaptures) {
+    const state = context.getState();
+    const result = resolveAutomaticCaptures({
+      nation: action.nationality,
+      unitsByTerritoryName: state.unitsByTerritoryName,
+      movementPlansBySquadId: state.movementPlansBySquadId,
+      landControl: state.landTerritoryControllerByName,
+      pendingCapturesByTerritory: state.pendingCapturesByTerritory,
+    });
+
+    context.patchState({
+      unitsByTerritoryName: result.unitsByTerritoryName,
+      pendingCapturesByTerritory: result.pendingCapturesByTerritory,
+      movementPlansBySquadId: result.movementPlansBySquadId,
+    });
   }
 }
 

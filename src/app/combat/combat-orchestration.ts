@@ -1,5 +1,6 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
+import { NEUTRAL_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { TurnPhase } from '@ww2/game/turn-phase';
 import { TerritoryName } from '../territories/territory-names';
 import { SquadMovementPlan } from '@ww2/map/map-state';
@@ -67,15 +68,19 @@ export function computePendingBattles(
 
   const battles: PendingBattle[] = [];
   for (const territory of destinations) {
-    const defenders = (unitsByTerritory[territory] ?? []).filter((unit) => isEnemy(unit, nation));
-    if (defenders.length === 0) {
+    // A battle only exists if the enemy has units that fight (AA guns / factories alone are
+    // captured without a fight — see resolveAutomaticCaptures).
+    const combatDefenders = (unitsByTerritory[territory] ?? []).filter(
+      (unit) => isEnemy(unit, nation) && !NEUTRAL_UNIT_TYPES.includes(unit.type),
+    );
+    if (combatDefenders.length === 0) {
       continue;
     }
     const attackerCount = combatPlansForDestination(plans, territory).reduce(
       (total, plan) => total + movingUnitsForPlan(plan, unitsByTerritory).length,
       0,
     );
-    battles.push({ territory, attackerCount, defenderCount: defenders.length });
+    battles.push({ territory, attackerCount, defenderCount: combatDefenders.length });
   }
   return battles;
 }

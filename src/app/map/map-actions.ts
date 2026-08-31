@@ -123,4 +123,14 @@ export namespace MapActions {
 
     constructor(public territoryName: TerritoryName) {}
   }
+
+  /**
+   * Resolve combat moves that need no battle: occupy + capture undefended enemy territories and
+   * record blitz pass-through captures for the given nation. Consumes the resolved combat-move plans.
+   */
+  export class ResolveAutomaticCaptures {
+    static readonly type = ACTION_SOURCE + ' Resolve Automatic Captures';
+
+    constructor(public nationality: Nationality) {}
+  }
 }
