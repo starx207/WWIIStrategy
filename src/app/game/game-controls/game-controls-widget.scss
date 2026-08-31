@@ -1,0 +1,88 @@
+:host {
+  display: flex;
+  align-items: center;
+}
+
+.game-controls {
+  display: flex;
+  gap: 0.5rem;
+
+  button {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1a1a1a;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+    font-size: 0.85rem;
+
+    &:hover {
+      background: #fff;
+    }
+  }
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.dialog {
+  min-width: 20rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  // Override the app's near-white global text color on this light surface.
+  color: #1a1a1a;
+  font-family: system-ui, sans-serif;
+
+  h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+  }
+
+  label {
+    font-size: 0.8rem;
+    color: #444;
+  }
+
+  input {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+}
+
+.dialog-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  button {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
+    background: #f2f2f2;
+    color: #1a1a1a;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+
+    &.primary {
+      background: #2f6db3;
+      border-color: #2f6db3;
+      color: #fff;
+    }
+  }
+}

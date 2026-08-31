@@ -1,6 +1,7 @@
 .app-header {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   height: var(--app-header-height);
   padding: 0.4rem 1rem;
   border-bottom: 1px solid rgba(32, 38, 46, 0.18);
@@ -11,6 +12,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+// Game-wide controls (Save / Main Menu) pinned to the far right, past the contextual widgets.
+.app-header__controls {
+  margin-left: auto;
 }
 
 .app-header__label {

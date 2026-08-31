@@ -1,0 +1,24 @@
+<div class="game-controls">
+  <button type="button" (click)="openSaveDialog()">Save Game</button>
+  <button type="button" (click)="exitToMenu()">Main Menu</button>
+</div>
+
+@if (saveDialogOpen()) {
+  <div class="dialog-backdrop" (click)="cancelSave()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <h2>Save Game</h2>
+      <label for="save-file-name">File name</label>
+      <input
+        id="save-file-name"
+        type="text"
+        [value]="saveFileName()"
+        (input)="updateSaveFileName($any($event.target).value)"
+        (keydown.enter)="confirmSave()"
+      />
+      <div class="dialog-actions">
+        <button type="button" (click)="cancelSave()">Cancel</button>
+        <button type="button" class="primary" (click)="confirmSave()">Download</button>
+      </div>
+    </div>
+  </div>
+}

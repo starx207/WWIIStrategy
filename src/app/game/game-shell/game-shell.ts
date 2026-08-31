@@ -1,5 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, computed, inject } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { AppHeader } from '../../app-header/app-header';
 import { GameMap } from '@ww2/map/game-map/game-map';
@@ -13,8 +12,8 @@ import { BattleBoard } from '../../combat/battle-board/battle-board';
 import { CombatOrchestrator } from '../../combat/combat-orchestrator';
 import { HandoffScreen } from '../handoff/handoff-screen';
 import { VictoryScreen } from '../../victory/victory-screen/victory-screen';
+import { GameControlsWidget } from '../game-controls/game-controls-widget';
 import { TurnFlowService } from '../turn-flow.service';
-import { GameSessionService } from '../game-session.service';
 
 @Component({
   selector: 'ww2-game-shell',
@@ -28,13 +27,12 @@ import { GameSessionService } from '../game-session.service';
     BattleBoard,
     HandoffScreen,
     VictoryScreen,
+    GameControlsWidget,
   ],
   templateUrl: './game-shell.html',
   styleUrl: './game-shell.scss',
 })
 export class GameShell {
-  private readonly session = inject(GameSessionService);
-  private readonly router = inject(Router);
   private readonly store = inject(Store);
   private readonly combatOrchestrator = inject(CombatOrchestrator);
   private readonly turnFlow = inject(TurnFlowService);
@@ -50,34 +48,9 @@ export class GameShell {
 
   protected onBattleAcknowledged(): void {
     this.combatOrchestrator.finishBattle();
-  }
-
-  protected readonly saveDialogOpen = signal(false);
-  protected readonly saveFileName = signal('');
-
-  protected openSaveDialog(): void {
-    this.saveFileName.set(this.session.suggestedSaveFileName());
-    this.saveDialogOpen.set(true);
-  }
-
-  protected cancelSave(): void {
-    this.saveDialogOpen.set(false);
-  }
-
-  protected confirmSave(): void {
-    const fileName = this.saveFileName().trim();
-    if (!fileName) {
-      return;
+    // When the last battle is resolved, advance straight out of combat resolution.
+    if (this.combatOrchestrator.pendingBattles().length === 0) {
+      this.turnFlow.advancePhase();
     }
-    this.session.saveToFile(fileName);
-    this.saveDialogOpen.set(false);
-  }
-
-  protected updateSaveFileName(value: string): void {
-    this.saveFileName.set(value);
-  }
-
-  protected exitToMenu(): void {
-    this.router.navigateByUrl('/');
   }
 }

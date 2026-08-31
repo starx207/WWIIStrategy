@@ -46,8 +46,9 @@ export const appConfig: ApplicationConfig = {
       //   storage: StorageOption.SessionStorage, // TODO: I want to use local storage in final version
       // })
     ),
-    { provide: HEADER_WIDGETS, useValue: PhaseControl, multi: true },
+    // Treasuries sit leftmost, then the contextual phase/movement widgets.
     { provide: HEADER_WIDGETS, useValue: TreasuryWidget, multi: true },
+    { provide: HEADER_WIDGETS, useValue: PhaseControl, multi: true },
     { provide: HEADER_WIDGETS, useValue: InvalidMovementBadge, multi: true },
   ],
 };
