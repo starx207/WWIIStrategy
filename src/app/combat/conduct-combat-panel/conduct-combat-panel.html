@@ -1,0 +1,25 @@
+<section class="conduct-combat-panel">
+  <header class="panel-head">
+    <h2>Conduct Combat</h2>
+    <span class="count">{{ battles().length }} battle(s)</span>
+  </header>
+
+  <div class="body">
+    @if (battles().length === 0) {
+      <p class="empty">No battles to resolve. Advance to the noncombat move phase.</p>
+    } @else {
+      <p class="hint">Choose the order to resolve your attacks.</p>
+      @for (battle of battles(); track battle.territory) {
+        <div class="battle-row">
+          <div class="info">
+            <span class="territory">{{ battle.territory }}</span>
+            <span class="forces">
+              {{ battle.attackerCount }} attacking &rarr; {{ battle.defenderCount }} defending
+            </span>
+          </div>
+          <button type="button" class="primary" (click)="resolve(battle.territory)">Resolve</button>
+        </div>
+      }
+    }
+  </div>
+</section>

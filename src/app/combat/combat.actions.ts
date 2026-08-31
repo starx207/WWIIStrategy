@@ -14,9 +14,14 @@ export type CombatRole = 'attack' | 'defend';
 export namespace CombatActions {
   const ACTION_SOURCE = '[Battle Board]';
 
-  // ngOnInit
   export class PreparingBattlefield {
     static readonly type = `${ACTION_SOURCE} Battlefield Loading`;
+
+    constructor(
+      public territory: string,
+      public attackers: MilitaryUnit[],
+      public defenders: MilitaryUnit[],
+    ) {}
   }
 
   /*

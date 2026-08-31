@@ -13,6 +13,16 @@
   <ww2-placement-panel></ww2-placement-panel>
 }
 
+@if (turnPhase() === TurnPhase.COMBAT_RESOLUTION && !battleActive()) {
+  <ww2-conduct-combat-panel></ww2-conduct-combat-panel>
+}
+
+@if (battleActive()) {
+  <div class="battle-overlay">
+    <ww2-battle-board (battleAcknowledged)="onBattleAcknowledged()"></ww2-battle-board>
+  </div>
+}
+
 <div class="game-controls">
   <button type="button" (click)="openSaveDialog()">Save Game</button>
   <button type="button" (click)="exitToMenu()">Main Menu</button>

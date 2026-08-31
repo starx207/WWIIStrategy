@@ -4,7 +4,6 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { CombatActions, CombatRole } from './combat.actions';
 import { CombatRules } from './rules/combat-rules';
-import { TEST_ATTACKERS, TEST_DEFENDERS, TEST_NEUTRAL_UNITS } from '../../dev-data';
 import { CasualtyPhase, CombatPhase } from './combat-phase';
 import { TargetKind } from '@ww2/shared/unit-profile';
 import { createResolvedRuleContext } from './rule-context.factory';
@@ -82,7 +81,7 @@ export interface CombatStateModel {
 }
 
 const DEFAULT_STATE: CombatStateModel = {
-  territory: 'TestTerritory',
+  territory: undefined,
   attackingArmy: [],
   defendingArmy: [],
   currentPhase: undefined,
@@ -113,14 +112,15 @@ export class CombatState {
   constructor(private store: Store) {}
 
   @Action(CombatActions.PreparingBattlefield)
-  prepareBattlefield(context: CombatStateContext) {
-    const attackingArmy = [...TEST_ATTACKERS];
-    const defendingArmy = [...TEST_DEFENDERS, ...TEST_NEUTRAL_UNITS];
+  prepareBattlefield(context: CombatStateContext, action: CombatActions.PreparingBattlefield) {
+    const attackingArmy = [...action.attackers];
+    const defendingArmy = [...action.defenders];
 
     this.activateWolfPackIfQualified(attackingArmy);
 
     const baseState: CombatStateModel = {
       ...DEFAULT_STATE,
+      territory: action.territory,
       attackingArmy,
       defendingArmy,
       unitDamageById: this.buildInitialDamageMap(attackingArmy, defendingArmy),

@@ -97,6 +97,22 @@ export class CombatSelectors {
     return state.resolutionSummary;
   }
 
+  @Selector([CombatState])
+  static territory(state: CombatStateModel) {
+    return state.territory;
+  }
+
+  /** Raw surviving attacker units (not the effective-combat view) — used to apply results to the map. */
+  @Selector([CombatState])
+  static rawAttackingArmy(state: CombatStateModel): MilitaryUnit[] {
+    return state.attackingArmy;
+  }
+
+  @Selector([CombatState])
+  static rawDefendingArmy(state: CombatStateModel): MilitaryUnit[] {
+    return state.defendingArmy;
+  }
+
   static combatForce(role: CombatRole) {
     return createSelector(
       [CombatState, SettingsSelectors.rules],

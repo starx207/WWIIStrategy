@@ -8,11 +8,22 @@ import { TurnPhase } from '@ww2/game/turn-phase';
 import { PurchasePanel } from '../../production/purchase-panel/purchase-panel';
 import { TechPanel } from '../../production/tech-panel/tech-panel';
 import { PlacementPanel } from '../../production/placement-panel/placement-panel';
+import { ConductCombatPanel } from '../../combat/conduct-combat-panel/conduct-combat-panel';
+import { BattleBoard } from '../../combat/battle-board/battle-board';
+import { CombatOrchestrator } from '../../combat/combat-orchestrator';
 import { GameSessionService } from '../game-session.service';
 
 @Component({
   selector: 'ww2-game-shell',
-  imports: [AppHeader, GameMap, PurchasePanel, TechPanel, PlacementPanel],
+  imports: [
+    AppHeader,
+    GameMap,
+    PurchasePanel,
+    TechPanel,
+    PlacementPanel,
+    ConductCombatPanel,
+    BattleBoard,
+  ],
   templateUrl: './game-shell.html',
   styleUrl: './game-shell.scss',
 })
@@ -20,9 +31,17 @@ export class GameShell {
   private readonly session = inject(GameSessionService);
   private readonly router = inject(Router);
   private readonly store = inject(Store);
+  private readonly combatOrchestrator = inject(CombatOrchestrator);
 
   protected readonly TurnPhase = TurnPhase;
   protected readonly turnPhase = this.store.selectSignal(GameSelectors.turnPhase);
+  protected readonly battleActive = computed(
+    () => this.combatOrchestrator.activeBattleTerritory() !== null,
+  );
+
+  protected onBattleAcknowledged(): void {
+    this.combatOrchestrator.finishBattle();
+  }
 
   protected readonly saveDialogOpen = signal(false);
   protected readonly saveFileName = signal('');

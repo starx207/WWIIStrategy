@@ -1,7 +1,8 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { EffectiveMapUnit } from './effective-map-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
-import { TerritoryName } from '../territories/territory-names';
+import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
+import { Nationality } from '@ww2/shared/nationality';
 import { Coordinate } from 'ol/coordinate';
 import { MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
 
@@ -76,5 +77,50 @@ export namespace MapActions {
     static readonly type = ACTION_SOURCE + ' Apply Movement Plans';
 
     constructor(public phase: TurnPhase) {}
+  }
+
+  /** Replace the full set of units occupying a territory (used to apply battle casualties). */
+  export class SetTerritoryUnits {
+    static readonly type = ACTION_SOURCE + ' Set Territory Units';
+
+    constructor(
+      public territoryName: TerritoryName,
+      public units: MilitaryUnit[],
+    ) {}
+  }
+
+  /** Append units to a territory (e.g. surviving attackers retreating back to their origin). */
+  export class AddUnitsToTerritory {
+    static readonly type = ACTION_SOURCE + ' Add Units To Territory';
+
+    constructor(
+      public territoryName: TerritoryName,
+      public units: MilitaryUnit[],
+    ) {}
+  }
+
+  /**
+   * Record that a land territory was captured. The transfer is applied at end of turn
+   * (ApplyPendingCaptures), not immediately, so aircraft can't treat it as a friendly airfield yet.
+   */
+  export class RecordTerritoryCapture {
+    static readonly type = ACTION_SOURCE + ' Record Territory Capture';
+
+    constructor(
+      public territoryName: LandTerritoryName,
+      public nationality: Nationality,
+    ) {}
+  }
+
+  /** Transfer all pending captures into the control map and clear them (end of turn). */
+  export class ApplyPendingCaptures {
+    static readonly type = ACTION_SOURCE + ' Apply Pending Captures';
+  }
+
+  /** Remove all movement plans whose destination is the given territory (after a battle resolves). */
+  export class RemoveMovementPlansForDestination {
+    static readonly type = ACTION_SOURCE + ' Remove Movement Plans For Destination';
+
+    constructor(public territoryName: TerritoryName) {}
   }
 }

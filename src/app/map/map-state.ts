@@ -45,6 +45,8 @@ export interface MapStateModel {
   //       it would allow aircraft to land there, which is not the intended behavior. We'll likely need some sort of "captured territory" state that transfers to
   //       this mapping at the end of the turn.
   landTerritoryControllerByName: Record<LandTerritoryName, Nationality>;
+  // Captures recorded during combat; transferred into landTerritoryControllerByName at end of turn.
+  pendingCapturesByTerritory: Partial<Record<LandTerritoryName, Nationality>>;
   squadLayoutCoordinatesBySquadId: Record<string, Coordinate>;
   selectedSquad?: {
     id: string;
@@ -56,6 +58,7 @@ export interface MapStateModel {
 const DEFAULT_STATE: MapStateModel = {
   unitsByTerritoryName: INITIAL_UNITS_BY_TERRITORY_NAME,
   landTerritoryControllerByName: INITIAL_LAND_TERRITORY_CONTROL,
+  pendingCapturesByTerritory: {},
   squadLayoutCoordinatesBySquadId: {},
   movementPlansBySquadId: {},
 };
@@ -309,6 +312,68 @@ export class MapState {
       movementPlansBySquadId: remainingPlans,
       selectedSquad: undefined,
     });
+  }
+
+  @Action(MapActions.SetTerritoryUnits)
+  setTerritoryUnits(context: MapStateContext, action: MapActions.SetTerritoryUnits) {
+    const state = context.getState();
+    context.patchState({
+      unitsByTerritoryName: {
+        ...state.unitsByTerritoryName,
+        [action.territoryName]: action.units,
+      },
+    });
+  }
+
+  @Action(MapActions.AddUnitsToTerritory)
+  addUnitsToTerritory(context: MapStateContext, action: MapActions.AddUnitsToTerritory) {
+    const state = context.getState();
+    const existing = state.unitsByTerritoryName[action.territoryName] ?? [];
+    context.patchState({
+      unitsByTerritoryName: {
+        ...state.unitsByTerritoryName,
+        [action.territoryName]: [...existing, ...action.units],
+      },
+    });
+  }
+
+  @Action(MapActions.RecordTerritoryCapture)
+  recordTerritoryCapture(context: MapStateContext, action: MapActions.RecordTerritoryCapture) {
+    const state = context.getState();
+    context.patchState({
+      pendingCapturesByTerritory: {
+        ...state.pendingCapturesByTerritory,
+        [action.territoryName]: action.nationality,
+      },
+    });
+  }
+
+  @Action(MapActions.ApplyPendingCaptures)
+  applyPendingCaptures(context: MapStateContext) {
+    const state = context.getState();
+    context.patchState({
+      landTerritoryControllerByName: {
+        ...state.landTerritoryControllerByName,
+        ...state.pendingCapturesByTerritory,
+      },
+      pendingCapturesByTerritory: {},
+    });
+  }
+
+  @Action(MapActions.RemoveMovementPlansForDestination)
+  removeMovementPlansForDestination(
+    context: MapStateContext,
+    action: MapActions.RemoveMovementPlansForDestination,
+  ) {
+    const state = context.getState();
+    const remainingPlans: Record<string, SquadMovementPlan> = {};
+    for (const [squadId, plan] of Object.entries(state.movementPlansBySquadId)) {
+      const destination = plan.path.at(-1)?.territoryName;
+      if (destination !== action.territoryName) {
+        remainingPlans[squadId] = plan;
+      }
+    }
+    context.patchState({ movementPlansBySquadId: remainingPlans });
   }
 }
 

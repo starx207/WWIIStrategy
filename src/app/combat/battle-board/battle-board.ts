@@ -5,8 +5,8 @@ import {
   signal,
   computed,
   inject,
-  OnInit,
   effect,
+  output,
   viewChild,
 } from '@angular/core';
 import { Battalion } from '../battalion/battalion';
@@ -32,8 +32,11 @@ const MAX_DICE_COUNT = 20;
     class: 'battle-board',
   },
 })
-export class BattleBoard implements OnInit {
+export class BattleBoard {
   private store = inject(Store);
+
+  /** Emitted when the player dismisses the outcome dialog, so the host can apply the result. */
+  readonly battleAcknowledged = output<void>();
 
   protected readonly CombatPhase = CombatPhase;
   readonly ATTACK_SQUAD_RANKS = [4, 3, 2, 1, 0];
@@ -149,12 +152,9 @@ export class BattleBoard implements OnInit {
 
   @ViewChildren(Dice) diceComponents!: QueryList<Dice>;
 
-  ngOnInit() {
-    this.store.dispatch(new CombatActions.PreparingBattlefield());
-  }
-
   closeOutcomeDialog(): void {
     this.outcomeDialog()?.close();
+    this.battleAcknowledged.emit();
   }
 
   retreat(): void {

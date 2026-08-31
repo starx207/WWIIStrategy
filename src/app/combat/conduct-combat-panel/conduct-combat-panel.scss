@@ -1,0 +1,82 @@
+.conduct-combat-panel {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 20;
+  width: min(24rem, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  background: #fbfaf5;
+  color: #23201a;
+  font-family: system-ui, sans-serif;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid #d8d3c4;
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.75rem 1rem 0.5rem;
+  border-bottom: 1px solid #e6e1d3;
+
+  h2 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .count {
+    font-size: 0.8rem;
+    color: #4a453b;
+  }
+}
+
+.body {
+  padding: 0.6rem 0.9rem 0.9rem;
+  overflow-y: auto;
+}
+
+.empty,
+.hint {
+  font-size: 0.82rem;
+  color: #6b6455;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.battle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid #efeadd;
+
+  .info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .territory {
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  .forces {
+    font-size: 0.74rem;
+    color: #6b6455;
+  }
+
+  .primary {
+    padding: 0.4rem 0.9rem;
+    border-radius: 5px;
+    border: 1px solid #b3402f;
+    background: #b3402f;
+    color: #fff;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
