@@ -377,6 +377,19 @@ export class MapState {
     context.patchState({ movementPlansBySquadId: remainingPlans });
   }
 
+  @Action(MapActions.RemoveMovementPlans)
+  removeMovementPlans(context: MapStateContext, action: MapActions.RemoveMovementPlans) {
+    const state = context.getState();
+    const toRemove = new Set(action.squadIds);
+    const remainingPlans: Record<string, SquadMovementPlan> = {};
+    for (const [squadId, plan] of Object.entries(state.movementPlansBySquadId)) {
+      if (!toRemove.has(squadId)) {
+        remainingPlans[squadId] = plan;
+      }
+    }
+    context.patchState({ movementPlansBySquadId: remainingPlans });
+  }
+
   @Action(MapActions.ResolveAutomaticCaptures)
   resolveAutomaticCaptures(context: MapStateContext, action: MapActions.ResolveAutomaticCaptures) {
     const state = context.getState();

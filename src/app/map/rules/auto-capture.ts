@@ -1,6 +1,6 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
-import { NEUTRAL_UNIT_TYPES } from '@ww2/shared/unit-type';
+import { AIR_UNIT_TYPES, NEUTRAL_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { TurnPhase } from '@ww2/game/turn-phase';
 import { LandTerritoryName, TerritoryName } from '../../territories/territory-names';
 import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
@@ -64,6 +64,13 @@ export function resolveAutomaticCaptures(params: {
 
   for (const [squadId, plan] of Object.entries(params.movementPlansBySquadId)) {
     if (plan.phase !== TurnPhase.COMBAT_MOVEMENT || plan.path.length === 0) {
+      remainingPlans[squadId] = plan;
+      continue;
+    }
+
+    // Aircraft only fly over enemy territory — they never capture it. Leave their plans for combat.
+    const squadInfo = parseSquadId(squadId);
+    if (squadInfo && AIR_UNIT_TYPES.includes(squadInfo.unitType)) {
       remainingPlans[squadId] = plan;
       continue;
     }

@@ -124,6 +124,13 @@ export namespace MapActions {
     constructor(public territoryName: TerritoryName) {}
   }
 
+  /** Remove specific movement plans by squad id (the plans that fed a resolved battle). */
+  export class RemoveMovementPlans {
+    static readonly type = ACTION_SOURCE + ' Remove Movement Plans';
+
+    constructor(public squadIds: string[]) {}
+  }
+
   /**
    * Resolve combat moves that need no battle: occupy + capture undefended enemy territories and
    * record blitz pass-through captures for the given nation. Consumes the resolved combat-move plans.

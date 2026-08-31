@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { Nationality } from '@ww2/shared/nationality';
+import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
 import { MapSelectors } from '@ww2/map/map-selectors';
@@ -30,10 +31,14 @@ export class CombatOrchestrator {
   readonly activeBattleTerritory = signal<TerritoryName | null>(null);
 
   private originByUnitId: BattleSetup['originByUnitId'] = {};
+  private returnByUnitId: BattleSetup['returnByUnitId'] = {};
+  private attackingSquadIds: string[] = [];
 
   /** Clear any in-progress battle state (called when starting or loading a game). */
   reset(): void {
     this.originByUnitId = {};
+    this.returnByUnitId = {};
+    this.attackingSquadIds = [];
     this.activeBattleTerritory.set(null);
   }
 
@@ -63,17 +68,15 @@ export class CombatOrchestrator {
 
     const units = this.store.selectSnapshot(MapSelectors.unitsByTerritoryName);
     const plans = this.store.selectSnapshot(MapSelectors.movementPlans);
-    const { attackers, defenders, originByUnitId } = buildBattleSetup(
-      territory,
-      nation,
-      plans,
-      units,
-    );
+    const { attackers, defenders, originByUnitId, returnByUnitId, attackingSquadIds } =
+      buildBattleSetup(territory, nation, plans, units);
     if (attackers.length === 0 || defenders.length === 0) {
       return;
     }
 
     this.originByUnitId = originByUnitId;
+    this.returnByUnitId = returnByUnitId;
+    this.attackingSquadIds = attackingSquadIds;
 
     // Remove the attacking units from their origin territories — they've committed to the assault.
     const attackerIds = new Set(attackers.map((unit) => unit.id));
@@ -100,42 +103,48 @@ export class CombatOrchestrator {
     const attackerWon = summary?.outcome === 'attackerVictory';
     const isLand = TERRITORY_INFO_BY_NAME[territory].kind === 'land';
 
-    if (attackerWon && summary?.canCaptureTerritory && isLand && nation) {
-      // Attackers occupy and capture (control transfers at end of turn).
-      this.store.dispatch(new MapActions.SetTerritoryUnits(territory, survivingAttackers));
-      this.store.dispatch(
-        new MapActions.RecordTerritoryCapture(territory as LandTerritoryName, nation),
-      );
-    } else if (attackerWon && !isLand) {
-      // Naval victory: surviving attackers hold the sea zone.
-      this.store.dispatch(new MapActions.SetTerritoryUnits(territory, survivingAttackers));
-    } else if (attackerWon) {
-      // Land cleared but not capturable (e.g. only air units survived): they return home.
-      this.store.dispatch(new MapActions.SetTerritoryUnits(territory, []));
-      this.returnAttackersToOrigins(survivingAttackers);
+    // Attackers hold the contested territory when they win it: land units capture, sea units hold a
+    // sea zone. Aircraft never hold ground — they always fly on to their landing airfield.
+    const holdsTerritory =
+      (attackerWon && summary?.canCaptureTerritory && isLand) || (attackerWon && !isLand);
+    const occupiers = holdsTerritory
+      ? survivingAttackers.filter((unit) => !AIR_UNIT_TYPES.includes(unit.type))
+      : [];
+    const departing = survivingAttackers.filter((unit) => !occupiers.includes(unit));
+
+    if (holdsTerritory) {
+      this.store.dispatch(new MapActions.SetTerritoryUnits(territory, occupiers));
+      if (isLand && nation) {
+        this.store.dispatch(
+          new MapActions.RecordTerritoryCapture(territory as LandTerritoryName, nation),
+        );
+      }
     } else {
-      // Defender victory or retreat: defenders hold, attackers fall back to their origins.
+      // Defenders hold (or the attacker won but can't capture) — clear the attackers off it.
       this.store.dispatch(new MapActions.SetTerritoryUnits(territory, survivingDefenders));
-      this.returnAttackersToOrigins(survivingAttackers);
     }
 
-    this.store.dispatch(new MapActions.RemoveMovementPlansForDestination(territory));
+    this.returnSurvivors(departing);
+    this.store.dispatch(new MapActions.RemoveMovementPlans(this.attackingSquadIds));
 
     this.originByUnitId = {};
+    this.returnByUnitId = {};
+    this.attackingSquadIds = [];
     this.activeBattleTerritory.set(null);
   }
 
-  private returnAttackersToOrigins(survivors: MilitaryUnit[]): void {
-    const byOrigin = new Map<TerritoryName, MilitaryUnit[]>();
+  /** Send surviving attackers that didn't occupy the territory to their landing/return territory. */
+  private returnSurvivors(survivors: MilitaryUnit[]): void {
+    const byTerritory = new Map<TerritoryName, MilitaryUnit[]>();
     for (const unit of survivors) {
-      const origin = this.originByUnitId[unit.id];
-      if (!origin) {
+      const destination = this.returnByUnitId[unit.id];
+      if (!destination) {
         continue;
       }
-      byOrigin.set(origin, [...(byOrigin.get(origin) ?? []), unit]);
+      byTerritory.set(destination, [...(byTerritory.get(destination) ?? []), unit]);
     }
-    for (const [origin, units] of byOrigin) {
-      this.store.dispatch(new MapActions.AddUnitsToTerritory(origin, units));
+    for (const [destination, units] of byTerritory) {
+      this.store.dispatch(new MapActions.AddUnitsToTerritory(destination, units));
     }
   }
 }
