@@ -14,6 +14,9 @@
   @if (unitCount() > 1) {
     <span class="unit-count-badge ww2-badge">{{ unitCount() }}</span>
   }
+  @if (cargoCount() > 0) {
+    <span class="cargo-badge ww2-badge" title="Fighters loaded">&#9992;{{ cargoCount() }}</span>
+  }
 </div>
 
 <ng-template #contextMenu let-squadContext="squad">

@@ -12,6 +12,8 @@ export class MilitaryUnitSquad<T extends EffectiveUnit | MilitaryUnit = Military
     public units: T[],
     id?: string,
     public displayVariant?: string,
+    /** Number of units carried as cargo (e.g. fighters loaded on an aircraft carrier). */
+    public cargoCount = 0,
   ) {
     this.id = id ?? uuid();
   }

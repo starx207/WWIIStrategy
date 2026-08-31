@@ -4,6 +4,7 @@ import { UnitType } from '@ww2/shared/unit-type';
 import { TurnPhase } from '@ww2/game/turn-phase';
 import { TerritoryName } from '../../territories/territory-names';
 import { SquadMovementPlan } from '../map-state';
+import { CargoByCarrierUnitId } from './carrier-cargo';
 
 type UnitsByTerritory = Partial<Record<TerritoryName, MilitaryUnit[]>>;
 
@@ -31,6 +32,7 @@ export function executeMovementPlans(
   unitsByTerritoryName: UnitsByTerritory,
   movementPlansBySquadId: Record<string, SquadMovementPlan>,
   phase: TurnPhase,
+  cargoByCarrierUnitId: CargoByCarrierUnitId = {},
 ): ExecuteMovementResult {
   const units: UnitsByTerritory = { ...unitsByTerritoryName };
   const remainingPlans: Record<string, SquadMovementPlan> = {};
@@ -49,14 +51,23 @@ export function executeMovementPlans(
     }
 
     const originUnits = units[origin] ?? [];
-    const isMoving = (unit: MilitaryUnit) =>
-      unit.nationality === squad.nationality && unit.type === squad.unitType;
-    const moving = originUnits.filter(isMoving);
-    if (moving.length === 0) {
+    const squadUnits = originUnits.filter(
+      (unit) => unit.nationality === squad.nationality && unit.type === squad.unitType,
+    );
+    if (squadUnits.length === 0) {
       continue;
     }
 
-    units[origin] = originUnits.filter((unit) => !isMoving(unit));
+    // A carrier carries its loaded fighters along with it.
+    const cargoIds = new Set(
+      squad.unitType === UnitType.AIRCRAFT_CARRIER
+        ? squadUnits.flatMap((carrier) => cargoByCarrierUnitId[carrier.id] ?? [])
+        : [],
+    );
+    const movingIds = new Set([...squadUnits.map((unit) => unit.id), ...cargoIds]);
+    const moving = originUnits.filter((unit) => movingIds.has(unit.id));
+
+    units[origin] = originUnits.filter((unit) => !movingIds.has(unit.id));
     units[destination] = [...(units[destination] ?? []), ...moving];
   }
 

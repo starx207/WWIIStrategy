@@ -15,6 +15,7 @@ import {
 } from '@ww2/shared/military-unit';
 import { Nationality } from '@ww2/shared/nationality';
 import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
+import { computeInitialCarrierCargo } from './rules/carrier-cargo';
 
 export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, MilitaryUnit[]>> = {
   // UNITED STATES CONTROLLED TERRITORIES
@@ -311,6 +312,11 @@ export const INITIAL_UNITS_BY_TERRITORY_NAME: Partial<Record<TerritoryName, Mili
   ],
   'Sea Zone 45': [new SubmarineUnit(Nationality.JAPAN)],
 };
+
+/** Fighters that begin loaded on carriers (in each carrier's starting sea zone). */
+export const INITIAL_CARGO_BY_CARRIER_UNIT_ID = computeInitialCarrierCargo(
+  INITIAL_UNITS_BY_TERRITORY_NAME,
+);
 
 export const INITIAL_LAND_TERRITORY_CONTROL = {
   Greenland: Nationality.UNITED_STATES,

@@ -4,6 +4,8 @@ import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { MapState, MapStateModel, SquadMovementPlan } from './map-state';
 import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
 import { Nationality } from '@ww2/shared/nationality';
+import { UnitType } from '@ww2/shared/unit-type';
+import { CargoByCarrierUnitId, allCargoUnitIds } from './rules/carrier-cargo';
 import { calculateAdjacentDestinations } from './rules/movement-calculator';
 import { createResolvedRuleContext } from './rule-context.factory';
 import { RuleState } from '@ww2/settings/settings-state';
@@ -26,10 +28,15 @@ export class MapSelectors {
       Object.entries(state.unitsByTerritoryName)
         .map(([territoryName, units]) => [
           territoryName,
-          createMapSquads(territoryName as TerritoryName, units ?? []),
+          createMapSquads(territoryName as TerritoryName, units ?? [], state.cargoByCarrierUnitId),
         ])
         .filter(([, squads]) => squads.length > 0),
     ) as Record<TerritoryName, MilitaryUnitSquad<MilitaryUnit>[]>;
+  }
+
+  @Selector([MapState])
+  static cargoByCarrierUnitId(state: MapStateModel): CargoByCarrierUnitId {
+    return state.cargoByCarrierUnitId;
   }
 
   @Selector([MapState])
@@ -161,8 +168,13 @@ function findTerritoryForUnitId(
 function createMapSquads(
   territoryName: TerritoryName,
   units: MilitaryUnit[],
+  cargoByCarrierUnitId: CargoByCarrierUnitId,
 ): MilitaryUnitSquad<MilitaryUnit>[] {
-  const groups = units.reduce<SquadGroups>((currentGroups, unit) => {
+  // Fighters loaded on a carrier are shown on the carrier, not as their own squad.
+  const cargoIds = allCargoUnitIds(cargoByCarrierUnitId);
+  const renderableUnits = units.filter((unit) => !cargoIds.has(unit.id));
+
+  const groups = renderableUnits.reduce<SquadGroups>((currentGroups, unit) => {
     const groupKey = `${unit.nationality}|${unit.type}`;
     currentGroups[groupKey] = [...(currentGroups[groupKey] ?? []), unit];
     return currentGroups;
@@ -172,9 +184,18 @@ function createMapSquads(
     .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
     .map(([groupKey, squadUnits]) => {
       const [nationality, unitType] = groupKey.split('|');
+      const cargoCount =
+        unitType === UnitType.AIRCRAFT_CARRIER
+          ? squadUnits.reduce(
+              (total, carrier) => total + (cargoByCarrierUnitId[carrier.id]?.length ?? 0),
+              0,
+            )
+          : 0;
       return new MilitaryUnitSquad(
         squadUnits,
         `map-squad|${territoryName}|${nationality}|${unitType}`,
+        undefined,
+        cargoCount,
       );
     });
 }

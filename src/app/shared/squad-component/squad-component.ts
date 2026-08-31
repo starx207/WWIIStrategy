@@ -43,6 +43,7 @@ export class SquadComponent<T extends EffectiveUnit | MilitaryUnit = MilitaryUni
   protected variant = computed(() => this.squad().displayVariant);
   protected nationality = computed(() => this.squad().nationality);
   protected unitCount = computed(() => this.squad().count);
+  protected cargoCount = computed(() => this.squad().cargoCount);
 
   protected hostClasses = computed(
     () =>

@@ -3,9 +3,11 @@ import { Action, State, StateContext } from '@ngxs/store';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { Nationality } from '@ww2/shared/nationality';
 import {
+  INITIAL_CARGO_BY_CARRIER_UNIT_ID,
   INITIAL_LAND_TERRITORY_CONTROL,
   INITIAL_UNITS_BY_TERRITORY_NAME,
 } from './initial-map-layout';
+import { CargoByCarrierUnitId } from './rules/carrier-cargo';
 import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
 import { MapActions } from './map-actions';
 import { Coordinate } from 'ol/coordinate';
@@ -48,6 +50,8 @@ export interface MapStateModel {
   landTerritoryControllerByName: Record<LandTerritoryName, Nationality>;
   // Captures recorded during combat; transferred into landTerritoryControllerByName at end of turn.
   pendingCapturesByTerritory: Partial<Record<LandTerritoryName, Nationality>>;
+  // Fighters loaded on carriers: carrier unit id -> loaded fighter unit ids.
+  cargoByCarrierUnitId: CargoByCarrierUnitId;
   squadLayoutCoordinatesBySquadId: Record<string, Coordinate>;
   selectedSquad?: {
     id: string;
@@ -60,6 +64,7 @@ const DEFAULT_STATE: MapStateModel = {
   unitsByTerritoryName: INITIAL_UNITS_BY_TERRITORY_NAME,
   landTerritoryControllerByName: INITIAL_LAND_TERRITORY_CONTROL,
   pendingCapturesByTerritory: {},
+  cargoByCarrierUnitId: INITIAL_CARGO_BY_CARRIER_UNIT_ID,
   squadLayoutCoordinatesBySquadId: {},
   movementPlansBySquadId: {},
 };
@@ -306,6 +311,7 @@ export class MapState {
       state.unitsByTerritoryName,
       state.movementPlansBySquadId,
       action.phase,
+      state.cargoByCarrierUnitId,
     );
 
     context.patchState({

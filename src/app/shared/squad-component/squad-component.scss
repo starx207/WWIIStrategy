@@ -19,6 +19,20 @@
   padding: var(--squad-count-badge-padding, 2px);
 }
 
+.cargo-badge {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 1;
+  user-select: none;
+  -webkit-user-select: none;
+
+  font-size: var(--squad-count-badge-font-size, 0.8em);
+  line-height: var(--squad-count-badge-line-height, normal);
+  height: var(--squad-count-badge-height, 1em);
+  padding: var(--squad-count-badge-padding, 2px);
+}
+
 :host.military-unit-squad__left-face {
   .military-unit-icon {
     transform: scale(-1, 1);
