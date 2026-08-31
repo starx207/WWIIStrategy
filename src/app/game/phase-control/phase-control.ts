@@ -77,6 +77,10 @@ export class PhaseControl {
     this.turnPhase() === TurnPhase.PLACE_NEW_UNITS ? 'End Turn' : 'Next Phase ▸',
   );
 
+  // During placement, the panel's "Confirm & End Turn" button owns advancing (it commits the
+  // player's staged placements first), so the header button is hidden to avoid bypassing them.
+  protected readonly showAdvance = computed(() => this.turnPhase() !== TurnPhase.PLACE_NEW_UNITS);
+
   protected nextPhase(): void {
     this.turnFlow.advancePhase();
   }

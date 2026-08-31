@@ -39,7 +39,9 @@
 
 .unit-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  // minmax(0, …) lets the columns shrink below their content's intrinsic width so the qty
+  // controls in the right column are never clipped off the panel edge.
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
   padding: 0.6rem 0.75rem;
   overflow-y: auto;
@@ -47,7 +49,7 @@
 
 .unit-card {
   display: grid;
-  grid-template-columns: 2.2rem 1fr auto;
+  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
   align-items: center;
   column-gap: 0.4rem;
@@ -89,6 +91,12 @@
     grid-column: 2;
     font-size: 0.72rem;
     color: #6b6455;
+
+    .subtotal {
+      margin-left: 0.3rem;
+      font-weight: 700;
+      color: #2f6db3;
+    }
   }
 
   .qty-controls {

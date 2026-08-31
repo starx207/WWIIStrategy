@@ -20,6 +20,7 @@
     <div class="body">
       @if (availableTechs().length === 0) {
         <p class="all-done">All available technologies have been researched.</p>
+        <button type="button" class="primary" (click)="advance()">Done</button>
       } @else {
         <p class="hint">Choose one development to pursue, then roll research dice.</p>
         <div class="tech-list">
@@ -65,14 +66,19 @@
             <p class="all-done">Not enough IPCs to buy a research die.</p>
           }
 
-          <button type="button" class="primary roll-btn" [disabled]="!canRoll()" (click)="roll()">
-            Roll {{ diceCount() }} {{ diceCount() === 1 ? 'die' : 'dice' }}
-          </button>
+          <div class="actions">
+            <button type="button" class="secondary" (click)="advance()">Skip</button>
+            <button type="button" class="primary roll-btn" [disabled]="!canRoll()" (click)="roll()">
+              Roll {{ diceCount() }} {{ diceCount() === 1 ? 'die' : 'dice' }}
+            </button>
+          </div>
         } @else {
           <div class="results">
-            <div class="dice">
+            <div class="dice-row">
               @for (result of rollResults(); track $index) {
-                <span class="die" [class.hit]="isHit(result)">{{ result }}</span>
+                <span class="die" [class.hit]="isHit(result)">
+                  <ww2-dice [value]="result" />
+                </span>
               }
             </div>
             @if (rollSuccess()) {
@@ -80,7 +86,7 @@
             } @else {
               <p class="outcome fail">No breakthrough this turn.</p>
             }
-            <p class="hint">Advance to the next phase to continue.</p>
+            <button type="button" class="primary" (click)="advance()">Done</button>
           </div>
         }
       }

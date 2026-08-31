@@ -13,16 +13,19 @@ import { EconomyActions } from '@ww2/economy/economy-actions';
 import { EconomySelectors } from '@ww2/economy/economy-selectors';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
+import { TurnFlowService } from '@ww2/game/turn-flow.service';
+import { Dice } from '@ww2/shared/dice/dice';
 import { SessionSelectors } from '../../session/session-selectors';
 
 @Component({
   selector: 'ww2-tech-panel',
-  imports: [],
+  imports: [Dice],
   templateUrl: './tech-panel.html',
   styleUrl: './tech-panel.scss',
 })
 export class TechPanel {
   private readonly store = inject(Store);
+  private readonly turnFlow = inject(TurnFlowService);
 
   private readonly gamePhase = this.store.selectSignal(GameSelectors.gamePhase);
   private readonly treasuries = this.store.selectSignal(EconomySelectors.treasuryByNationality);
@@ -113,5 +116,10 @@ export class TechPanel {
     if (success) {
       this.store.dispatch(new SettingsActions.GrantTechnology(nation, tech));
     }
+  }
+
+  /** Advance to the next phase (after rolling, or skipping research entirely). */
+  protected advance(): void {
+    this.turnFlow.advancePhase();
   }
 }

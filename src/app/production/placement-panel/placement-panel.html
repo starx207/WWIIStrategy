@@ -6,18 +6,22 @@
     </header>
 
     <div class="body">
-      @if (pending().length === 0) {
-        <p class="empty">No units waiting to be placed. Advance to end the turn.</p>
-      } @else {
-        @if (capacityRows().length > 0) {
-          <div class="capacity">
-            <span class="cap-label">Complex capacity:</span>
-            @for (row of capacityRows(); track row.territory) {
-              <span class="cap-chip">{{ row.territory }} {{ row.placed }}/{{ row.capacity }}</span>
-            }
-          </div>
-        }
+      @if (capacityRows().length > 0) {
+        <div class="capacity">
+          <span class="cap-label">Complex capacity:</span>
+          @for (row of capacityRows(); track row.territory) {
+            <span class="cap-chip">{{ row.territory }} {{ row.placed }}/{{ row.capacity }}</span>
+          }
+        </div>
+      }
 
+      @if (pending().length === 0) {
+        @if (placedGroups().length === 0) {
+          <p class="empty">No units waiting to be placed. End the turn when ready.</p>
+        } @else {
+          <p class="empty">All units placed. End the turn when ready.</p>
+        }
+      } @else {
         @for (group of pendingGroups(); track group.unitType) {
           <div class="place-row">
             <div class="unit">
@@ -45,6 +49,39 @@
           </div>
         }
       }
+
+      @if (placedGroups().length > 0) {
+        <div class="placed">
+          <span class="placed-label">Placed this turn:</span>
+          @for (group of placedGroups(); track group.label) {
+            <div class="placed-group">
+              <span class="placed-territory">{{ group.label }}</span>
+              <div class="placed-units">
+                @for (placement of group.placements; track placement.unit.id) {
+                  <button
+                    type="button"
+                    class="placed-chip"
+                    title="Remove this unit"
+                    (click)="undo(placement.unit.id)"
+                  >
+                    <ww2-military-unit-icon
+                      [nationality]="nation"
+                      [unitType]="placement.unit.type"
+                    />
+                    <span class="remove-x">&times;</span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
     </div>
+
+    <footer class="panel-foot">
+      <button type="button" class="primary end-turn" (click)="confirm()">
+        Confirm &amp; End Turn
+      </button>
+    </footer>
   </section>
 }

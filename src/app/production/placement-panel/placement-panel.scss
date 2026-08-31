@@ -36,6 +36,7 @@
 .body {
   padding: 0.6rem 0.9rem 0.9rem;
   overflow-y: auto;
+  flex: 1;
 }
 
 .empty {
@@ -126,6 +127,101 @@
     color: #fff;
     font: inherit;
     font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.placed {
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #e6e1d3;
+
+  .placed-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b6455;
+  }
+}
+
+.placed-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+
+  .placed-territory {
+    min-width: 8.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .placed-units {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+}
+
+// A placed unit shown as a removable chip: click to undo (return it to the queue).
+.placed-chip {
+  position: relative;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #d8d3c4;
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+
+  ww2-military-unit-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  ::ng-deep .graphics-container,
+  ::ng-deep svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .remove-x {
+    position: absolute;
+    top: -0.4rem;
+    right: -0.4rem;
+    width: 1rem;
+    height: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #b3402f;
+    color: #fff;
+    font-size: 0.8rem;
+    line-height: 1;
+  }
+
+  &:hover {
+    border-color: #b3402f;
+  }
+}
+
+.panel-foot {
+  padding: 0.6rem 0.9rem 0.75rem;
+  border-top: 1px solid #e6e1d3;
+
+  .end-turn {
+    width: 100%;
+    padding: 0.55rem;
+    border-radius: 6px;
+    border: 1px solid #2f6db3;
+    background: #2f6db3;
+    color: #fff;
+    font: inherit;
     font-weight: 600;
     cursor: pointer;
   }

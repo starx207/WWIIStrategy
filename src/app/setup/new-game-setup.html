@@ -34,11 +34,14 @@
       <div class="nation-row">
         <span class="nation-name">{{ nationLabel(nationality) }}</span>
         <select
+          class="nation-select"
           [value]="nationAssignments()[nationality]"
           (change)="assignNation(nationality, $any($event.target).value)"
         >
           @for (player of players(); track player.id) {
-            <option [value]="player.id">{{ player.name || 'Unnamed player' }}</option>
+            <option [value]="player.id" [selected]="player.id === nationAssignments()[nationality]">
+              {{ player.name || 'Unnamed player' }}
+            </option>
           }
         </select>
       </div>
@@ -59,13 +62,6 @@
       }
     </select>
 
-    <p class="hint">Technologies players may research this game.</p>
-    @for (techId of allTechIds; track techId) {
-      <label class="tech-row">
-        <input type="checkbox" [checked]="isTechAllowed(techId)" (change)="toggleTech(techId)" />
-        {{ techLabel(techId) }}
-      </label>
-    }
     <p class="hint">National advantages are disabled in this version.</p>
   </section>
 

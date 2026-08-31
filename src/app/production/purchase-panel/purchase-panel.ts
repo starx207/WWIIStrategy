@@ -7,6 +7,7 @@ import { UNIT_COST_BY_TYPE } from '@ww2/economy/data/unit-cost';
 import { EconomySelectors } from '@ww2/economy/economy-selectors';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
+import { TurnFlowService } from '@ww2/game/turn-flow.service';
 import { ProductionSelectors } from '../production-selectors';
 import { ProductionActions } from '../production-actions';
 import { cartCost } from '../production-state';
@@ -19,6 +20,7 @@ import { cartCost } from '../production-state';
 })
 export class PurchasePanel {
   private readonly store = inject(Store);
+  private readonly turnFlow = inject(TurnFlowService);
 
   private readonly gamePhase = this.store.selectSignal(GameSelectors.gamePhase);
   private readonly treasuries = this.store.selectSignal(EconomySelectors.treasuryByNationality);
@@ -52,6 +54,10 @@ export class PurchasePanel {
     return this.cart().filter((type) => type === unitType).length;
   }
 
+  protected subtotal(unitType: UnitType): number {
+    return this.quantityOf(unitType) * this.cost(unitType);
+  }
+
   protected canAfford(unitType: UnitType): boolean {
     return this.remaining() >= this.cost(unitType);
   }
@@ -82,5 +88,16 @@ export class PurchasePanel {
     if (nation && this.cart().length > 0) {
       this.store.dispatch(new ProductionActions.ConfirmPurchase(nation));
     }
+    // A valid purchase advances straight to the next phase.
+    this.turnFlow.advancePhase();
+  }
+
+  /** Advance without buying anything, discarding any units queued in the cart. */
+  protected skip(): void {
+    const nation = this.activeNation();
+    if (nation && this.cart().length > 0) {
+      this.store.dispatch(new ProductionActions.ClearCart(nation));
+    }
+    this.turnFlow.advancePhase();
   }
 }

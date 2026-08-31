@@ -1,3 +1,8 @@
+:host {
+  // Keep the turn info on one line each; don't let the header squeeze it into wrapping.
+  flex-shrink: 0;
+}
+
 .phase-control {
   display: flex;
   align-items: center;
@@ -10,6 +15,12 @@
   display: flex;
   flex-direction: column;
   line-height: 1.15;
+
+  .nation,
+  .player,
+  .phase {
+    white-space: nowrap;
+  }
 
   .nation {
     font-weight: 700;

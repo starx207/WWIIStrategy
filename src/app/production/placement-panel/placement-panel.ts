@@ -7,6 +7,7 @@ import { UNIT_TYPE_LABEL } from '@ww2/shared/unit-type-label';
 import { MapSelectors } from '@ww2/map/map-selectors';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
+import { TurnFlowService } from '@ww2/game/turn-flow.service';
 import { LandTerritoryName, TerritoryName } from '../../territories/territory-names';
 import { ProductionSelectors } from '../production-selectors';
 import { ProductionActions } from '../production-actions';
@@ -31,6 +32,20 @@ interface Destination {
   countsAgainst?: LandTerritoryName;
 }
 
+/** A unit the player has staged for placement this phase (not yet committed to the map). */
+interface StagedPlacement {
+  unit: MilitaryUnit;
+  destination: Destination;
+  isFactory: boolean;
+}
+
+/** Staged placements grouped by their destination, for the "placed this turn" review list. */
+interface PlacedGroup {
+  territory: TerritoryName;
+  label: string;
+  placements: StagedPlacement[];
+}
+
 @Component({
   selector: 'ww2-placement-panel',
   imports: [MilitaryUnitIcon],
@@ -39,6 +54,7 @@ interface Destination {
 })
 export class PlacementPanel {
   private readonly store = inject(Store);
+  private readonly turnFlow = inject(TurnFlowService);
 
   private readonly gamePhase = this.store.selectSignal(GameSelectors.gamePhase);
   private readonly pendingByNation = this.store.selectSignal(
@@ -49,16 +65,19 @@ export class PlacementPanel {
     MapSelectors.landTerritoryControllerByName,
   );
 
-  // Local, phase-scoped placement bookkeeping (the component is recreated each placement phase).
-  private readonly placedByTerritory = signal<Record<string, number>>({});
-  private readonly builtThisPhase = signal<LandTerritoryName[]>([]);
+  // Placements are staged locally until the player confirms, so removing one before committing is
+  // a trivial undo (nothing is written to the map until "End Turn").
+  private readonly staged = signal<StagedPlacement[]>([]);
   private readonly selectedDestByType = signal<Partial<Record<UnitType, string>>>({});
 
   protected readonly activeNation = computed(() => nationalityForGamePhase(this.gamePhase()));
 
+  /** Units bought but not yet staged for placement. */
   protected readonly pending = computed(() => {
     const nation = this.activeNation();
-    return nation ? (this.pendingByNation()[nation] ?? []) : [];
+    const all = nation ? (this.pendingByNation()[nation] ?? []) : [];
+    const stagedIds = new Set(this.staged().map((placement) => placement.unit.id));
+    return all.filter((unit) => !stagedIds.has(unit.id));
   });
 
   protected readonly pendingGroups = computed<PendingGroup[]>(() => {
@@ -70,6 +89,41 @@ export class PlacementPanel {
     }
     return [...groups.entries()].map(([unitType, units]) => ({ unitType, units }));
   });
+
+  /** Newly-placed units this phase, grouped by destination, for review/undo. */
+  protected readonly placedGroups = computed<PlacedGroup[]>(() => {
+    const groups = new Map<string, PlacedGroup>();
+    for (const placement of this.staged()) {
+      const key = placement.destination.value;
+      const group = groups.get(key) ?? {
+        territory: placement.destination.territory,
+        label: placement.destination.label,
+        placements: [],
+      };
+      group.placements.push(placement);
+      groups.set(key, group);
+    }
+    return [...groups.values()];
+  });
+
+  /** Units placed against each IC territory (used for capacity accounting). */
+  private readonly placedByTerritory = computed<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    for (const placement of this.staged()) {
+      const key = placement.destination.countsAgainst;
+      if (key) {
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+    }
+    return counts;
+  });
+
+  /** Complexes built this phase — they can't mobilize units until next turn. */
+  private readonly builtThisPhase = computed<LandTerritoryName[]>(() =>
+    this.staged()
+      .filter((placement) => placement.isFactory)
+      .map((placement) => placement.destination.territory as LandTerritoryName),
+  );
 
   /** IC territories usable this turn (built-this-phase complexes can't mobilize until next turn). */
   private readonly factoryTerritories = computed(() => {
@@ -165,11 +219,11 @@ export class PlacementPanel {
     this.selectedDestByType.update((map) => ({ ...map, [unitType]: value }));
   }
 
+  /** Stage one unit of the given type at its selected destination. */
   protected place(unitType: UnitType): void {
-    const nation = this.activeNation();
     const group = this.pendingGroups().find((candidate) => candidate.unitType === unitType);
     const destinationValue = this.selectedDest(unitType);
-    if (!nation || !group || group.units.length === 0 || !destinationValue) {
+    if (!group || group.units.length === 0 || !destinationValue) {
       return;
     }
 
@@ -180,15 +234,34 @@ export class PlacementPanel {
       return;
     }
 
-    if (placementCategory(unitType) === 'factory') {
-      this.builtThisPhase.update((built) => [...built, destination.territory as LandTerritoryName]);
-    } else if (destination.countsAgainst) {
-      const key = destination.countsAgainst;
-      this.placedByTerritory.update((map) => ({ ...map, [key]: (map[key] ?? 0) + 1 }));
-    }
+    this.staged.update((placements) => [
+      ...placements,
+      { unit: group.units[0], destination, isFactory: placementCategory(unitType) === 'factory' },
+    ]);
+  }
 
-    this.store.dispatch(
-      new ProductionActions.PlaceUnit(nation, group.units[0].id, destination.territory),
+  /** Undo a staged placement, returning the unit to the pending queue. */
+  protected undo(unitId: string): void {
+    this.staged.update((placements) =>
+      placements.filter((placement) => placement.unit.id !== unitId),
     );
+  }
+
+  /** Commit every staged placement to the map, then end the turn. */
+  protected confirm(): void {
+    const nation = this.activeNation();
+    if (nation) {
+      for (const placement of this.staged()) {
+        this.store.dispatch(
+          new ProductionActions.PlaceUnit(
+            nation,
+            placement.unit.id,
+            placement.destination.territory,
+          ),
+        );
+      }
+    }
+    this.staged.set([]);
+    this.turnFlow.advancePhase();
   }
 }

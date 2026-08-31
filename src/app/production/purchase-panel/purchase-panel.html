@@ -16,7 +16,12 @@
             <ww2-military-unit-icon [nationality]="nation" [unitType]="unitType" />
           </div>
           <div class="name">{{ label(unitType) }}</div>
-          <div class="unit-cost">{{ cost(unitType) }} IPC</div>
+          <div class="unit-cost">
+            {{ cost(unitType) }} IPC
+            @if (quantityOf(unitType) > 0) {
+              <span class="subtotal">= {{ subtotal(unitType) }}</span>
+            }
+          </div>
           <div class="qty-controls">
             <button
               type="button"
@@ -41,6 +46,7 @@
     </div>
 
     <footer class="panel-foot">
+      <button type="button" class="secondary" (click)="skip()">Skip</button>
       <button type="button" class="secondary" [disabled]="cart().length === 0" (click)="clear()">
         Clear
       </button>

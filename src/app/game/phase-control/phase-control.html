@@ -6,13 +6,15 @@
     }
     <span class="phase">{{ phaseLabel() }}</span>
   </div>
-  <button
-    type="button"
-    class="next"
-    [disabled]="!canAdvance()"
-    [title]="blockers().join(', ')"
-    (click)="nextPhase()"
-  >
-    {{ advanceLabel() }}
-  </button>
+  @if (showAdvance()) {
+    <button
+      type="button"
+      class="next"
+      [disabled]="!canAdvance()"
+      [title]="blockers().join(', ')"
+      (click)="nextPhase()"
+    >
+      {{ advanceLabel() }}
+    </button>
+  }
 </div>
