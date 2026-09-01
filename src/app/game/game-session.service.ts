@@ -5,7 +5,7 @@ import { HouseRules, Player } from '../session/session-state';
 import { SessionActions } from '../session/session-actions';
 import { GameActions } from './game-actions';
 import { GamePhase } from './game-phase';
-import { TurnPhase } from './turn-phase';
+import { FIRST_TURN_PHASE } from './turn-phase';
 import { TurnFlowService } from './turn-flow.service';
 import { CombatOrchestrator } from '@ww2/combat/combat-orchestrator';
 import { defaultSaveFileName, deserializeGame, serializeGame } from './game-serialization';
@@ -43,7 +43,7 @@ export class GameSessionService {
       // A game begins with the Soviet Union's first turn. (Turn-order / starting-phase specifics
       // are finalized in the turn-flow workstream.)
       new GameActions.SetGamePhase(GamePhase.SOVIET_TURN),
-      new GameActions.SetTurnPhase(TurnPhase.PURCHASE_UNITS),
+      new GameActions.SetTurnPhase(FIRST_TURN_PHASE),
     ]);
   }
 

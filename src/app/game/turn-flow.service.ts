@@ -10,7 +10,7 @@ import { LandTerritoryName } from '../territories/territory-names';
 import { GameSelectors } from './game-selectors';
 import { GameActions } from './game-actions';
 import { GamePhase } from './game-phase';
-import { TurnPhase } from './turn-phase';
+import { FIRST_TURN_PHASE, TurnPhase } from './turn-phase';
 import { MapSelectors } from '@ww2/map/map-selectors';
 import { MapActions } from '@ww2/map/map-actions';
 import { EconomyActions } from '@ww2/economy/economy-actions';
@@ -119,7 +119,7 @@ export class TurnFlowService {
     }
     this.store.dispatch([
       new GameActions.SetGamePhase(gamePhaseForNationality(next)),
-      new GameActions.SetTurnPhase(TurnPhase.PURCHASE_UNITS),
+      new GameActions.SetTurnPhase(FIRST_TURN_PHASE),
     ]);
     this.handoffPending.set(false);
     this.pendingNextNation.set(null);

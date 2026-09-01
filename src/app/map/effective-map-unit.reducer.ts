@@ -1,4 +1,4 @@
-import { MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
+import { FIRST_TURN_PHASE, MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
 import { BaseUnitProfile, UNIT_PROFILES } from '@ww2/shared/unit-profile';
 import { EffectiveMapUnit, isEffectiveMapUnit, MovementProfile } from './effective-map-unit';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
@@ -40,7 +40,7 @@ export const resolveRuleContext = (
     ...extra,
     unitsByTerritory: context?.unitsByTerritory ?? {},
     landControlMap: context?.landControlMap ?? {},
-    turnPhase: extra?.turnPhase ?? context?.turnPhase ?? TurnPhase.PURCHASE_UNITS,
+    turnPhase: extra?.turnPhase ?? context?.turnPhase ?? FIRST_TURN_PHASE,
     ruleState: extra?.ruleState ?? context?.ruleState ?? DEFAULT_RULE_STATE,
   };
 };

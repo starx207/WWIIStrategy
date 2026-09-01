@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Action, State, StateContext } from '@ngxs/store';
 import { GameActions } from './game-actions';
 import { GamePhase } from './game-phase';
-import { TurnPhase } from './turn-phase';
+import { FIRST_TURN_PHASE, TurnPhase } from './turn-phase';
 import { MenuOption } from '../menu-actions';
 
 export interface GameStateModel {
@@ -13,7 +13,7 @@ export interface GameStateModel {
 
 const DEFAULT_STATE: GameStateModel = {
   gamePhase: GamePhase.SOVIET_TURN,
-  turnPhase: TurnPhase.PURCHASE_UNITS,
+  turnPhase: FIRST_TURN_PHASE,
   contextualMenu: [],
 };
 
@@ -44,6 +44,8 @@ export class GameState {
     });
   }
 
+  // TODO: Once phase-advance UI exists, block this (and AdvanceTurnPhase below) when
+  //       MapSelectors.invalidMovementPlanCount() is greater than zero.
   @Action(GameActions.AdvanceGamePhase)
   advanceGamePhase(ctx: GameStateContext) {
     ctx.patchState({
@@ -51,6 +53,8 @@ export class GameState {
     });
   }
 
+  // TODO: Once phase-advance UI exists, block this when MapSelectors.invalidMovementPlanCount()
+  //       is greater than zero.
   @Action(GameActions.AdvanceTurnPhase)
   advanceTurnPhase(ctx: GameStateContext) {
     const state = ctx.getState();
@@ -59,9 +63,7 @@ export class GameState {
     ctx.patchState({
       turnPhase: nextTurnPhase,
       gamePhase:
-        nextTurnPhase === TurnPhase.PURCHASE_UNITS
-          ? getNextGamePhase(state.gamePhase)
-          : state.gamePhase,
+        nextTurnPhase === FIRST_TURN_PHASE ? getNextGamePhase(state.gamePhase) : state.gamePhase,
     });
   }
 
