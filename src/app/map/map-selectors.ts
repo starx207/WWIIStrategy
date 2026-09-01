@@ -217,6 +217,13 @@ export class MapSelectors {
   ): Partial<Record<LandTerritoryName, Nationality>> {
     return state.pendingCapturesByTerritory;
   }
+
+  /** Units that combat-moved or staged an amphibious assault this turn — locked out of non-combat
+   * movement. See MapActions.RecordCombatCommitments. */
+  @Selector([MapState])
+  static combatCommittedUnitIds(state: MapStateModel): string[] {
+    return state.combatCommittedUnitIds;
+  }
 }
 
 function findTerritoryForUnitId(

@@ -92,9 +92,11 @@ export class TurnFlowService {
     const phase = this.turnPhase();
     const nation = this.currentNation();
 
-    // Leaving combat movement: resolve anti-aircraft fire over fly-over territories, then
-    // undefended captures and blitz, before battles are shown.
+    // Leaving combat movement: record which units committed to combat (before their plans are
+    // consumed below), resolve anti-aircraft fire over fly-over territories, then undefended
+    // captures and blitz, before battles are shown.
     if (phase === TurnPhase.COMBAT_MOVEMENT && nation) {
+      this.store.dispatch(new MapActions.RecordCombatCommitments(nation));
       this.combatOrchestrator.resolveAntiAircraftFire();
       this.store.dispatch(new MapActions.ResolveAutomaticCaptures(nation));
     }
@@ -143,6 +145,8 @@ export class TurnFlowService {
     // Transfer captured territory, then collect income on the resulting control map.
     this.store.dispatch(new MapActions.ApplyPendingCaptures());
     this.store.dispatch(new EconomyActions.CollectIncome(nation));
+    // Clear this turn's combat-commitment lockout so the next nation starts fresh.
+    this.store.dispatch(new MapActions.ClearCombatCommitments());
 
     // Determine who plays next; after the US turn the round ends and victory is checked.
     if (nation === Nationality.UNITED_STATES) {

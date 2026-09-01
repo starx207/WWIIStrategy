@@ -27,7 +27,7 @@ import { mapMovementPlanLayer } from '../layers/movement-plan-layer';
 import { GameActions } from '@ww2/game/game-actions';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
-import { MOVEMENT_PHASES, MovementPhase } from '@ww2/game/turn-phase';
+import { MOVEMENT_PHASES, MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
 import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { LandTerritoryName } from '../../territories/territory-names';
 import { parseSquadId } from '../rules/movement-execution';
@@ -81,6 +81,9 @@ export class GameMap implements OnInit, OnDestroy {
   );
   private readonly cargoDestinations = this.store.selectSignal(
     MapSelectors.selectedSquadCargoDestinations,
+  );
+  private readonly combatCommittedUnitIds = this.store.selectSignal(
+    MapSelectors.combatCommittedUnitIds,
   );
 
   private map!: OlMap;
@@ -318,6 +321,14 @@ export class GameMap implements OnInit, OnDestroy {
       if (squad.nationality !== nationalityForGamePhase(this.gamePhase())) {
         this.tryPlanMoveToDestinationSquad(squad);
         return;
+      }
+      // Units that combat-moved or fought this turn can't move again in non-combat. A mixed
+      // group (some committed, some idle) locks as a whole — split-squad movement isn't built yet.
+      if (phase === TurnPhase.NON_COMBAT_MOVEMENT) {
+        const committed = this.combatCommittedUnitIds();
+        if (squad.units.some((unit) => committed.includes(unit.id))) {
+          return;
+        }
       }
       const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
       const hasMovementPlans = this.hasMovementPlansWithPath();

@@ -171,4 +171,20 @@ export namespace MapActions {
 
     constructor(public territoryName: LandTerritoryName) {}
   }
+
+  /**
+   * Record which of the nation's units committed to combat this turn (combat-moved and/or staged
+   * an amphibious assault), locking them out of the non-combat movement phase. Dispatched when
+   * leaving COMBAT_MOVEMENT, before ResolveAutomaticCaptures consumes the plans.
+   */
+  export class RecordCombatCommitments {
+    static readonly type = ACTION_SOURCE + ' Record Combat Commitments';
+
+    constructor(public nationality: Nationality) {}
+  }
+
+  /** Clear recorded combat commitments (start of a new turn). */
+  export class ClearCombatCommitments {
+    static readonly type = ACTION_SOURCE + ' Clear Combat Commitments';
+  }
 }

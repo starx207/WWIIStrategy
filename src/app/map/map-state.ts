@@ -22,6 +22,7 @@ import { isMovementPlanValid } from './rules/movement-validity';
 import { executeMovementPlans } from './rules/movement-execution';
 import { resolveAutomaticCaptures } from './rules/auto-capture';
 import { loadCargo, stageAmphibiousAssault, unloadToTerritory } from './rules/amphibious';
+import { collectCombatCommittedUnitIds } from './rules/combat-commitments';
 
 export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
 
@@ -61,6 +62,9 @@ export interface MapStateModel {
     unitIds: string[];
   };
   movementPlansBySquadId: Record<string, SquadMovementPlan>;
+  // Units that combat-moved or staged an amphibious assault this turn — locked out of non-combat
+  // movement. Cleared at the start of each nation's turn.
+  combatCommittedUnitIds: string[];
 }
 
 const DEFAULT_STATE: MapStateModel = {
@@ -71,6 +75,7 @@ const DEFAULT_STATE: MapStateModel = {
   amphibiousAssaultsByTerritory: {},
   squadLayoutCoordinatesBySquadId: {},
   movementPlansBySquadId: {},
+  combatCommittedUnitIds: [],
 };
 
 type MapStateContext = StateContext<MapStateModel>;
@@ -418,6 +423,24 @@ export class MapState {
       movementPlansBySquadId: result.movementPlansBySquadId,
       amphibiousAssaultsByTerritory: result.amphibiousAssaultsByTerritory,
     });
+  }
+
+  @Action(MapActions.RecordCombatCommitments)
+  recordCombatCommitments(context: MapStateContext, action: MapActions.RecordCombatCommitments) {
+    const state = context.getState();
+    context.patchState({
+      combatCommittedUnitIds: collectCombatCommittedUnitIds({
+        nation: action.nationality,
+        plans: Object.values(state.movementPlansBySquadId),
+        unitsByTerritory: state.unitsByTerritoryName,
+        amphibiousAssaultsByTerritory: state.amphibiousAssaultsByTerritory,
+      }),
+    });
+  }
+
+  @Action(MapActions.ClearCombatCommitments)
+  clearCombatCommitments(context: MapStateContext) {
+    context.patchState({ combatCommittedUnitIds: [] });
   }
 
   @Action(MapActions.ClearAmphibiousAssault)
