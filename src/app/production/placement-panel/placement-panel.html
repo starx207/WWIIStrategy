@@ -15,49 +15,43 @@
         </div>
       }
 
-      @if (pending().length === 0) {
-        @if (placedGroups().length === 0) {
-          <p class="empty">No units waiting to be placed. End the turn when ready.</p>
-        } @else {
-          <p class="empty">All units placed. End the turn when ready.</p>
-        }
-      } @else {
-        @for (group of pendingGroups(); track group.unitType) {
-          <div class="place-row">
-            <div class="unit">
-              <div class="icon">
-                <ww2-military-unit-icon [nationality]="nation" [unitType]="group.unitType" />
-              </div>
-              <span class="unit-name"
-                >{{ label(group.unitType) }} &times;{{ group.units.length }}</span
-              >
-            </div>
-
-            @if (destinationsFor(group.unitType).length > 0) {
-              <select
-                [value]="selectedDest(group.unitType)"
-                (change)="setDest(group.unitType, $any($event.target).value)"
-              >
-                @for (destination of destinationsFor(group.unitType); track destination.value) {
-                  <option [value]="destination.value">{{ destination.label }}</option>
-                }
-              </select>
-              <button type="button" class="primary" (click)="place(group.unitType)">Place</button>
-            } @else {
-              <span class="no-dest">No valid location</span>
-            }
+      @if (focusedTerritory(); as territory) {
+        <div class="focus">
+          <div class="focus-head">
+            <span class="focus-territory">{{ territory }}</span>
+            <button
+              type="button"
+              class="clear-focus"
+              title="Stop placing here"
+              (click)="clearFocus()"
+            >
+              &times;
+            </button>
           </div>
-        }
-      }
 
-      @if (placedGroups().length > 0) {
-        <div class="placed">
-          <span class="placed-label">Placed this turn:</span>
-          @for (group of placedGroups(); track group.label) {
-            <div class="placed-group">
-              <span class="placed-territory">{{ group.label }}</span>
+          @if (placeableGroups().length > 0) {
+            @for (group of placeableGroups(); track group.unitType) {
+              <div class="place-row">
+                <div class="unit">
+                  <div class="icon">
+                    <ww2-military-unit-icon [nationality]="nation" [unitType]="group.unitType" />
+                  </div>
+                  <span class="unit-name"
+                    >{{ label(group.unitType) }} &times;{{ group.units.length }}</span
+                  >
+                </div>
+                <button type="button" class="primary" (click)="place(group.unitType)">Place</button>
+              </div>
+            }
+          } @else {
+            <p class="empty">Nothing left to place here.</p>
+          }
+
+          @if (stagedAtFocus().length > 0) {
+            <div class="staged-here">
+              <span class="staged-label">Placed here:</span>
               <div class="placed-units">
-                @for (placement of group.placements; track placement.unit.id) {
+                @for (placement of stagedAtFocus(); track placement.unit.id) {
                   <button
                     type="button"
                     class="placed-chip"
@@ -73,6 +67,31 @@
                 }
               </div>
             </div>
+          }
+        </div>
+      } @else if (pending().length > 0) {
+        <p class="hint">Click a highlighted factory or sea zone on the map to place units there.</p>
+      } @else if (stagedGroups().length === 0) {
+        <p class="empty">No units waiting to be placed. End the turn when ready.</p>
+      }
+
+      @if (stagedGroups().length > 0) {
+        <div class="all-territories">
+          <span class="all-label">Placed this turn:</span>
+          @for (group of stagedGroups(); track group.territory) {
+            <button
+              type="button"
+              class="territory-summary-row"
+              [class.active]="group.territory === focusedTerritory()"
+              (click)="reviewTerritory(group.territory)"
+            >
+              <span>{{ group.territory }}</span>
+              <span
+                >{{ group.placements.length }} unit{{
+                  group.placements.length === 1 ? '' : 's'
+                }}</span
+              >
+            </button>
           }
         </div>
       }

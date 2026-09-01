@@ -32,6 +32,7 @@ import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { LandTerritoryName } from '../../territories/territory-names';
 import { parseSquadId } from '../rules/movement-execution';
 import { canUnloadTo, findLoadableTransport } from '../rules/amphibious';
+import { PlacementService } from '../../production/placement.service';
 
 @Component({
   selector: 'ww2-game-map',
@@ -85,6 +86,7 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly combatCommittedUnitIds = this.store.selectSignal(
     MapSelectors.combatCommittedUnitIds,
   );
+  private readonly placementService = inject(PlacementService);
 
   private map!: OlMap;
   private cleanupFns: ((() => void) | undefined)[] = [];
@@ -115,6 +117,8 @@ export class GameMap implements OnInit, OnDestroy {
         this.nextAdjacentDestinations,
         this.selectedSquadMovementPlan,
         this.cargoDestinations,
+        this.placementService.candidateTerritories,
+        this.placementService.focusedTerritory,
       ],
     });
     this.cleanupFns.push(territoryCleanup);
@@ -175,6 +179,17 @@ export class GameMap implements OnInit, OnDestroy {
         return typeof territoryName === 'string' ? territoryName : undefined;
       });
 
+      if (
+        clickedTerritory &&
+        this.currentTurnPhase() === TurnPhase.PLACE_NEW_UNITS &&
+        this.placementService.candidateTerritories().includes(clickedTerritory)
+      ) {
+        this.selectedZoneId = undefined;
+        this.placementService.focus(clickedTerritory);
+        territoriesLayer.changed();
+        return;
+      }
+
       if (clickedTerritory && this.tryLoadOrUnload(clickedTerritory)) {
         this.selectedZoneId = undefined;
         territoriesLayer.changed();
@@ -226,6 +241,15 @@ export class GameMap implements OnInit, OnDestroy {
         : undefined;
       if (territoryName === selectedPlanCurrentTerritory) {
         return 'movement-current';
+      }
+
+      if (this.currentTurnPhase() === TurnPhase.PLACE_NEW_UNITS) {
+        if (territoryName === this.placementService.focusedTerritory()) {
+          return 'movement-current';
+        }
+        if (this.placementService.candidateTerritories().includes(territoryName)) {
+          return 'placement-candidate';
+        }
       }
     }
 

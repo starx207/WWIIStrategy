@@ -37,6 +37,11 @@ const movementCurrentZoneStyle = new Style({
   stroke: new Stroke({ color: 'rgba(72, 190, 135, 0.95)', width: 3 }),
 });
 
+const placementCandidateZoneStyle = new Style({
+  fill: new Fill({ color: 'rgba(200, 162, 74, 0.22)' }),
+  stroke: new Stroke({ color: 'rgba(200, 162, 74, 0.95)', width: 3 }),
+});
+
 export type TerritoryLayer = VectorLayer<VectorSource<Feature<Geometry>>, Feature<Geometry>>;
 
 export type TerritoryStyleId =
@@ -44,7 +49,8 @@ export type TerritoryStyleId =
   | 'sea'
   | 'selected'
   | 'movement-candidate'
-  | 'movement-current';
+  | 'movement-current'
+  | 'placement-candidate';
 
 export type TerritoryLayerOptions = {
   stylePicker: (feature: FeatureLike) => TerritoryStyleId;
@@ -76,6 +82,8 @@ export const mapTerritoriesLayer = ({
         return movementCandidateZoneStyle;
       case 'movement-current':
         return movementCurrentZoneStyle;
+      case 'placement-candidate':
+        return placementCandidateZoneStyle;
       default:
         return landZoneStyle;
     }

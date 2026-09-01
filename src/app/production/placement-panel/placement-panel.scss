@@ -39,7 +39,8 @@
   flex: 1;
 }
 
-.empty {
+.empty,
+.hint {
   font-size: 0.85rem;
   color: #4a453b;
 }
@@ -63,6 +64,41 @@
   }
 }
 
+// The territory the player has focused on the map: what's placeable there, and what's already
+// staged there.
+.focus {
+  border: 1px solid #c8a24a;
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.6rem;
+  background: #fdf6e6;
+}
+
+.focus-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+
+  .focus-territory {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .clear-focus {
+    border: none;
+    background: transparent;
+    color: #6b6455;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+      color: #b3402f;
+    }
+  }
+}
+
 .place-row {
   display: flex;
   align-items: center;
@@ -74,12 +110,14 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    min-width: 8.5rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .icon {
     width: 1.9rem;
     height: 1.9rem;
+    flex: 0 0 auto;
     overflow: hidden;
 
     ww2-military-unit-icon {
@@ -101,24 +139,6 @@
     font-weight: 600;
   }
 
-  select {
-    flex: 1;
-    min-width: 0;
-    padding: 0.35rem 0.4rem;
-    border: 1px solid #bbb;
-    border-radius: 4px;
-    background: #fff;
-    color: #1a1a1a;
-    font: inherit;
-    font-size: 0.78rem;
-  }
-
-  .no-dest {
-    flex: 1;
-    font-size: 0.75rem;
-    color: #b3402f;
-  }
-
   .primary {
     padding: 0.35rem 0.7rem;
     border-radius: 5px;
@@ -132,37 +152,24 @@
   }
 }
 
-.placed {
-  margin-top: 0.7rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid #e6e1d3;
+.staged-here {
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid #e9dfc0;
 
-  .placed-label {
+  .staged-label {
     display: block;
-    margin-bottom: 0.4rem;
-    font-size: 0.75rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: #6b6455;
   }
 }
 
-.placed-group {
+.placed-units {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.4rem;
-
-  .placed-territory {
-    min-width: 8.5rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-  }
-
-  .placed-units {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-  }
+  flex-wrap: wrap;
+  gap: 0.3rem;
 }
 
 // A placed unit shown as a removable chip: click to undo (return it to the queue).
@@ -207,6 +214,48 @@
 
   &:hover {
     border-color: #b3402f;
+  }
+}
+
+// All territories placed at this turn — click a row to refocus that territory even if it's no
+// longer a fresh candidate (e.g. it's full, or nothing pending fits it any more).
+.all-territories {
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #e6e1d3;
+
+  .all-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b6455;
+  }
+}
+
+.territory-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.25rem;
+  border: 1px solid #e0dccf;
+  border-radius: 5px;
+  background: #fff;
+  color: #23201a;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-align: left;
+
+  &.active {
+    border-color: #c8a24a;
+    background: #fdf6e6;
+  }
+
+  &:hover {
+    border-color: #2f6db3;
   }
 }
 
