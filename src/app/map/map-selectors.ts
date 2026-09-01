@@ -3,17 +3,20 @@ import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { MapState, MapStateModel, SquadMovementPlan } from './map-state';
 import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
+import { ADJACENT_TERRITORIES_BY_NAME } from '../territories/territory-adjacency';
 import { Nationality } from '@ww2/shared/nationality';
-import { UnitType } from '@ww2/shared/unit-type';
+import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { CargoByCarrierUnitId, allCargoUnitIds } from './rules/carrier-cargo';
-import { allAmphibiousUnitIds } from './rules/amphibious';
+import { allAmphibiousUnitIds, canUnloadTo, findLoadableTransport } from './rules/amphibious';
 import { calculateAdjacentDestinations } from './rules/movement-calculator';
+import { parseSquadId } from './rules/movement-execution';
 import { createResolvedRuleContext } from './rule-context.factory';
 import { RuleState } from '@ww2/settings/settings-state';
 import { SettingsSelectors } from '@ww2/settings/settings-selectors';
 import { getMaxMovement } from './effective-map-unit.reducer';
 import { Coordinate } from 'ol/coordinate';
 import { GameSelectors } from '@ww2/game/game-selectors';
+import { GamePhase, nationalityForGamePhase } from '@ww2/game/game-phase';
 import { TurnPhase } from '@ww2/game/turn-phase';
 
 export type SelectedSquadState = NonNullable<MapStateModel['selectedSquad']>;
@@ -137,6 +140,56 @@ export class MapSelectors {
       selectedPlan,
       createResolvedRuleContext(state, turnPhase, rulesState),
     );
+  }
+
+  /**
+   * Adjacent territories the selected squad could load onto / unload into: a loadable sea zone for
+   * a selected land unit, or an unloadable coast for a selected loaded transport. Disjoint from
+   * `selectedSquadNextAdjacentDestinations` (cross-kind moves are never ordinary destinations) but
+   * highlighted the same way — mirrors the guards in `GameMap.tryLoadOrUnload`.
+   */
+  @Selector([MapState, GameSelectors.gamePhase])
+  static selectedSquadCargoDestinations(
+    state: MapStateModel,
+    gamePhase: GamePhase,
+  ): TerritoryName[] {
+    const selectedSquad = state.selectedSquad;
+    if (!selectedSquad || selectedSquad.unitIds.length === 0) {
+      return [];
+    }
+
+    const parsed = parseSquadId(selectedSquad.id);
+    const selectedTerritory = selectedSquad.id.split('|')[1] as TerritoryName | undefined;
+    const nation = nationalityForGamePhase(gamePhase);
+    if (!parsed || !selectedTerritory || !nation) {
+      return [];
+    }
+
+    const adjacent = ADJACENT_TERRITORIES_BY_NAME[selectedTerritory] ?? [];
+
+    if (LAND_UNIT_TYPES.includes(parsed.unitType)) {
+      return adjacent.filter((territory) =>
+        findLoadableTransport({
+          fromTerritory: selectedTerritory,
+          seaZone: territory,
+          cargoUnitCount: selectedSquad.unitIds.length,
+          nation,
+          unitsByTerritory: state.unitsByTerritoryName,
+          cargoByCarrierUnitId: state.cargoByCarrierUnitId,
+        }),
+      );
+    }
+
+    if (parsed.unitType === UnitType.TRANSPORT) {
+      const transportId = selectedSquad.unitIds[0];
+      const hasCargo = (state.cargoByCarrierUnitId[transportId] ?? []).length > 0;
+      if (!hasCargo) {
+        return [];
+      }
+      return adjacent.filter((territory) => canUnloadTo(selectedTerritory, territory));
+    }
+
+    return [];
   }
 
   @Selector([MapState])

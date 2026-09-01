@@ -79,6 +79,9 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly cargoByCarrierUnitId = this.store.selectSignal(
     MapSelectors.cargoByCarrierUnitId,
   );
+  private readonly cargoDestinations = this.store.selectSignal(
+    MapSelectors.selectedSquadCargoDestinations,
+  );
 
   private map!: OlMap;
   private cleanupFns: ((() => void) | undefined)[] = [];
@@ -105,7 +108,11 @@ export class GameMap implements OnInit, OnDestroy {
     const { layer: territoriesLayer, cleanup: territoryCleanup } = mapTerritoriesLayer({
       stylePicker: this.selectZoneStyle.bind(this),
       injector: this.environmentInjector,
-      styleRefreshTriggers: [this.nextAdjacentDestinations, this.selectedSquadMovementPlan],
+      styleRefreshTriggers: [
+        this.nextAdjacentDestinations,
+        this.selectedSquadMovementPlan,
+        this.cargoDestinations,
+      ],
     });
     this.cleanupFns.push(territoryCleanup);
 
@@ -203,7 +210,10 @@ export class GameMap implements OnInit, OnDestroy {
   selectZoneStyle(feature: FeatureLike): TerritoryStyleId {
     const territoryName = feature.get('name') as TerritoryName | undefined;
     if (typeof territoryName === 'string') {
-      if (this.nextAdjacentDestinations().includes(territoryName)) {
+      if (
+        this.nextAdjacentDestinations().includes(territoryName) ||
+        this.cargoDestinations().includes(territoryName)
+      ) {
         return 'movement-candidate';
       }
 
