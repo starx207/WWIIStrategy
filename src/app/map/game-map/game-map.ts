@@ -276,12 +276,37 @@ export class GameMap implements OnInit, OnDestroy {
     return false;
   }
 
+  /**
+   * A click on a squad occupying a valid destination territory should move the active squad there,
+   * same as clicking empty ground of that territory — but the destination squad's overlay swallows
+   * the click before the map's own singleclick handler ever sees it (`stopEvent: true`), so this is
+   * invoked directly from the squad-selection callback instead.
+   */
+  private tryPlanMoveToDestinationSquad(destinationSquad: MilitaryUnitSquad<MilitaryUnit>): void {
+    if (!this.selectedSquad()) {
+      return;
+    }
+    const territory = destinationSquad.id.split('|')[1] as TerritoryName | undefined;
+    if (!territory || !this.nextAdjacentDestinations().includes(territory)) {
+      return;
+    }
+    const coordinate = this.squadLayoutCoordinatesBySquadId()[destinationSquad.id];
+    if (!coordinate) {
+      return;
+    }
+    this.store.dispatch(new MapActions.PlanSquadMovementStep(territory, coordinate));
+  }
+
   private onSquadSelected(squad: MilitaryUnitSquad<MilitaryUnit>) {
     const phase = this.currentTurnPhase();
 
     if ([...MOVEMENT_PHASES].includes(phase)) {
-      // Only the active nation may move units — ignore clicks on any other nation's squads.
+      // Only the active nation's own squads can be selected. A click on any other squad can't
+      // select it, but squad overlays swallow the click before it reaches the map's territory-click
+      // handler (see tryPlanMoveToDestinationSquad) — so redirect it as a destination click for the
+      // currently selected active squad when that territory is a valid move.
       if (squad.nationality !== nationalityForGamePhase(this.gamePhase())) {
+        this.tryPlanMoveToDestinationSquad(squad);
         return;
       }
       const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
