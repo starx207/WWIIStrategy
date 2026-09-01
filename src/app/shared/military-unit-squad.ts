@@ -12,14 +12,20 @@ export class MilitaryUnitSquad<T extends EffectiveUnit | MilitaryUnit = Military
     public units: T[],
     id?: string,
     public displayVariant?: string,
-    /** Number of units carried as cargo (e.g. fighters loaded on an aircraft carrier). */
-    public cargoCount = 0,
+    /** Types of the units carried as cargo (e.g. fighters loaded on an aircraft carrier, or land
+     * units loaded on a transport) — one entry per loaded unit. */
+    public cargo: UnitType[] = [],
   ) {
     this.id = id ?? uuid();
   }
 
   get count() {
     return this.units.length;
+  }
+
+  /** Total number of cargo units carried, regardless of type. */
+  get cargoCount() {
+    return this.cargo.length;
   }
 
   get nationality() {

@@ -14,8 +14,17 @@
   @if (unitCount() > 1) {
     <span class="unit-count-badge ww2-badge">{{ unitCount() }}</span>
   }
-  @if (cargoCount() > 0) {
-    <span class="cargo-badge ww2-badge" title="Fighters loaded">&#9992;{{ cargoCount() }}</span>
+  @if (cargoComposition().length > 0) {
+    <span class="cargo-badge" [title]="cargoTitle()">
+      @for (item of cargoComposition(); track item.type) {
+        <span class="cargo-item">
+          <ww2-military-unit-icon [nationality]="nationality()" [unitType]="item.type" />
+          @if (item.count > 1) {
+            <span class="cargo-item-count">{{ item.count }}</span>
+          }
+        </span>
+      }
+    </span>
   }
 </div>
 

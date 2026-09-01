@@ -24,13 +24,48 @@
   right: 0;
   top: 0;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1px;
   user-select: none;
   -webkit-user-select: none;
 
-  font-size: var(--squad-count-badge-font-size, 0.8em);
-  line-height: var(--squad-count-badge-line-height, normal);
-  height: var(--squad-count-badge-height, 1em);
-  padding: var(--squad-count-badge-padding, 2px);
+  background: var(--ww2-badge-background, rgba(0, 0, 0, 0.75));
+  border-radius: 3px;
+  padding: 1px;
+}
+
+.cargo-item {
+  position: relative;
+  display: block;
+  width: var(--squad-cargo-item-size, 0.9em);
+  height: var(--squad-cargo-item-size, 0.9em);
+
+  .military-unit-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  // The icon renders a raw <svg> via innerHTML; constrain it to the cell.
+  ::ng-deep .graphics-container,
+  ::ng-deep svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+}
+
+.cargo-item-count {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  font-size: 0.6em;
+  line-height: 1;
+  color: #fff;
+  text-shadow:
+    0 0 2px #000,
+    0 0 2px #000;
 }
 
 :host.military-unit-squad__left-face {

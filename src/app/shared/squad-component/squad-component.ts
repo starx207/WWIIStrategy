@@ -9,6 +9,13 @@ import {
 } from '../context-menu/context-menu';
 import { EffectiveUnit } from '../effective-unit';
 import { MilitaryUnit } from '../military-unit';
+import { UnitType } from '../unit-type';
+import { UNIT_TYPE_LABEL } from '../unit-type-label';
+
+export interface CargoCompositionItem {
+  type: UnitType;
+  count: number;
+}
 
 export type SquadDirection = 'left-face' | 'right-face';
 
@@ -43,7 +50,21 @@ export class SquadComponent<T extends EffectiveUnit | MilitaryUnit = MilitaryUni
   protected variant = computed(() => this.squad().displayVariant);
   protected nationality = computed(() => this.squad().nationality);
   protected unitCount = computed(() => this.squad().count);
-  protected cargoCount = computed(() => this.squad().cargoCount);
+
+  /** Loaded cargo grouped by type with per-type counts, in a stable order, for the badge. */
+  protected cargoComposition = computed<CargoCompositionItem[]>(() => {
+    const counts = new Map<UnitType, number>();
+    for (const type of this.squad().cargo) {
+      counts.set(type, (counts.get(type) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([type, count]) => ({ type, count }));
+  });
+
+  protected cargoTitle = computed(() =>
+    this.cargoComposition()
+      .map((item) => `${item.count} ${UNIT_TYPE_LABEL[item.type]}`)
+      .join(', '),
+  );
 
   protected hostClasses = computed(
     () =>

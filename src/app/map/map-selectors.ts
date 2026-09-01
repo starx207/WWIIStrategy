@@ -197,22 +197,28 @@ function createMapSquads(
     return currentGroups;
   }, {});
 
+  // Cargo units are hidden from squads but stay in the territory's unit array, so their types are
+  // resolvable here by looking up each carrying unit's loaded ids against `units`.
+  const unitById = new Map(units.map((unit) => [unit.id, unit]));
+
   return Object.entries(groups)
     .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
     .map(([groupKey, squadUnits]) => {
       const [nationality, unitType] = groupKey.split('|');
-      const cargoCount =
-        unitType === UnitType.AIRCRAFT_CARRIER
-          ? squadUnits.reduce(
-              (total, carrier) => total + (cargoByCarrierUnitId[carrier.id]?.length ?? 0),
-              0,
+      const cargo: UnitType[] =
+        unitType === UnitType.AIRCRAFT_CARRIER || unitType === UnitType.TRANSPORT
+          ? squadUnits.flatMap((carrier) =>
+              (cargoByCarrierUnitId[carrier.id] ?? []).flatMap((cargoId) => {
+                const cargoUnit = unitById.get(cargoId);
+                return cargoUnit ? [cargoUnit.type] : [];
+              }),
             )
-          : 0;
+          : [];
       return new MilitaryUnitSquad(
         squadUnits,
         `map-squad|${territoryName}|${nationality}|${unitType}`,
         undefined,
-        cargoCount,
+        cargo,
       );
     });
 }
