@@ -68,19 +68,19 @@
           <div class="staged-here">
             <span class="staged-label">Placed here:</span>
             <div class="placed-row">
-              @if (stagedAtFocus().length > 0) {
+              @if (stagedGroupsAtFocus().length > 0) {
                 <div class="placed-units">
-                  @for (placement of stagedAtFocus(); track placement.unit.id) {
+                  @for (group of stagedGroupsAtFocus(); track group.unitType) {
                     <button
                       type="button"
                       class="placed-chip"
-                      title="Remove this unit"
-                      (click)="undo(placement.unit.id)"
+                      title="Remove one {{ label(group.unitType) }}"
+                      (click)="undoOne(group)"
                     >
-                      <ww2-military-unit-icon
-                        [nationality]="nation"
-                        [unitType]="placement.unit.type"
-                      />
+                      <ww2-military-unit-icon [nationality]="nation" [unitType]="group.unitType" />
+                      @if (group.placements.length > 1) {
+                        <span class="count-badge">{{ group.placements.length }}</span>
+                      }
                       <span class="remove-x">&times;</span>
                     </button>
                   }

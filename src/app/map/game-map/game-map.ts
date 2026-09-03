@@ -14,8 +14,9 @@ import {
 import { Store } from '@ngxs/store';
 import { FeatureLike } from 'ol/Feature';
 import { Map as OlMap } from 'ol';
+import { containsExtent, getCenter } from 'ol/extent';
 import { configureMap } from '../map-config';
-import { mapTerritoriesLayer, TerritoryStyleId } from '../layers/map-territories';
+import { mapTerritoriesLayer, TerritoryLayer, TerritoryStyleId } from '../layers/map-territories';
 import { MapSelectors } from '../map-selectors';
 import { connectSquadOverlaysToMap } from '../overlays/squad-placement';
 import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
@@ -89,6 +90,7 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly placementService = inject(PlacementService);
 
   private map!: OlMap;
+  private territoriesLayer?: TerritoryLayer;
   private cleanupFns: ((() => void) | undefined)[] = [];
 
   private readonly effects: EffectRef[] = [
@@ -107,6 +109,14 @@ export class GameMap implements OnInit, OnDestroy {
         new GameActions.SetContextualMenuOptionDisabled(['reset-all-moves'], !hasMovementPlans),
       );
     }),
+    // A "Complex capacity" chip click (PlacementService.focusDirect) asks the map to pan the
+    // territory into view, in case the player had scrolled/zoomed elsewhere while reviewing.
+    effect(() => {
+      const request = this.placementService.revealRequest();
+      if (request) {
+        this.ensureTerritoryVisible(request.territory);
+      }
+    }),
   ];
 
   ngOnInit(): void {
@@ -122,6 +132,7 @@ export class GameMap implements OnInit, OnDestroy {
       ],
     });
     this.cleanupFns.push(territoryCleanup);
+    this.territoriesLayer = territoriesLayer;
 
     const { layer: movementPlanLayer, cleanup: cleanupMovementPlan } = mapMovementPlanLayer(
       this.movementPlansBySquadId,
@@ -264,6 +275,29 @@ export class GameMap implements OnInit, OnDestroy {
     return typeof territoryName === 'string' && TERRITORY_INFO_BY_NAME[territoryName].kind === 'sea'
       ? 'sea'
       : 'land';
+  }
+
+  /** Pan the view to bring a territory fully into frame, if it isn't already — used when the
+   * placement panel's "Complex capacity" chip asks to review a territory that may be off-screen. */
+  private ensureTerritoryVisible(territory: TerritoryName): void {
+    const feature = this.territoriesLayer
+      ?.getSource()
+      ?.getFeatures()
+      .find((candidate) => candidate.get('name') === territory);
+    const geometry = feature?.getGeometry();
+    const view = this.map?.getView();
+    const size = this.map?.getSize();
+    if (!geometry || !view || !size) {
+      return;
+    }
+
+    const featureExtent = geometry.getExtent();
+    const viewExtent = view.calculateExtent(size);
+    if (containsExtent(viewExtent, featureExtent)) {
+      return;
+    }
+
+    view.animate({ center: getCenter(featureExtent), duration: 300 });
   }
 
   /**

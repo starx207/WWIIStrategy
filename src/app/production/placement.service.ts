@@ -204,13 +204,23 @@ export class PlacementService {
     }
   }
 
+  private revealRequestToken = 0;
+  private readonly revealRequestSignal = signal<{ territory: TerritoryName; token: number } | null>(
+    null,
+  );
+  /** Set whenever `focusDirect` is called — GameMap watches this to pan the territory into view.
+   * A fresh token on every call (rather than relying on the territory changing) so re-clicking the
+   * same "Complex capacity" chip re-centers the map even if the player panned away in between. */
+  readonly revealRequest = this.revealRequestSignal.asReadonly();
+
   /**
    * Focus a territory directly, bypassing the candidate check — used to revisit a territory (from
    * a "Complex capacity" chip) even if it's no longer a fresh candidate, e.g. it has nothing left
-   * pending for it.
+   * pending for it. Also requests that the map pan the territory into view (see `revealRequest`).
    */
   focusDirect(territory: TerritoryName): void {
     this.focusedTerritorySignal.set(territory);
+    this.revealRequestSignal.set({ territory, token: ++this.revealRequestToken });
   }
 
   /** Clear the focused territory (e.g. the player dismisses the focus panel). */

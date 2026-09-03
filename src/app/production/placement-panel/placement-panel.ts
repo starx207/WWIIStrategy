@@ -1,10 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { UnitType } from '@ww2/shared/unit-type';
 import { MilitaryUnitIcon } from '@ww2/shared/military-unit-icon';
 import { UNIT_TYPE_LABEL } from '@ww2/shared/unit-type-label';
 import { TurnFlowService } from '@ww2/game/turn-flow.service';
 import { TerritoryName } from '../../territories/territory-names';
-import { PlacementService } from '../placement.service';
+import { PlacementService, StagedPlacement } from '../placement.service';
+
+interface StagedGroup {
+  unitType: UnitType;
+  placements: StagedPlacement[];
+}
 
 /**
  * View over PlacementService: the player clicks a highlighted factory / sea zone / new-IC
@@ -26,8 +31,20 @@ export class PlacementPanel {
   protected readonly pending = this.placementService.pending;
   protected readonly capacityRows = this.placementService.capacityRows;
   protected readonly focusedTerritory = this.placementService.focusedTerritory;
-  protected readonly stagedAtFocus = this.placementService.stagedAtFocus;
+  private readonly stagedAtFocus = this.placementService.stagedAtFocus;
   protected readonly placeableGroups = this.placementService.placeableGroupsAtFocus;
+
+  /** Staged placements at the focus, grouped by unit type so "Placed here" shows one icon per
+   * type with a count badge instead of a duplicate icon per unit. */
+  protected readonly stagedGroupsAtFocus = computed<StagedGroup[]>(() => {
+    const groups = new Map<UnitType, StagedPlacement[]>();
+    for (const placement of this.stagedAtFocus()) {
+      const list = groups.get(placement.unit.type) ?? [];
+      list.push(placement);
+      groups.set(placement.unit.type, list);
+    }
+    return [...groups.entries()].map(([unitType, placements]) => ({ unitType, placements }));
+  });
 
   protected label(unitType: UnitType): string {
     return UNIT_TYPE_LABEL[unitType];
@@ -40,8 +57,12 @@ export class PlacementPanel {
     }
   }
 
-  protected undo(unitId: string): void {
-    this.placementService.undo(unitId);
+  /** Undo one unit from a staged group (e.g. clicking a "Placed here" chip). */
+  protected undoOne(group: StagedGroup): void {
+    const placement = group.placements[0];
+    if (placement) {
+      this.placementService.undo(placement.unit.id);
+    }
   }
 
   protected clearFocus(): void {
