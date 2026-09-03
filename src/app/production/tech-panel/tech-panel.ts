@@ -64,6 +64,12 @@ export class TechPanel {
   protected readonly rollResults = signal<number[]>([]);
   protected readonly rollSuccess = signal(false);
 
+  /** Whether forfeiting research this turn is still an option — before rolling, and only when
+   * there's something to skip (the "nothing left to research" case has its own Done button). */
+  protected readonly canSkip = computed(
+    () => this.availableTechs().length > 0 && !this.hasRolled(),
+  );
+
   protected label(tech: TechnologyId): string {
     return TECHNOLOGY_LABEL[tech];
   }

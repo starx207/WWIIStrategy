@@ -20,9 +20,34 @@
   padding: 0.75rem 1rem 0.5rem;
   border-bottom: 1px solid #e6e1d3;
 
+  .head-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+
   h2 {
-    margin: 0 0 0.35rem;
+    margin: 0;
     font-size: 1.05rem;
+  }
+
+  .skip-link {
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #2f6db3;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      color: #1f4d80;
+    }
   }
 
   .budget {
@@ -172,17 +197,6 @@
 
 .roll-btn {
   flex: 1;
-}
-
-.secondary {
-  padding: 0.5rem 0.9rem;
-  border-radius: 6px;
-  border: 1px solid #bbb;
-  background: #f0efe8;
-  color: #23201a;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .actions {

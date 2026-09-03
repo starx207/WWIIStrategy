@@ -1,7 +1,12 @@
 @if (activeNation()) {
   <section class="tech-panel">
     <header class="panel-head">
-      <h2>Develop Weapons</h2>
+      <div class="head-row">
+        <h2>Develop Weapons</h2>
+        @if (canSkip()) {
+          <button type="button" class="skip-link" (click)="advance()">Skip</button>
+        }
+      </div>
       <div class="budget">
         <span>Treasury: {{ treasury() }}</span>
         <span>Research die: {{ 5 }} IPC each</span>
@@ -67,7 +72,6 @@
           }
 
           <div class="actions">
-            <button type="button" class="secondary" (click)="advance()">Skip</button>
             <button type="button" class="primary roll-btn" [disabled]="!canRoll()" (click)="roll()">
               Roll {{ diceCount() }} {{ diceCount() === 1 ? 'die' : 'dice' }}
             </button>
