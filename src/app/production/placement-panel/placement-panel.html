@@ -45,13 +45,13 @@
                     <ww2-military-unit-icon [nationality]="nation" [unitType]="group.unitType" />
                   </div>
                   <span class="unit-name"
-                    >{{ label(group.unitType) }} &times;{{ group.units.length }}</span
+                    >{{ label(group.unitType) }} &times;{{ group.availableUnits.length }}</span
                   >
                 </div>
                 <button
                   type="button"
                   class="primary"
-                  [disabled]="placementService.isFocusFull()"
+                  [disabled]="group.availableUnits.length === 0 || placementService.isFocusFull()"
                   (click)="place(group.unitType)"
                 >
                   Place
@@ -67,26 +67,28 @@
 
           <div class="staged-here">
             <span class="staged-label">Placed here:</span>
-            @if (stagedAtFocus().length > 0) {
-              <div class="placed-units">
-                @for (placement of stagedAtFocus(); track placement.unit.id) {
-                  <button
-                    type="button"
-                    class="placed-chip"
-                    title="Remove this unit"
-                    (click)="undo(placement.unit.id)"
-                  >
-                    <ww2-military-unit-icon
-                      [nationality]="nation"
-                      [unitType]="placement.unit.type"
-                    />
-                    <span class="remove-x">&times;</span>
-                  </button>
-                }
-              </div>
-            } @else {
-              <p class="empty-here">Nothing placed here yet.</p>
-            }
+            <div class="placed-row">
+              @if (stagedAtFocus().length > 0) {
+                <div class="placed-units">
+                  @for (placement of stagedAtFocus(); track placement.unit.id) {
+                    <button
+                      type="button"
+                      class="placed-chip"
+                      title="Remove this unit"
+                      (click)="undo(placement.unit.id)"
+                    >
+                      <ww2-military-unit-icon
+                        [nationality]="nation"
+                        [unitType]="placement.unit.type"
+                      />
+                      <span class="remove-x">&times;</span>
+                    </button>
+                  }
+                </div>
+              } @else {
+                <p class="empty-here">Nothing placed here yet.</p>
+              }
+            </div>
           </div>
         </div>
       } @else if (pending().length > 0) {

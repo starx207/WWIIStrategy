@@ -198,6 +198,14 @@
   }
 }
 
+// Fixed to a chip row's height so switching between "nothing placed here" and a row of chips
+// never shifts the rest of the panel.
+.placed-row {
+  display: flex;
+  align-items: center;
+  min-height: 2rem;
+}
+
 .empty-here {
   margin: 0;
   font-size: 0.78rem;

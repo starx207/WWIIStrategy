@@ -1,16 +1,10 @@
-import { Component, computed, inject } from '@angular/core';
-import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { Component, inject } from '@angular/core';
 import { UnitType } from '@ww2/shared/unit-type';
 import { MilitaryUnitIcon } from '@ww2/shared/military-unit-icon';
 import { UNIT_TYPE_LABEL } from '@ww2/shared/unit-type-label';
 import { TurnFlowService } from '@ww2/game/turn-flow.service';
 import { TerritoryName } from '../../territories/territory-names';
 import { PlacementService } from '../placement.service';
-
-interface PlaceableGroup {
-  unitType: UnitType;
-  units: MilitaryUnit[];
-}
 
 /**
  * View over PlacementService: the player clicks a highlighted factory / sea zone / new-IC
@@ -33,16 +27,7 @@ export class PlacementPanel {
   protected readonly capacityRows = this.placementService.capacityRows;
   protected readonly focusedTerritory = this.placementService.focusedTerritory;
   protected readonly stagedAtFocus = this.placementService.stagedAtFocus;
-
-  protected readonly placeableGroups = computed<PlaceableGroup[]>(() => {
-    const groups = new Map<UnitType, MilitaryUnit[]>();
-    for (const unit of this.placementService.placeableUnitsAtFocus()) {
-      const units = groups.get(unit.type) ?? [];
-      units.push(unit);
-      groups.set(unit.type, units);
-    }
-    return [...groups.entries()].map(([unitType, units]) => ({ unitType, units }));
-  });
+  protected readonly placeableGroups = this.placementService.placeableGroupsAtFocus;
 
   protected label(unitType: UnitType): string {
     return UNIT_TYPE_LABEL[unitType];
@@ -50,8 +35,8 @@ export class PlacementPanel {
 
   protected place(unitType: UnitType): void {
     const group = this.placeableGroups().find((candidate) => candidate.unitType === unitType);
-    if (group && group.units.length > 0) {
-      this.placementService.place(group.units[0]);
+    if (group && group.availableUnits.length > 0) {
+      this.placementService.place(group.availableUnits[0]);
     }
   }
 

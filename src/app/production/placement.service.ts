@@ -31,6 +31,16 @@ export interface StagedPlacement {
 type FocusKind = 'land-air' | 'naval' | 'new-factory';
 
 /**
+ * One unit type placeable at the focused territory: `availableUnits` are the still-pending
+ * (unstaged) units of that type, so `availableUnits.length` is the count to show — 0 once
+ * exhausted, rather than the row disappearing.
+ */
+export interface PlaceableGroup {
+  unitType: UnitType;
+  availableUnits: MilitaryUnit[];
+}
+
+/**
  * Drives the map-driven Mobilize Units phase: the player clicks a factory (or its adjacent sea
  * zone, or a new-IC-eligible territory) on the map to focus it, then places pending units there.
  * Placements are staged locally (not written to the map) until the player confirms, so removing a
@@ -131,10 +141,14 @@ export class PlacementService {
    * pending unit that could actually go there — a factory tile only lights up if land/air units
    * are pending, its adjacent sea zones only if naval units are pending, and so on. A factory at
    * capacity stays a candidate (see `isFull`) so it keeps its highlight — turned red — instead of
-   * disappearing from the map.
+   * disappearing from the map. A territory with staged placements always stays a candidate too,
+   * even once its category is otherwise fully placed elsewhere (e.g. the last naval unit is
+   * placed) — otherwise it'd vanish from the map mid-review and couldn't be clicked again to undo.
    */
   readonly candidateTerritories = computed<TerritoryName[]>(() => {
-    const territories = new Set<TerritoryName>();
+    const territories = new Set<TerritoryName>(
+      this.staged().map((placement) => placement.territory),
+    );
 
     if (this.hasPendingCategory('land-air')) {
       for (const factory of this.factoryTerritories()) {
@@ -224,13 +238,16 @@ export class PlacementService {
   }
 
   /**
-   * Units placeable at the focused territory right now (from the pending queue). Empty whenever
-   * the territory isn't a live candidate any more (already built this phase, or nothing pending
-   * fits it) — a full-capacity territory still lists its placeable groups (see `isFocusFull`) so
-   * the panel can show them with Place disabled rather than reflowing. `stagedAtFocus` below still
-   * shows what's already there for removal.
+   * Unit types placeable at the focused territory, in the stable order they first appeared in
+   * this turn's purchase batch. Empty whenever the territory isn't a live candidate any more
+   * (already built this phase, or nothing of its category was ever pending) — a full-capacity
+   * territory still lists its groups (see `isFocusFull`) so the panel can show them with Place
+   * disabled rather than reflowing. A type stays listed (with `availableUnits.length` at 0) once
+   * exhausted instead of disappearing, and the list never reorders as units get placed, since it's
+   * built from the turn's full batch rather than from what's currently left unstaged.
+   * `stagedAtFocus` below still shows what's already there for removal.
    */
-  readonly placeableUnitsAtFocus = computed<MilitaryUnit[]>(() => {
+  readonly placeableGroupsAtFocus = computed<PlaceableGroup[]>(() => {
     const territory = this.focusedTerritory();
     const kind = this.focusKind();
     if (!territory || !kind || !this.candidateTerritories().includes(territory)) {
@@ -238,7 +255,26 @@ export class PlacementService {
     }
     const category: PlacementCategory =
       kind === 'new-factory' ? 'factory' : kind === 'naval' ? 'naval' : 'land-air';
-    return this.pending().filter((unit) => placementCategory(unit.type) === category);
+
+    const nation = this.activeNation();
+    const fullBatch = nation ? (this.pendingByNation()[nation] ?? []) : [];
+    const availableIds = new Set(this.pending().map((unit) => unit.id));
+
+    const orderedTypes: UnitType[] = [];
+    const seenTypes = new Set<UnitType>();
+    for (const unit of fullBatch) {
+      if (placementCategory(unit.type) === category && !seenTypes.has(unit.type)) {
+        seenTypes.add(unit.type);
+        orderedTypes.push(unit.type);
+      }
+    }
+
+    return orderedTypes.map((unitType) => ({
+      unitType,
+      availableUnits: fullBatch.filter(
+        (unit) => unit.type === unitType && availableIds.has(unit.id),
+      ),
+    }));
   });
 
   /** Units already staged at the focused territory. */
