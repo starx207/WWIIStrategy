@@ -19,6 +19,9 @@ export class MapSquadOverlay {
   id = input.required<string>();
   layout = input.required<MapSquadLayout>();
   variant = input<MapSquadOverlayVariant>('normal');
+  /** True when this squad is locked out of movement this phase (e.g. combat-committed units
+   * during non-combat move) — dimmed like a squad mid-move, but still selectable. */
+  disabled = input<boolean>(false);
   squadSelected = output<MilitaryUnitSquad<MilitaryUnit>>();
 
   private readonly store = inject(Store);
@@ -26,7 +29,7 @@ export class MapSquadOverlay {
   private readonly isSelectedSquad = computed(() => this.selectedSquad()?.id === this.id());
 
   protected overlayClasses(): string {
-    return `map-squad-overlay map-squad-overlay__${this.variant()} ${this.isSelectedSquad() ? 'map-squad-overlay__selected' : ''}`;
+    return `map-squad-overlay map-squad-overlay__${this.variant()} ${this.isSelectedSquad() ? 'map-squad-overlay__selected' : ''} ${this.disabled() ? 'map-squad-overlay__disabled' : ''}`;
   }
 
   protected selectSquad(squad: MilitaryUnitSquad<MilitaryUnit>) {

@@ -75,6 +75,7 @@ export class GameMap implements OnInit, OnDestroy {
   );
   private readonly currentTurnPhase = this.store.selectSignal(GameSelectors.turnPhase);
   private readonly gamePhase = this.store.selectSignal(GameSelectors.gamePhase);
+  private readonly activeNationality = computed(() => nationalityForGamePhase(this.gamePhase()));
   private readonly unitsByTerritoryName = this.store.selectSignal(
     MapSelectors.unitsByTerritoryName,
   );
@@ -154,6 +155,9 @@ export class GameMap implements OnInit, OnDestroy {
       this.movementPlansBySquadId,
       this.selectedSquad,
       this.squadLayoutCoordinatesBySquadId,
+      this.activeNationality,
+      this.currentTurnPhase,
+      this.combatCommittedUnitIds,
       this.appRef,
       this.environmentInjector,
       this.onSquadSelected.bind(this),
@@ -315,7 +319,7 @@ export class GameMap implements OnInit, OnDestroy {
     }
     const parsed = parseSquadId(selected.id);
     const selectedTerritory = selected.id.split('|')[1] as TerritoryName | undefined;
-    const nation = nationalityForGamePhase(this.gamePhase());
+    const nation = this.activeNationality();
     if (!parsed || !selectedTerritory || !nation) {
       return false;
     }
@@ -380,7 +384,7 @@ export class GameMap implements OnInit, OnDestroy {
       // select it, but squad overlays swallow the click before it reaches the map's territory-click
       // handler (see tryPlanMoveToDestinationSquad) — so redirect it as a destination click for the
       // currently selected active squad when that territory is a valid move.
-      if (squad.nationality !== nationalityForGamePhase(this.gamePhase())) {
+      if (squad.nationality !== this.activeNationality()) {
         this.tryPlanMoveToDestinationSquad(squad);
         return;
       }

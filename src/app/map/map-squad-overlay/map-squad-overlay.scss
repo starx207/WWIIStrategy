@@ -19,7 +19,8 @@
   transform-origin: center center;
 }
 
-.map-squad-overlay__movement-start {
+.map-squad-overlay__movement-start,
+.map-squad-overlay__disabled {
   opacity: 0.42;
   filter: grayscale(0.25);
 }

@@ -23,6 +23,8 @@ import { TerritoryLayer } from '../layers/map-territories';
 import { SquadMovementPlan } from '../map-state';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
+import { Nationality } from '@ww2/shared/nationality';
+import { TurnPhase } from '@ww2/game/turn-phase';
 import { combineLatest } from 'rxjs';
 
 type MapSquadOverlayRef = {
@@ -36,6 +38,10 @@ type DesiredMapSquadOverlay = {
   layout: MapSquadLayout;
   coordinate: Coordinate;
   variant: MapSquadOverlayVariant;
+  disabled: boolean;
+  /** True for the active nation's squads — stacked above (and thus clickable over) squads of
+   * other nations sharing the same territory, e.g. an attacker/defender pair mid-combat-move. */
+  onTop: boolean;
 };
 
 type TerritoryFeatureMap = Map<TerritoryName, Feature<Geometry>>;
@@ -75,7 +81,10 @@ const updateSquadOverlayScale = (
     return;
   }
 
-  const scale = baseOverlayResolution / currentResolution;
+  // TODO: Maybe we need a settings dialog where we can adjust things like the overall scale of the pieces
+  //       I had to add the 0.9 reduction when moving from my Lenovo to Mac. Alternatively I might need to
+  //       have a better way to calculate initial resolution for the pieces.
+  const scale = (baseOverlayResolution / currentResolution) * 0.9;
   for (const { componentRef } of squadOverlayRefsByKey.values()) {
     componentRef.location.nativeElement.style.setProperty(
       '--map-squad-overlay-scale',
@@ -89,6 +98,9 @@ const refreshSquadOverlays = (
   movementPlansBySquadId: MovementPlansBySquadId,
   selectedSquad: SelectedSquadState | undefined,
   squadLayoutCoordinatesBySquadId: SquadLayoutCoordinatesBySquadId,
+  activeNationality: Nationality | undefined,
+  turnPhase: TurnPhase,
+  combatCommittedUnitIds: string[],
   territoryFeaturesByName: TerritoryFeatureMap,
   squadOverlayRefsByKey: Map<string, MapSquadOverlayRef>,
   appRef: ApplicationRef,
@@ -118,6 +130,9 @@ const refreshSquadOverlays = (
       movementPlansBySquadId,
       selectedSquad,
       effectiveLayoutCoordinatesBySquadId,
+      activeNationality,
+      turnPhase,
+      combatCommittedUnitIds,
     ),
     squadOverlayRefsByKey,
     appRef,
@@ -128,11 +143,27 @@ const refreshSquadOverlays = (
   updateSquadOverlayScale(squadOverlayRefsByKey, map, baseOverlayResolution);
 };
 
+/** Whether a squad is locked out of non-combat movement because one or more of its units already
+ * committed to combat this turn (mixed squads lock as a whole — see GameMap.onSquadSelected). */
+function isSquadDisabled(
+  squad: MilitaryUnitSquad<MilitaryUnit>,
+  turnPhase: TurnPhase,
+  combatCommittedUnitIds: string[],
+): boolean {
+  return (
+    turnPhase === TurnPhase.NON_COMBAT_MOVEMENT &&
+    squad.units.some((unit) => combatCommittedUnitIds.includes(unit.id))
+  );
+}
+
 function buildDesiredSquadOverlays(
   squadsByTerritoryName: SquadsByTerritoryName,
   movementPlansBySquadId: MovementPlansBySquadId,
   selectedSquad: SelectedSquadState | undefined,
   squadLayoutCoordinatesBySquadId: SquadLayoutCoordinatesBySquadId,
+  activeNationality: Nationality | undefined,
+  turnPhase: TurnPhase,
+  combatCommittedUnitIds: string[],
 ): DesiredMapSquadOverlay[] {
   const desiredOverlays: DesiredMapSquadOverlay[] = [];
   const plannedMovingSquadIds = new Set(
@@ -156,6 +187,8 @@ function buildDesiredSquadOverlays(
         layout: createSingleSquadLayout(squad),
         coordinate,
         variant: 'normal',
+        disabled: isSquadDisabled(squad, turnPhase, combatCommittedUnitIds),
+        onTop: squad.nationality === activeNationality,
       });
     }
   }
@@ -173,6 +206,8 @@ function buildDesiredSquadOverlays(
       continue;
     }
 
+    // A movement plan only ever exists for the active nation's own squad (selection is gated to
+    // it), so these are always on top.
     if (startCoordinate) {
       desiredOverlays.push({
         key: 'start:' + plan.squadId,
@@ -180,6 +215,8 @@ function buildDesiredSquadOverlays(
         layout: createSingleSquadLayout(squad),
         coordinate: startCoordinate,
         variant: 'movement-start',
+        disabled: false,
+        onTop: true,
       });
     }
     desiredOverlays.push({
@@ -188,6 +225,8 @@ function buildDesiredSquadOverlays(
       layout: createSingleSquadLayout(squad),
       coordinate: finalStep.coordinate,
       variant: selectedSquad?.id === plan.squadId ? 'movement-final' : 'normal',
+      disabled: false,
+      onTop: true,
     });
   }
 
@@ -242,6 +281,7 @@ function createSquadOverlay(
   componentRef.setInput('id', desiredOverlay.squadId);
   componentRef.setInput('layout', desiredOverlay.layout);
   componentRef.setInput('variant', desiredOverlay.variant);
+  componentRef.setInput('disabled', desiredOverlay.disabled);
   componentRef.instance.squadSelected.subscribe(onSquadSelected);
   appRef.attachView(componentRef.hostView);
 
@@ -253,6 +293,7 @@ function createSquadOverlay(
   });
 
   map.addOverlay(overlay);
+  applyOverlayStackOrder(componentRef, desiredOverlay.onTop);
   return { overlay, componentRef };
 }
 
@@ -262,7 +303,28 @@ function updateSquadOverlay(
 ): void {
   overlayRef.componentRef.setInput('layout', desiredOverlay.layout);
   overlayRef.componentRef.setInput('variant', desiredOverlay.variant);
+  overlayRef.componentRef.setInput('disabled', desiredOverlay.disabled);
   overlayRef.overlay.setPosition(desiredOverlay.coordinate);
+  applyOverlayStackOrder(overlayRef.componentRef, desiredOverlay.onTop);
+}
+
+/**
+ * Stack the active nation's overlay elements above others sharing the same territory (e.g. an
+ * attacker/defender pair mid-combat-move) — both visually and for pointer hit-testing, so they're
+ * also the ones that get selected on click.
+ *
+ * OL wraps the element it's given (`componentRef.location.nativeElement`) in its own internal
+ * `position: absolute` div, and it's those wrapper divs — not our content — that are the actual
+ * siblings competing for paint order in the shared overlay container; a z-index on our content
+ * only orders things *inside* that wrapper, which has nothing else in it. OL doesn't expose the
+ * wrapper via any public API, so reach it the only way available: it's the parent element once
+ * the Overlay has been constructed (or reused, for an already-attached overlay).
+ */
+function applyOverlayStackOrder(componentRef: ComponentRef<MapSquadOverlay>, onTop: boolean): void {
+  const wrapper = componentRef.location.nativeElement.parentElement;
+  if (wrapper) {
+    wrapper.style.zIndex = onTop ? '2' : '1';
+  }
 }
 
 const refreshTerritoryFeatures = (
@@ -288,6 +350,9 @@ export const connectSquadOverlaysToMap = (
   movementPlansBySquadId: Signal<MovementPlansBySquadId>,
   selectedSquad: Signal<SelectedSquadState | undefined>,
   squadLayoutCoordinatesBySquadId: Signal<SquadLayoutCoordinatesBySquadId>,
+  activeNationality: Signal<Nationality | undefined>,
+  turnPhase: Signal<TurnPhase>,
+  combatCommittedUnitIds: Signal<string[]>,
   appRef: ApplicationRef,
   environmentInjector: EnvironmentInjector,
   onSquadSelected: (squad: MilitaryUnitSquad<MilitaryUnit>) => void,
@@ -309,22 +374,30 @@ export const connectSquadOverlaysToMap = (
     toObservable(movementPlansBySquadId, { injector: environmentInjector }),
     toObservable(selectedSquad, { injector: environmentInjector }),
     toObservable(squadLayoutCoordinatesBySquadId, { injector: environmentInjector }),
-  ]).subscribe(([squads, movementPlans, activeSquad, layoutCoordinates]) => {
-    refreshSquadOverlays(
-      squads,
-      movementPlans,
-      activeSquad,
-      layoutCoordinates,
-      territoryFeaturesByName,
-      squadOverlayRefsByKey,
-      appRef,
-      environmentInjector,
-      onSquadSelected,
-      setSquadLayoutCoordinates,
-      map,
-      baseOverlayResolution,
-    );
-  });
+    toObservable(activeNationality, { injector: environmentInjector }),
+    toObservable(turnPhase, { injector: environmentInjector }),
+    toObservable(combatCommittedUnitIds, { injector: environmentInjector }),
+  ]).subscribe(
+    ([squads, movementPlans, activeSquad, layoutCoordinates, nation, phase, committedIds]) => {
+      refreshSquadOverlays(
+        squads,
+        movementPlans,
+        activeSquad,
+        layoutCoordinates,
+        nation,
+        phase,
+        committedIds,
+        territoryFeaturesByName,
+        squadOverlayRefsByKey,
+        appRef,
+        environmentInjector,
+        onSquadSelected,
+        setSquadLayoutCoordinates,
+        map,
+        baseOverlayResolution,
+      );
+    },
+  );
 
   const territoriesSource = territoriesLayer.getSource();
   if (territoriesSource) {
@@ -336,6 +409,9 @@ export const connectSquadOverlaysToMap = (
           movementPlansBySquadId(),
           selectedSquad(),
           squadLayoutCoordinatesBySquadId(),
+          activeNationality(),
+          turnPhase(),
+          combatCommittedUnitIds(),
           territoryFeaturesByName,
           squadOverlayRefsByKey,
           appRef,
