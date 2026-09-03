@@ -19,6 +19,7 @@ import { configureMap } from '../map-config';
 import { mapTerritoriesLayer, TerritoryLayer, TerritoryStyleId } from '../layers/map-territories';
 import { MapSelectors } from '../map-selectors';
 import { connectSquadOverlaysToMap } from '../overlays/squad-placement';
+import { connectControlMarkersToMap } from '../overlays/control-marker-placement';
 import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
 import type { TerritoryName } from '../../territories/territory-names';
 import { MapActions } from '../map-actions';
@@ -87,6 +88,9 @@ export class GameMap implements OnInit, OnDestroy {
   );
   private readonly combatCommittedUnitIds = this.store.selectSignal(
     MapSelectors.combatCommittedUnitIds,
+  );
+  private readonly capturedControlMarkers = this.store.selectSignal(
+    MapSelectors.capturedControlMarkers,
   );
   private readonly placementService = inject(PlacementService);
 
@@ -165,6 +169,14 @@ export class GameMap implements OnInit, OnDestroy {
         this.store.dispatch(new MapActions.SetSquadLayoutCoordinates(coordinatesBySquadId)),
     );
     this.cleanupFns.push(cleanup);
+
+    const { cleanup: cleanupControlMarkers } = connectControlMarkersToMap(
+      this.map,
+      territoriesLayer,
+      this.capturedControlMarkers,
+      this.environmentInjector,
+    );
+    this.cleanupFns.push(cleanupControlMarkers);
 
     map.on('singleclick', (event) => {
       const clickedNode = map.forEachFeatureAtPixel(

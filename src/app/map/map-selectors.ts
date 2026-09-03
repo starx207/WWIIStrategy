@@ -18,6 +18,7 @@ import { Coordinate } from 'ol/coordinate';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { GamePhase, nationalityForGamePhase } from '@ww2/game/game-phase';
 import { TurnPhase } from '@ww2/game/turn-phase';
+import { INITIAL_LAND_TERRITORY_CONTROL } from './initial-map-layout';
 
 export type SelectedSquadState = NonNullable<MapStateModel['selectedSquad']>;
 
@@ -223,6 +224,35 @@ export class MapSelectors {
   @Selector([MapState])
   static combatCommittedUnitIds(state: MapStateModel): string[] {
     return state.combatCommittedUnitIds;
+  }
+
+  /**
+   * Land territories captured this game — current controller differs from
+   * `INITIAL_LAND_TERRITORY_CONTROL` — that the controlling nation has since emptied of its own
+   * units. Rendered on the map as a small emblem marker so a captured-then-vacated territory
+   * still reads as under that nation's control, rather than looking untouched. A territory held
+   * by the same nation since the start of the game never qualifies, regardless of occupancy.
+   */
+  @Selector([MapState])
+  static capturedControlMarkers(
+    state: MapStateModel,
+  ): Partial<Record<LandTerritoryName, Nationality>> {
+    const markers: Partial<Record<LandTerritoryName, Nationality>> = {};
+    for (const [territory, controller] of Object.entries(state.landTerritoryControllerByName) as [
+      LandTerritoryName,
+      Nationality,
+    ][]) {
+      if (controller === INITIAL_LAND_TERRITORY_CONTROL[territory]) {
+        continue;
+      }
+      const hasControllerUnit = (state.unitsByTerritoryName[territory] ?? []).some(
+        (unit) => unit.nationality === controller,
+      );
+      if (!hasControllerUnit) {
+        markers[territory] = controller;
+      }
+    }
+    return markers;
   }
 }
 
