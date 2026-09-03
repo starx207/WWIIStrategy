@@ -42,6 +42,11 @@ const placementCandidateZoneStyle = new Style({
   stroke: new Stroke({ color: 'rgba(200, 162, 74, 0.95)', width: 3 }),
 });
 
+const placementFullZoneStyle = new Style({
+  fill: new Fill({ color: 'rgba(200, 50, 40, 0.22)' }),
+  stroke: new Stroke({ color: 'rgba(200, 50, 40, 0.95)', width: 3 }),
+});
+
 export type TerritoryLayer = VectorLayer<VectorSource<Feature<Geometry>>, Feature<Geometry>>;
 
 export type TerritoryStyleId =
@@ -50,7 +55,8 @@ export type TerritoryStyleId =
   | 'selected'
   | 'movement-candidate'
   | 'movement-current'
-  | 'placement-candidate';
+  | 'placement-candidate'
+  | 'placement-full';
 
 export type TerritoryLayerOptions = {
   stylePicker: (feature: FeatureLike) => TerritoryStyleId;
@@ -84,6 +90,8 @@ export const mapTerritoriesLayer = ({
         return movementCurrentZoneStyle;
       case 'placement-candidate':
         return placementCandidateZoneStyle;
+      case 'placement-full':
+        return placementFullZoneStyle;
       default:
         return landZoneStyle;
     }

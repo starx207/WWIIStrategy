@@ -33,7 +33,6 @@ export class PlacementPanel {
   protected readonly capacityRows = this.placementService.capacityRows;
   protected readonly focusedTerritory = this.placementService.focusedTerritory;
   protected readonly stagedAtFocus = this.placementService.stagedAtFocus;
-  protected readonly stagedGroups = this.placementService.stagedGroups;
 
   protected readonly placeableGroups = computed<PlaceableGroup[]>(() => {
     const groups = new Map<UnitType, MilitaryUnit[]>();

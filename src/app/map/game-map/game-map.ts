@@ -244,10 +244,14 @@ export class GameMap implements OnInit, OnDestroy {
       }
 
       if (this.currentTurnPhase() === TurnPhase.PLACE_NEW_UNITS) {
+        const isCandidate = this.placementService.candidateTerritories().includes(territoryName);
+        if (isCandidate && this.placementService.isFull(territoryName)) {
+          return 'placement-full';
+        }
         if (territoryName === this.placementService.focusedTerritory()) {
           return 'movement-current';
         }
-        if (this.placementService.candidateTerritories().includes(territoryName)) {
+        if (isCandidate) {
           return 'placement-candidate';
         }
       }
@@ -365,6 +369,14 @@ export class GameMap implements OnInit, OnDestroy {
         ]),
       );
       this.store.dispatch(new MapActions.SelectSquad(squad, phase as MovementPhase));
+    } else if (phase === TurnPhase.PLACE_NEW_UNITS) {
+      // A click on a squad occupying a factory or sea zone would otherwise be swallowed by the
+      // squad overlay (stopEvent: true) before the map's territory-click handler sees it — focus
+      // the territory directly instead, same as clicking empty ground there.
+      const territory = squad.id.split('|')[1] as TerritoryName | undefined;
+      if (territory) {
+        this.placementService.focus(territory);
+      }
     } else {
       this.store.dispatch(new GameActions.SetContextualMenu([]));
     }

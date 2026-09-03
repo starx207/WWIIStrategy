@@ -10,7 +10,15 @@
         <div class="capacity">
           <span class="cap-label">Complex capacity:</span>
           @for (row of capacityRows(); track row.territory) {
-            <span class="cap-chip">{{ row.territory }} {{ row.placed }}/{{ row.capacity }}</span>
+            <button
+              type="button"
+              class="cap-chip"
+              [class.active]="row.territory === focusedTerritory()"
+              [class.full]="row.placed >= row.capacity"
+              (click)="reviewTerritory(row.territory)"
+            >
+              {{ row.territory }} {{ row.placed }}/{{ row.capacity }}
+            </button>
           }
         </div>
       }
@@ -40,16 +48,26 @@
                     >{{ label(group.unitType) }} &times;{{ group.units.length }}</span
                   >
                 </div>
-                <button type="button" class="primary" (click)="place(group.unitType)">Place</button>
+                <button
+                  type="button"
+                  class="primary"
+                  [disabled]="placementService.isFocusFull()"
+                  (click)="place(group.unitType)"
+                >
+                  Place
+                </button>
               </div>
+            }
+            @if (placementService.isFocusFull()) {
+              <p class="full-notice">This complex is at capacity this turn.</p>
             }
           } @else {
             <p class="empty">Nothing left to place here.</p>
           }
 
-          @if (stagedAtFocus().length > 0) {
-            <div class="staged-here">
-              <span class="staged-label">Placed here:</span>
+          <div class="staged-here">
+            <span class="staged-label">Placed here:</span>
+            @if (stagedAtFocus().length > 0) {
               <div class="placed-units">
                 @for (placement of stagedAtFocus(); track placement.unit.id) {
                   <button
@@ -66,34 +84,15 @@
                   </button>
                 }
               </div>
-            </div>
-          }
+            } @else {
+              <p class="empty-here">Nothing placed here yet.</p>
+            }
+          </div>
         </div>
       } @else if (pending().length > 0) {
         <p class="hint">Click a highlighted factory or sea zone on the map to place units there.</p>
-      } @else if (stagedGroups().length === 0) {
+      } @else if (!placementService.hasStaged()) {
         <p class="empty">No units waiting to be placed. End the turn when ready.</p>
-      }
-
-      @if (stagedGroups().length > 0) {
-        <div class="all-territories">
-          <span class="all-label">Placed this turn:</span>
-          @for (group of stagedGroups(); track group.territory) {
-            <button
-              type="button"
-              class="territory-summary-row"
-              [class.active]="group.territory === focusedTerritory()"
-              (click)="reviewTerritory(group.territory)"
-            >
-              <span>{{ group.territory }}</span>
-              <span
-                >{{ group.placements.length }} unit{{
-                  group.placements.length === 1 ? '' : 's'
-                }}</span
-              >
-            </button>
-          }
-        </div>
       }
     </div>
 

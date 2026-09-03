@@ -27,11 +27,6 @@ export interface StagedPlacement {
   isFactory: boolean;
 }
 
-export interface StagedGroup {
-  territory: TerritoryName;
-  placements: StagedPlacement[];
-}
-
 /** What kind of placement a focused territory accepts. */
 type FocusKind = 'land-air' | 'naval' | 'new-factory';
 
@@ -134,18 +129,20 @@ export class PlacementService {
   /**
    * Territories the map should highlight as clickable this phase, gated by whether there's a
    * pending unit that could actually go there — a factory tile only lights up if land/air units
-   * are pending, its adjacent sea zones only if naval units are pending, and so on.
+   * are pending, its adjacent sea zones only if naval units are pending, and so on. A factory at
+   * capacity stays a candidate (see `isFull`) so it keeps its highlight — turned red — instead of
+   * disappearing from the map.
    */
   readonly candidateTerritories = computed<TerritoryName[]>(() => {
     const territories = new Set<TerritoryName>();
 
     if (this.hasPendingCategory('land-air')) {
-      for (const factory of this.usableFactories()) {
+      for (const factory of this.factoryTerritories()) {
         territories.add(factory);
       }
     }
     if (this.hasPendingCategory('naval')) {
-      for (const factory of this.usableFactories()) {
+      for (const factory of this.factoryTerritories()) {
         for (const seaZone of adjacentSeaZones(factory)) {
           territories.add(seaZone);
         }
@@ -160,6 +157,32 @@ export class PlacementService {
     return [...territories];
   });
 
+  /**
+   * Whether a candidate territory has no mobilization room left this turn. A full land-air
+   * factory is full outright; a sea zone is full only once every factory it launches from is
+   * itself full. Used to keep the territory highlighted (in red) and its Place buttons disabled,
+   * rather than dropping it as a candidate.
+   */
+  isFull(territory: TerritoryName): boolean {
+    if (TERRITORY_INFO_BY_NAME[territory].kind === 'land') {
+      const factory = territory as LandTerritoryName;
+      return this.factoryTerritories().includes(factory) && this.remainingCapacity(factory) <= 0;
+    }
+    const launchingFactories = this.factoryTerritories().filter((factory) =>
+      (adjacentSeaZones(factory) as readonly TerritoryName[]).includes(territory),
+    );
+    return (
+      launchingFactories.length > 0 &&
+      launchingFactories.every((factory) => this.remainingCapacity(factory) <= 0)
+    );
+  }
+
+  /** Whether the currently focused territory is full (see `isFull`). */
+  readonly isFocusFull = computed(() => {
+    const territory = this.focusedTerritory();
+    return territory ? this.isFull(territory) : false;
+  });
+
   /** Focus a territory for placement, if it's currently a valid candidate. */
   focus(territory: TerritoryName): void {
     if (this.candidateTerritories().includes(territory)) {
@@ -168,9 +191,9 @@ export class PlacementService {
   }
 
   /**
-   * Focus a territory directly, bypassing the candidate check — used to revisit a territory that
-   * already has staged placements (from the all-territories summary) even if it's no longer a
-   * fresh candidate (e.g. its capacity filled up, or it has nothing left pending for it).
+   * Focus a territory directly, bypassing the candidate check — used to revisit a territory (from
+   * a "Complex capacity" chip) even if it's no longer a fresh candidate, e.g. it has nothing left
+   * pending for it.
    */
   focusDirect(territory: TerritoryName): void {
     this.focusedTerritorySignal.set(territory);
@@ -201,9 +224,11 @@ export class PlacementService {
   }
 
   /**
-   * Units placeable at the focused territory right now (from the pending queue). Empty whenever the
-   * territory isn't a live candidate any more (full capacity, already built this phase, or nothing
-   * pending fits it) — `stagedAtFocus` below still shows what's already there for removal.
+   * Units placeable at the focused territory right now (from the pending queue). Empty whenever
+   * the territory isn't a live candidate any more (already built this phase, or nothing pending
+   * fits it) — a full-capacity territory still lists its placeable groups (see `isFocusFull`) so
+   * the panel can show them with Place disabled rather than reflowing. `stagedAtFocus` below still
+   * shows what's already there for removal.
    */
   readonly placeableUnitsAtFocus = computed<MilitaryUnit[]>(() => {
     const territory = this.focusedTerritory();
@@ -223,17 +248,6 @@ export class PlacementService {
       return [];
     }
     return this.staged().filter((placement) => placement.territory === territory);
-  });
-
-  /** All staged placements grouped by territory, for the all-territories review list. */
-  readonly stagedGroups = computed<StagedGroup[]>(() => {
-    const groups = new Map<TerritoryName, StagedPlacement[]>();
-    for (const placement of this.staged()) {
-      const list = groups.get(placement.territory) ?? [];
-      list.push(placement);
-      groups.set(placement.territory, list);
-    }
-    return [...groups.entries()].map(([territory, placements]) => ({ territory, placements }));
   });
 
   readonly hasStaged = computed(() => this.staged().length > 0);
