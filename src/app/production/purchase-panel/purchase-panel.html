@@ -1,7 +1,10 @@
 @if (activeNation(); as nation) {
   <section class="purchase-panel">
     <header class="panel-head">
-      <h2>Purchase Units</h2>
+      <div class="head-row">
+        <h2>Purchase Units</h2>
+        <button type="button" class="skip-link" (click)="skip()">Skip</button>
+      </div>
       <div class="budget">
         <span>Treasury: {{ treasury() }}</span>
         <span>Spent: {{ totalCost() }}</span>
@@ -15,12 +18,18 @@
           <div class="icon">
             <ww2-military-unit-icon [nationality]="nation" [unitType]="unitType" />
           </div>
-          <div class="name">{{ label(unitType) }}</div>
-          <div class="unit-cost">
-            {{ cost(unitType) }} IPC
-            @if (quantityOf(unitType) > 0) {
-              <span class="subtotal">= {{ subtotal(unitType) }}</span>
-            }
+          <div class="info">
+            <div class="name">{{ label(unitType) }}</div>
+            <div class="unit-cost">
+              @if (quantityOf(unitType) > 0) {
+                <span class="subtotal"
+                  >{{ quantityOf(unitType) }} &times; {{ cost(unitType) }} =
+                  {{ subtotal(unitType) }} IPC</span
+                >
+              } @else {
+                {{ cost(unitType) }} IPC
+              }
+            </div>
           </div>
           <div class="qty-controls">
             <button
@@ -46,7 +55,6 @@
     </div>
 
     <footer class="panel-foot">
-      <button type="button" class="secondary" (click)="skip()">Skip</button>
       <button type="button" class="secondary" [disabled]="cart().length === 0" (click)="clear()">
         Clear
       </button>
