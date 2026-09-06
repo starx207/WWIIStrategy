@@ -15,7 +15,7 @@ import { Store } from '@ngxs/store';
 import { FeatureLike } from 'ol/Feature';
 import { Map as OlMap } from 'ol';
 import { containsExtent, getCenter } from 'ol/extent';
-import { configureMap } from '../map-config';
+import { configureMap, mapExtent } from '../map-config';
 import { mapTerritoriesLayer, TerritoryLayer, TerritoryStyleId } from '../layers/map-territories';
 import { MapSelectors } from '../map-selectors';
 import { connectSquadOverlaysToMap } from '../overlays/squad-placement';
@@ -121,6 +121,10 @@ export class GameMap implements OnInit, OnDestroy {
       if (request) {
         this.ensureTerritoryVisible(request.territory);
       }
+    }),
+    effect(() => {
+      const _ = this.gamePhase();
+      this.map.getView().fit([...mapExtent]);
     }),
   ];
 

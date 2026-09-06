@@ -8,7 +8,7 @@ const mapWidth = 2772;
 const mapHeight = 1512;
 const mapCode = 'AABOARD';
 
-const mapExtent = [0, 0, mapWidth, mapHeight] as const;
+export const mapExtent = [0, 0, mapWidth, mapHeight] as const;
 
 export const mapProjection = new Projection({
   code: mapCode,
