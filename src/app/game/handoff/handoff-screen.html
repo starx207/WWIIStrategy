@@ -19,6 +19,13 @@
           <span class="value">{{ axisCities() }} / {{ threshold() }}</span>
         </div>
       </div>
+      <div class="cities">
+        @for (city of cityControl(); track city.city) {
+          <div [className]="city.alliance === 'axis' ? 'side axis' : 'side allies'">
+            <span class="value">{{ city.city }}</span>
+          </div>
+        }
+      </div>
     </div>
 
     <button type="button" class="begin" (click)="begin()">

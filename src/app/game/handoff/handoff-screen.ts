@@ -1,10 +1,10 @@
 import { Component, computed, inject } from '@angular/core';
 import { Store } from '@ngxs/store';
-import { Alliance } from '@ww2/shared/nationality';
+import { Alliance, NATION_ALLIANCE } from '@ww2/shared/nationality';
 import { NATIONALITY_LABEL } from '@ww2/shared/nationality-label';
 import { MapSelectors } from '@ww2/map/map-selectors';
 import { countVictoryCities } from '@ww2/victory/rules/victory';
-import { VICTORY_CITY_THRESHOLD } from '@ww2/victory/data/victory-cities';
+import { VICTORY_CITIES, VICTORY_CITY_THRESHOLD } from '@ww2/victory/data/victory-cities';
 import { SessionSelectors, playerForNation } from '../../session/session-selectors';
 import { TurnFlowService } from '../turn-flow.service';
 
@@ -50,6 +50,17 @@ export class HandoffScreen {
   protected readonly threshold = computed(
     () => VICTORY_CITY_THRESHOLD[this.houseRules().victoryCondition],
   );
+
+  protected readonly cityControl = computed(() => {
+    return VICTORY_CITIES.map((city) => {
+      const controlledBy = this.landControl()[city.territory];
+      const alliance = NATION_ALLIANCE[controlledBy];
+      return {
+        city: city.city,
+        alliance: alliance,
+      };
+    });
+  });
 
   protected begin(): void {
     this.turnFlow.completeHandoff();
