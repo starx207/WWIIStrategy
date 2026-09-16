@@ -175,12 +175,25 @@ export class MapState {
   @Action(MapActions.UndoSquadMovementStep)
   undoSquadMovementStep(context: MapStateContext) {
     const state = context.getState();
-    const selectedSquadId = state.selectedSquad?.id;
+    const selected = state.selectedSquad;
+    const selectedSquadId = selected?.id;
     const selectedPlan = selectedSquadId
       ? state.movementPlansBySquadId[selectedSquadId]
       : undefined;
 
     if (!selectedSquadId || !selectedPlan || selectedPlan.path.length === 0) {
+      // Nothing to pop on the transport's own plan — but a load lives on the boarding land squad's
+      // plan (that squad is hidden while aboard), so let Undo on the transport reverse the most
+      // recent load, keeping load/move/unload undoable as one operation.
+      if (selected) {
+        const loadPlanIds = associatedLoadPlanSquadIds(state, selected.unitIds);
+        if (loadPlanIds.length > 0) {
+          const toRemove = loadPlanIds[loadPlanIds.length - 1];
+          const { [toRemove]: _removedLoad, ...movementPlansBySquadId } =
+            state.movementPlansBySquadId;
+          context.patchState({ movementPlansBySquadId });
+        }
+      }
       return;
     }
 
@@ -276,14 +289,24 @@ export class MapState {
   @Action(MapActions.ClearSelectedSquadMovementPlan)
   clearSelectedSquadMovementPlan(context: MapStateContext) {
     const state = context.getState();
-    const selectedSquadId = state.selectedSquad?.id;
-
-    if (!selectedSquadId || !state.movementPlansBySquadId[selectedSquadId]) {
+    const selected = state.selectedSquad;
+    if (!selected) {
       return;
     }
 
-    const { [selectedSquadId]: _clearedPlan, ...movementPlansBySquadId } =
-      state.movementPlansBySquadId;
+    // Clear the selected squad's plan plus any loads onto it (a transport owns its whole operation),
+    // so clearing a transport also releases the units it had queued to board.
+    const toRemove = new Set<string>(associatedLoadPlanSquadIds(state, selected.unitIds));
+    if (state.movementPlansBySquadId[selected.id]) {
+      toRemove.add(selected.id);
+    }
+    if (toRemove.size === 0) {
+      return;
+    }
+
+    const movementPlansBySquadId = Object.fromEntries(
+      Object.entries(state.movementPlansBySquadId).filter(([squadId]) => !toRemove.has(squadId)),
+    );
     context.patchState({ movementPlansBySquadId });
   }
 
@@ -527,6 +550,20 @@ export class MapState {
       });
     }
   }
+}
+
+/** Squad ids of the deferred load plans whose boarding units are aboard one of `transportUnitIds`
+ * (a transport squad's units). Insertion order ≈ chronological, so the last is the most recent. */
+function associatedLoadPlanSquadIds(state: MapStateModel, transportUnitIds: string[]): string[] {
+  const ids = new Set(transportUnitIds);
+  const squadIds: string[] = [];
+  for (const [squadId, plan] of Object.entries(state.movementPlansBySquadId)) {
+    const terminal = plan.path[plan.path.length - 1];
+    if (terminal?.cargo?.role === 'load' && ids.has(terminal.cargo.transportId)) {
+      squadIds.push(squadId);
+    }
+  }
+  return squadIds;
 }
 
 function findUnitById(state: MapStateModel, unitId: string): MilitaryUnit | undefined {

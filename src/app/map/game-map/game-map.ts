@@ -65,11 +65,8 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly nextAdjacentDestinations = this.store.selectSignal(
     MapSelectors.selectedSquadNextAdjacentDestinations,
   );
-  private readonly selectedMovementPlan = this.store.selectSignal(
-    MapSelectors.selectedSquadMovementPlan,
-  );
-  private readonly canChangeSelectedMovementPlan = computed(
-    () => (this.selectedMovementPlan()?.path.length ?? 0) > 0,
+  private readonly canChangeSelectedMovementPlan = this.store.selectSignal(
+    MapSelectors.selectedSquadCanUndo,
   );
   private readonly hasMovementPlansWithPath = this.store.selectSignal(
     MapSelectors.hasMovementPlansWithPath,

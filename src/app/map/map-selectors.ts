@@ -160,6 +160,27 @@ export class MapSelectors {
     return Object.values(state.movementPlansBySquadId).some((plan) => plan.path.length > 0);
   }
 
+  /**
+   * Whether Undo / Clear Squad should be enabled for the selected squad: it has its own planned
+   * steps, or (for a transport) a deferred load onto it — which lives on the boarding land squad's
+   * plan but is reversible from the transport (see UndoSquadMovementStep).
+   */
+  @Selector([MapState])
+  static selectedSquadCanUndo(state: MapStateModel): boolean {
+    const selected = state.selectedSquad;
+    if (!selected) {
+      return false;
+    }
+    if ((state.movementPlansBySquadId[selected.id]?.path.length ?? 0) > 0) {
+      return true;
+    }
+    const ids = new Set(selected.unitIds);
+    return Object.values(state.movementPlansBySquadId).some((plan) => {
+      const terminal = plan.path[plan.path.length - 1];
+      return terminal?.cargo?.role === 'load' && ids.has(terminal.cargo.transportId);
+    });
+  }
+
   @Selector([MapState, SettingsSelectors.rules, GameSelectors.turnPhase])
   static selectedSquadRemainingMovement(
     state: MapStateModel,

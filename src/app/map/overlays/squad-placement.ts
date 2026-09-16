@@ -200,9 +200,13 @@ function buildDesiredSquadOverlays(
 
     const squad = findSquadById(squadsByTerritoryName, plan.squadId);
     const startCoordinate = squadLayoutCoordinatesBySquadId[plan.squadId];
-    const finalStep = plan.path[plan.path.length - 1];
+    // A trailing load/unload cargo step is a pickup/drop target, not a place the squad ends up —
+    // the transport's icon belongs at its last actual (non-cargo) position, or where it started if
+    // it only loads/unloads without moving.
+    const moveSteps = plan.path.filter((step) => !step.cargo);
+    const finalCoordinate = moveSteps[moveSteps.length - 1]?.coordinate ?? startCoordinate;
 
-    if (!squad) {
+    if (!squad || !finalCoordinate) {
       continue;
     }
 
@@ -223,7 +227,7 @@ function buildDesiredSquadOverlays(
       key: 'final:' + plan.squadId,
       squadId: squad.id,
       layout: createSingleSquadLayout(squad),
-      coordinate: finalStep.coordinate,
+      coordinate: finalCoordinate,
       variant: selectedSquad?.id === plan.squadId ? 'movement-final' : 'normal',
       disabled: false,
       onTop: true,
