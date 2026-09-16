@@ -47,6 +47,18 @@ const placementFullZoneStyle = new Style({
   stroke: new Stroke({ color: 'rgba(200, 50, 40, 0.95)', width: 3 }),
 });
 
+// Amphibious logistics cues, kept distinct from the movement blue/green: teal = a sea zone a land
+// squad can load onto; violet = a coast a loaded transport can unload onto.
+const loadTargetZoneStyle = new Style({
+  fill: new Fill({ color: 'rgba(64, 196, 200, 0.22)' }),
+  stroke: new Stroke({ color: 'rgba(64, 196, 200, 0.95)', width: 3 }),
+});
+
+const unloadTargetZoneStyle = new Style({
+  fill: new Fill({ color: 'rgba(150, 110, 210, 0.24)' }),
+  stroke: new Stroke({ color: 'rgba(150, 110, 210, 0.95)', width: 3 }),
+});
+
 export type TerritoryLayer = VectorLayer<VectorSource<Feature<Geometry>>, Feature<Geometry>>;
 
 export type TerritoryStyleId =
@@ -56,7 +68,9 @@ export type TerritoryStyleId =
   | 'movement-candidate'
   | 'movement-current'
   | 'placement-candidate'
-  | 'placement-full';
+  | 'placement-full'
+  | 'load-target'
+  | 'unload-target';
 
 export type TerritoryLayerOptions = {
   stylePicker: (feature: FeatureLike) => TerritoryStyleId;
@@ -92,6 +106,10 @@ export const mapTerritoriesLayer = ({
         return placementCandidateZoneStyle;
       case 'placement-full':
         return placementFullZoneStyle;
+      case 'load-target':
+        return loadTargetZoneStyle;
+      case 'unload-target':
+        return unloadTargetZoneStyle;
       default:
         return landZoneStyle;
     }

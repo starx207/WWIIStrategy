@@ -26,6 +26,14 @@ import { collectCombatCommittedUnitIds } from './rules/combat-commitments';
 
 export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
 
+/**
+ * Marks a movement step as a deferred amphibious logistics action rather than an ordinary move:
+ * a land squad's terminal step into an adjacent sea zone means "load onto this transport"; a
+ * transport's terminal step onto an adjacent land territory means "unload cargo here". These are
+ * applied at phase exit (see `executeMovementPlans`), so they stay undoable like any other step.
+ */
+export type SquadMovementStepCargo = { role: 'load'; transportId: string } | { role: 'unload' };
+
 export interface SquadMovementStep {
   territoryName: TerritoryName;
   coordinate: Coordinate;
@@ -33,6 +41,8 @@ export interface SquadMovementStep {
   // Aircraft only: the player manually designated this step as the combat engagement, overriding
   // the auto "last engageable enemy" pick. Survives path recompute so the choice sticks.
   manualCombat?: boolean;
+  // Present on a terminal load/unload step; see SquadMovementStepCargo.
+  cargo?: SquadMovementStepCargo;
 }
 
 export interface SquadMovementPlan {
@@ -135,6 +145,7 @@ export class MapState {
         territoryName: action.territoryName,
         coordinate: [...action.coordinate],
         combatType: 'none',
+        ...(action.cargo ? { cargo: action.cargo } : {}),
       },
     ];
 
@@ -316,7 +327,7 @@ export class MapState {
   @Action(MapActions.ApplyMovementPlans)
   applyMovementPlans(context: MapStateContext, action: MapActions.ApplyMovementPlans) {
     const state = context.getState();
-    const { unitsByTerritoryName, remainingPlans } = executeMovementPlans(
+    const { unitsByTerritoryName, cargoByCarrierUnitId, remainingPlans } = executeMovementPlans(
       state.unitsByTerritoryName,
       state.movementPlansBySquadId,
       action.phase,
@@ -325,6 +336,7 @@ export class MapState {
 
     context.patchState({
       unitsByTerritoryName,
+      cargoByCarrierUnitId,
       movementPlansBySquadId: remainingPlans,
       selectedSquad: undefined,
     });
@@ -544,7 +556,13 @@ function withRecomputedCombatTypes(
         determineMovementStepCombatType({ unit, territory, unitsByTerritoryName }),
       );
 
-  return steps.map((step, index) => ({ ...step, combatType: combatTypes[index] }));
+  return steps.map((step, index) => ({
+    ...step,
+    // Load/unload logistics steps are never troop combat into that territory (a land squad's step
+    // is a sea zone; a transport's is a coast it drops cargo on). WS7b will set 'combat' on a
+    // hostile unload; for now every deferred cargo step is 'none'.
+    combatType: step.cargo ? 'none' : combatTypes[index],
+  }));
 }
 
 function copyCoordinatesBySquadId(

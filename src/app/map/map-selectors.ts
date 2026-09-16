@@ -4,10 +4,15 @@ import { MilitaryUnitSquad } from '@ww2/shared/military-unit-squad';
 import { MapState, MapStateModel, SquadMovementPlan } from './map-state';
 import { LandTerritoryName, TerritoryName } from '../territories/territory-names';
 import { ADJACENT_TERRITORIES_BY_NAME } from '../territories/territory-adjacency';
-import { Nationality } from '@ww2/shared/nationality';
+import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
 import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { CargoByCarrierUnitId, allCargoUnitIds } from './rules/carrier-cargo';
-import { allAmphibiousUnitIds, canUnloadTo, findLoadableTransport } from './rules/amphibious';
+import {
+  allAmphibiousUnitIds,
+  canUnloadTo,
+  findLoadableTransport,
+  plannedTransportSeaPosition,
+} from './rules/amphibious';
 import { calculateAdjacentDestinations } from './rules/movement-calculator';
 import { parseSquadId } from './rules/movement-execution';
 import { createResolvedRuleContext } from './rule-context.factory';
@@ -22,7 +27,35 @@ import { INITIAL_LAND_TERRITORY_CONTROL } from './initial-map-layout';
 
 export type SelectedSquadState = NonNullable<MapStateModel['selectedSquad']>;
 
+/** Territories the selected squad can load onto / unload into, split by kind for distinct map cues. */
+export interface SquadCargoDestinations {
+  load: TerritoryName[];
+  unload: TerritoryName[];
+}
+
 type SquadGroups = Record<string, MilitaryUnit[]>;
+
+/** Whether a transport squad will hold cargo when its plan executes — already loaded, or a load
+ * step planned this phase targets one of its transports. */
+function transportWillHaveCargo(state: MapStateModel, transportUnitIds: string[]): boolean {
+  if (transportUnitIds.some((id) => (state.cargoByCarrierUnitId[id] ?? []).length > 0)) {
+    return true;
+  }
+  const ids = new Set(transportUnitIds);
+  return Object.values(state.movementPlansBySquadId).some((plan) => {
+    const terminal = plan.path[plan.path.length - 1];
+    return terminal?.cargo?.role === 'load' && ids.has(terminal.cargo.transportId);
+  });
+}
+
+function isHostileCoast(
+  state: MapStateModel,
+  territory: TerritoryName,
+  nation: Nationality,
+): boolean {
+  const controller = state.landTerritoryControllerByName[territory as LandTerritoryName];
+  return controller !== undefined && NATION_ALLIANCE[controller] !== NATION_ALLIANCE[nation];
+}
 
 export class MapSelectors {
   @Selector([MapState])
@@ -144,32 +177,40 @@ export class MapSelectors {
   }
 
   /**
-   * Adjacent territories the selected squad could load onto / unload into: a loadable sea zone for
-   * a selected land unit, or an unloadable coast for a selected loaded transport. Disjoint from
-   * `selectedSquadNextAdjacentDestinations` (cross-kind moves are never ordinary destinations) but
-   * highlighted the same way — mirrors the guards in `GameMap.tryLoadOrUnload`.
+   * Territories the selected squad could load onto / unload into, tagged by kind so the map can
+   * color them distinctly. `load` = adjacent sea zones holding a same-nation transport with room
+   * (offered only while the land squad still has unspent movement). `unload` = friendly coasts
+   * adjacent to the transport's *planned* final sea position, once it will hold cargo. Disjoint from
+   * `selectedSquadNextAdjacentDestinations` (cross-kind moves are never ordinary destinations) —
+   * mirrors the guards in `GameMap.tryLoadOrUnload`.
    */
   @Selector([MapState, GameSelectors.gamePhase])
   static selectedSquadCargoDestinations(
     state: MapStateModel,
     gamePhase: GamePhase,
-  ): TerritoryName[] {
+  ): SquadCargoDestinations {
+    const empty: SquadCargoDestinations = { load: [], unload: [] };
     const selectedSquad = state.selectedSquad;
     if (!selectedSquad || selectedSquad.unitIds.length === 0) {
-      return [];
+      return empty;
     }
 
     const parsed = parseSquadId(selectedSquad.id);
     const selectedTerritory = selectedSquad.id.split('|')[1] as TerritoryName | undefined;
     const nation = nationalityForGamePhase(gamePhase);
     if (!parsed || !selectedTerritory || !nation) {
-      return [];
+      return empty;
     }
 
-    const adjacent = ADJACENT_TERRITORIES_BY_NAME[selectedTerritory] ?? [];
+    const plan = state.movementPlansBySquadId[selectedSquad.id];
 
     if (LAND_UNIT_TYPES.includes(parsed.unitType)) {
-      return adjacent.filter((territory) =>
+      // A land squad that has already spent movement can no longer load (its move is committed).
+      if ((plan?.path.length ?? 0) > 0) {
+        return empty;
+      }
+      const adjacent = ADJACENT_TERRITORIES_BY_NAME[selectedTerritory] ?? [];
+      const load = adjacent.filter((territory) =>
         findLoadableTransport({
           fromTerritory: selectedTerritory,
           seaZone: territory,
@@ -179,18 +220,27 @@ export class MapSelectors {
           cargoByCarrierUnitId: state.cargoByCarrierUnitId,
         }),
       );
+      return { load, unload: [] };
     }
 
     if (parsed.unitType === UnitType.TRANSPORT) {
-      const transportId = selectedSquad.unitIds[0];
-      const hasCargo = (state.cargoByCarrierUnitId[transportId] ?? []).length > 0;
-      if (!hasCargo) {
-        return [];
+      // One unload target per plan; the player undoes to change it.
+      if (plan && plan.path.at(-1)?.cargo) {
+        return empty;
       }
-      return adjacent.filter((territory) => canUnloadTo(selectedTerritory, territory));
+      if (!transportWillHaveCargo(state, selectedSquad.unitIds)) {
+        return empty;
+      }
+      const seaPosition = plannedTransportSeaPosition(plan, selectedTerritory);
+      const adjacent = ADJACENT_TERRITORIES_BY_NAME[seaPosition] ?? [];
+      const unload = adjacent.filter(
+        (territory) =>
+          canUnloadTo(seaPosition, territory) && !isHostileCoast(state, territory, nation),
+      );
+      return { load: [], unload };
     }
 
-    return [];
+    return empty;
   }
 
   @Selector([MapState])

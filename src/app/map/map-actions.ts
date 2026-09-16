@@ -5,6 +5,7 @@ import { LandTerritoryName, TerritoryName } from '../territories/territory-names
 import { Nationality } from '@ww2/shared/nationality';
 import { Coordinate } from 'ol/coordinate';
 import { MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
+import type { SquadMovementStepCargo } from './map-state';
 
 export namespace MapActions {
   const ACTION_SOURCE = '[Map]';
@@ -24,6 +25,8 @@ export namespace MapActions {
     constructor(
       public territoryName: TerritoryName,
       public coordinate: Coordinate,
+      // When set, the appended step is a deferred load/unload rather than an ordinary move.
+      public cargo?: SquadMovementStepCargo,
     ) {}
   }
 

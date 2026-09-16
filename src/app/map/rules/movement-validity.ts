@@ -94,6 +94,13 @@ export const isMovementPlanValid = ({
     return true;
   }
 
+  // Deferred load/unload steps are gated when authored (see selectedSquadCargoDestinations) and do
+  // not follow ordinary entry rules — a land squad's terminal step is a sea zone, a transport's is
+  // a coast it drops cargo on — so a cargo-terminated plan is always valid here.
+  if (plan.path[plan.path.length - 1].cargo) {
+    return true;
+  }
+
   const unitType = unit.type;
   if (AIR_UNIT_TYPES.includes(unitType)) {
     return isValidAirMovement({

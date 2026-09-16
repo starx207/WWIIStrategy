@@ -21,13 +21,19 @@ const INACTIVE_FILL = 'rgba(46, 128, 255, 0.18)';
 const COMBAT_COLOR = 'rgba(189, 0, 0, 0.82)';
 const INVALID_COLOR = 'rgba(189, 0, 0, 0.9)';
 const NODE_BORDER_COLOR = 'rgba(255, 255, 255, 0.9)';
+// Match the load/unload territory highlight colors (map-territories.ts).
+const LOAD_COLOR = 'rgba(64, 196, 200, 0.95)';
+const UNLOAD_COLOR = 'rgba(150, 110, 210, 0.95)';
 
 type MovementFeatureKind = 'segment' | 'arrow' | 'start' | 'final';
+type MovementCargoRole = 'load' | 'unload';
 
 type MovementPlanFeatureProperties = {
   active: boolean;
   kind: MovementFeatureKind;
   subKind?: SquadMovementStepCombatType;
+  // Present on a node whose step is a deferred load/unload — drawn as a distinct cue.
+  cargoRole?: MovementCargoRole;
   // Present on node features ('arrow' / 'final') so a map click can resolve back to a plan step.
   squadId?: string;
   stepIndex?: number;
@@ -121,6 +127,7 @@ function refreshMovementPlanLayer(
           active,
           kind: 'arrow',
           subKind: planStep?.combatType,
+          cargoRole: planStep?.cargo?.role,
           squadId: plan.squadId,
           stepIndex: index,
         }),
@@ -133,6 +140,7 @@ function movementPlanStyle(feature: FeatureLike): Style | Style[] {
   const active = feature.get('active') as MovementPlanFeatureProperties['active'];
   const kind = feature.get('kind') as MovementPlanFeatureProperties['kind'];
   const subKind = feature.get('subKind') as MovementPlanFeatureProperties['subKind'];
+  const cargoRole = feature.get('cargoRole') as MovementPlanFeatureProperties['cargoRole'];
   const valid = feature.get('valid') as MovementPlanFeatureProperties['valid'];
   const color = active ? ACTIVE_COLOR : INACTIVE_COLOR;
   const warningColor = active ? ACTIVE_WARNING_COLOR : INACTIVE_WARNING_COLOR;
@@ -145,7 +153,9 @@ function movementPlanStyle(feature: FeatureLike): Style | Style[] {
         stroke: new Stroke({ color, width: lineWidth, lineDash: active ? undefined : [8, 8] }),
       });
     case 'arrow':
-      return nodeStyle(active, subKind, color, warningColor);
+      return cargoRole
+        ? cargoNodeStyle(active, cargoRole)
+        : nodeStyle(active, subKind, color, warningColor);
     case 'start':
       return new Style({
         image: new CircleStyle({
@@ -185,6 +195,19 @@ function nodeStyle(
     default:
       return normalNodeStyle(active, color);
   }
+}
+
+/** Deferred load/unload: a diamond in the load (teal) / unload (violet) cue color. */
+function cargoNodeStyle(active: boolean, role: MovementCargoRole): Style {
+  return new Style({
+    image: new RegularShape({
+      points: 4,
+      radius: active ? 9 : 7,
+      angle: Math.PI / 4,
+      fill: new Fill({ color: role === 'load' ? LOAD_COLOR : UNLOAD_COLOR }),
+      stroke: new Stroke({ color: NODE_BORDER_COLOR, width: active ? 2 : 1.5 }),
+    }),
+  });
 }
 
 /** Normal move: solid circle with a white border. */

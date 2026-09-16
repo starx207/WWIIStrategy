@@ -5,12 +5,26 @@ import { LandTerritoryName, TerritoryName } from '../../territories/territory-na
 import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
 import { ADJACENT_TERRITORIES_BY_NAME } from '../../territories/territory-adjacency';
 import { CargoByCarrierUnitId, remainingCapacity } from './carrier-cargo';
+import type { SquadMovementPlan } from '../map-state';
 
 type UnitsByTerritory = Partial<Record<TerritoryName, MilitaryUnit[]>>;
 type AmphibiousAssaults = Partial<Record<LandTerritoryName, string[]>>;
 
 function isAdjacent(a: TerritoryName, b: TerritoryName): boolean {
   return (ADJACENT_TERRITORIES_BY_NAME[a] ?? []).includes(b);
+}
+
+/**
+ * The sea zone a transport will occupy once its plan executes — its last ordinary (non-cargo) step,
+ * or its current territory if it has no planned move. Used to offer/authorize unload targets against
+ * where the transport *will* be, not where it currently sits.
+ */
+export function plannedTransportSeaPosition(
+  plan: SquadMovementPlan | undefined,
+  currentTerritory: TerritoryName,
+): TerritoryName {
+  const moveSteps = (plan?.path ?? []).filter((step) => !step.cargo);
+  return moveSteps[moveSteps.length - 1]?.territoryName ?? currentTerritory;
 }
 
 /**
