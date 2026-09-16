@@ -57,14 +57,49 @@ function isHostileCoast(
   return controller !== undefined && NATION_ALLIANCE[controller] !== NATION_ALLIANCE[nation];
 }
 
+/**
+ * A deferred load step (a land squad's plan whose terminal step targets a transport) doesn't
+ * physically move its units until phase exit — but the transport should already read as carrying
+ * them. This resolves each planned load to the boarding units so the map can hide them at their
+ * origin and show their types on the target transport's cargo badge right away.
+ */
+function collectPlannedLoads(state: MapStateModel): {
+  hiddenUnitIds: Set<string>;
+  cargoTypesByTransportId: Record<string, UnitType[]>;
+} {
+  const hiddenUnitIds = new Set<string>();
+  const cargoTypesByTransportId: Record<string, UnitType[]> = {};
+  for (const plan of Object.values(state.movementPlansBySquadId)) {
+    const terminal = plan.path[plan.path.length - 1];
+    if (terminal?.cargo?.role !== 'load') {
+      continue;
+    }
+    const squad = parseSquadId(plan.squadId);
+    if (!squad) {
+      continue;
+    }
+    const boarding = (state.unitsByTerritoryName[plan.startingTerritoryName] ?? []).filter(
+      (unit) => unit.nationality === squad.nationality && unit.type === squad.unitType,
+    );
+    const transportId = terminal.cargo.transportId;
+    for (const unit of boarding) {
+      hiddenUnitIds.add(unit.id);
+      (cargoTypesByTransportId[transportId] ??= []).push(unit.type);
+    }
+  }
+  return { hiddenUnitIds, cargoTypesByTransportId };
+}
+
 export class MapSelectors {
   @Selector([MapState])
   static squadsByTerritoryName(
     state: MapStateModel,
   ): Record<TerritoryName, MilitaryUnitSquad<MilitaryUnit>[]> {
+    const plannedLoads = collectPlannedLoads(state);
     const hiddenUnitIds = new Set([
       ...allCargoUnitIds(state.cargoByCarrierUnitId),
       ...allAmphibiousUnitIds(state.amphibiousAssaultsByTerritory),
+      ...plannedLoads.hiddenUnitIds,
     ]);
     return Object.fromEntries(
       Object.entries(state.unitsByTerritoryName)
@@ -75,6 +110,7 @@ export class MapSelectors {
             units ?? [],
             state.cargoByCarrierUnitId,
             hiddenUnitIds,
+            plannedLoads.cargoTypesByTransportId,
           ),
         ])
         .filter(([, squads]) => squads.length > 0),
@@ -327,6 +363,7 @@ function createMapSquads(
   units: MilitaryUnit[],
   cargoByCarrierUnitId: CargoByCarrierUnitId,
   hiddenUnitIds: Set<string>,
+  plannedCargoTypesByTransportId: Record<string, UnitType[]> = {},
 ): MilitaryUnitSquad<MilitaryUnit>[] {
   // Loaded cargo (and units staged for an amphibious assault) are shown on their carrier / not at all.
   const renderableUnits = units.filter((unit) => !hiddenUnitIds.has(unit.id));
@@ -347,12 +384,15 @@ function createMapSquads(
       const [nationality, unitType] = groupKey.split('|');
       const cargo: UnitType[] =
         unitType === UnitType.AIRCRAFT_CARRIER || unitType === UnitType.TRANSPORT
-          ? squadUnits.flatMap((carrier) =>
-              (cargoByCarrierUnitId[carrier.id] ?? []).flatMap((cargoId) => {
+          ? squadUnits.flatMap((carrier) => [
+              ...(cargoByCarrierUnitId[carrier.id] ?? []).flatMap((cargoId) => {
                 const cargoUnit = unitById.get(cargoId);
                 return cargoUnit ? [cargoUnit.type] : [];
               }),
-            )
+              // Units with a planned (not-yet-executed) load onto this transport already read as
+              // aboard, so they show on its cargo badge while their origin tile hides them.
+              ...(plannedCargoTypesByTransportId[carrier.id] ?? []),
+            ])
           : [];
       return new MilitaryUnitSquad(
         squadUnits,
