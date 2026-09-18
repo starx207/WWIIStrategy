@@ -154,7 +154,7 @@ function movementPlanStyle(feature: FeatureLike): Style | Style[] {
       });
     case 'arrow':
       return cargoRole
-        ? cargoNodeStyle(active, cargoRole)
+        ? cargoNodeStyle(active, cargoRole, subKind === 'combat')
         : nodeStyle(active, subKind, color, warningColor);
     case 'start':
       return new Style({
@@ -197,14 +197,18 @@ function nodeStyle(
   }
 }
 
-/** Deferred load/unload: a diamond in the load (teal) / unload (violet) cue color. */
-function cargoNodeStyle(active: boolean, role: MovementCargoRole): Style {
+/**
+ * Deferred load/unload: a diamond in the load (teal) / unload (violet) cue color. A hostile unload
+ * is an amphibious assault, so it is drawn in the combat (red) color instead.
+ */
+function cargoNodeStyle(active: boolean, role: MovementCargoRole, combat: boolean): Style {
+  const fill = role === 'load' ? LOAD_COLOR : combat ? COMBAT_COLOR : UNLOAD_COLOR;
   return new Style({
     image: new RegularShape({
       points: 4,
       radius: active ? 9 : 7,
       angle: Math.PI / 4,
-      fill: new Fill({ color: role === 'load' ? LOAD_COLOR : UNLOAD_COLOR }),
+      fill: new Fill({ color: fill }),
       stroke: new Stroke({ color: NODE_BORDER_COLOR, width: active ? 2 : 1.5 }),
     }),
   });

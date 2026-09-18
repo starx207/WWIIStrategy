@@ -19,9 +19,8 @@ import {
 } from './rules/destination-rules';
 import { AIR_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { isMovementPlanValid } from './rules/movement-validity';
-import { executeMovementPlans } from './rules/movement-execution';
+import { executeAmphibiousCombatMovePlans, executeMovementPlans } from './rules/movement-execution';
 import { resolveAutomaticCaptures } from './rules/auto-capture';
-import { loadCargo, stageAmphibiousAssault, unloadToTerritory } from './rules/amphibious';
 import { collectCombatCommittedUnitIds } from './rules/combat-commitments';
 
 export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
@@ -152,7 +151,12 @@ export class MapState {
     const unit = findUnitForSelectedSquad(state)!;
     const newPlan = {
       ...selectedPlan,
-      path: withRecomputedCombatTypes(unit, appendedSteps, state.unitsByTerritoryName),
+      path: withRecomputedCombatTypes(
+        unit,
+        appendedSteps,
+        state.unitsByTerritoryName,
+        state.landTerritoryControllerByName,
+      ),
     };
     const isValid = isMovementPlanValid({
       unit: unit,
@@ -205,7 +209,12 @@ export class MapState {
     const newPlan = {
       ...selectedPlan,
       path: unit
-        ? withRecomputedCombatTypes(unit, remainingSteps, state.unitsByTerritoryName)
+        ? withRecomputedCombatTypes(
+            unit,
+            remainingSteps,
+            state.unitsByTerritoryName,
+            state.landTerritoryControllerByName,
+          )
         : remainingSteps,
     };
     const isValid =
@@ -266,7 +275,12 @@ export class MapState {
 
     const newPlan = {
       ...selectedPlan,
-      path: withRecomputedCombatTypes(unit, steps, state.unitsByTerritoryName),
+      path: withRecomputedCombatTypes(
+        unit,
+        steps,
+        state.unitsByTerritoryName,
+        state.landTerritoryControllerByName,
+      ),
     };
     const isValid = isMovementPlanValid({
       unit: unit,
@@ -485,70 +499,27 @@ export class MapState {
     context.patchState({ amphibiousAssaultsByTerritory: rest });
   }
 
-  @Action(MapActions.LoadCargo)
-  loadCargo(context: MapStateContext, action: MapActions.LoadCargo) {
+  @Action(MapActions.ApplyAmphibiousCombatMovePlans)
+  applyAmphibiousCombatMovePlans(
+    context: MapStateContext,
+    action: MapActions.ApplyAmphibiousCombatMovePlans,
+  ) {
     const state = context.getState();
-    const transportTerritory = findTerritoryForUnitId(state, action.transportId);
-    if (!transportTerritory) {
-      return;
-    }
-
-    const result = loadCargo({
-      unitsByTerritory: state.unitsByTerritoryName,
+    const result = executeAmphibiousCombatMovePlans({
+      unitsByTerritoryName: state.unitsByTerritoryName,
+      movementPlansBySquadId: state.movementPlansBySquadId,
       cargoByCarrierUnitId: state.cargoByCarrierUnitId,
-      transportId: action.transportId,
-      transportTerritory,
-      unitIds: action.unitIds,
-      fromTerritory: action.fromTerritory,
+      amphibiousAssaultsByTerritory: state.amphibiousAssaultsByTerritory,
+      landControl: state.landTerritoryControllerByName,
+      nation: action.nationality,
     });
 
     context.patchState({
       unitsByTerritoryName: result.unitsByTerritoryName,
       cargoByCarrierUnitId: result.cargoByCarrierUnitId,
-      selectedSquad: undefined,
+      amphibiousAssaultsByTerritory: result.amphibiousAssaultsByTerritory,
+      movementPlansBySquadId: result.remainingPlans,
     });
-  }
-
-  @Action(MapActions.UnloadCargo)
-  unloadCargo(context: MapStateContext, action: MapActions.UnloadCargo) {
-    const state = context.getState();
-    const transport = findUnitById(state, action.transportId);
-    const transportTerritory = findTerritoryForUnitId(state, action.transportId);
-    if (!transport || !transportTerritory) {
-      return;
-    }
-
-    const controller = state.landTerritoryControllerByName[action.targetTerritory];
-    const hostile =
-      controller !== undefined &&
-      NATION_ALLIANCE[controller] !== NATION_ALLIANCE[transport.nationality];
-
-    if (hostile) {
-      const result = stageAmphibiousAssault({
-        cargoByCarrierUnitId: state.cargoByCarrierUnitId,
-        amphibiousAssaultsByTerritory: state.amphibiousAssaultsByTerritory,
-        transportId: action.transportId,
-        targetTerritory: action.targetTerritory,
-      });
-      context.patchState({
-        cargoByCarrierUnitId: result.cargoByCarrierUnitId,
-        amphibiousAssaultsByTerritory: result.amphibiousAssaultsByTerritory,
-        selectedSquad: undefined,
-      });
-    } else {
-      const result = unloadToTerritory({
-        unitsByTerritory: state.unitsByTerritoryName,
-        cargoByCarrierUnitId: state.cargoByCarrierUnitId,
-        transportId: action.transportId,
-        transportTerritory,
-        targetTerritory: action.targetTerritory,
-      });
-      context.patchState({
-        unitsByTerritoryName: result.unitsByTerritoryName,
-        cargoByCarrierUnitId: result.cargoByCarrierUnitId,
-        selectedSquad: undefined,
-      });
-    }
   }
 }
 
@@ -566,20 +537,11 @@ function associatedLoadPlanSquadIds(state: MapStateModel, transportUnitIds: stri
   return squadIds;
 }
 
-function findUnitById(state: MapStateModel, unitId: string): MilitaryUnit | undefined {
-  for (const units of Object.values(state.unitsByTerritoryName)) {
-    const found = units?.find((unit) => unit.id === unitId);
-    if (found) {
-      return found;
-    }
-  }
-  return undefined;
-}
-
 function withRecomputedCombatTypes(
   unit: MilitaryUnit,
   steps: SquadMovementStep[],
   unitsByTerritoryName: MapStateModel['unitsByTerritoryName'],
+  landTerritoryControllerByName: MapStateModel['landTerritoryControllerByName'],
 ): SquadMovementStep[] {
   const territories = steps.map((step) => step.territoryName);
   const combatTypes = [...AIR_UNIT_TYPES].includes(unit.type)
@@ -593,13 +555,29 @@ function withRecomputedCombatTypes(
         determineMovementStepCombatType({ unit, territory, unitsByTerritoryName }),
       );
 
-  return steps.map((step, index) => ({
-    ...step,
-    // Load/unload logistics steps are never troop combat into that territory (a land squad's step
-    // is a sea zone; a transport's is a coast it drops cargo on). WS7b will set 'combat' on a
-    // hostile unload; for now every deferred cargo step is 'none'.
-    combatType: step.cargo ? 'none' : combatTypes[index],
-  }));
+  return steps.map((step, index) => {
+    // Load/unload logistics steps never represent troop combat *into* that territory (a land squad's
+    // step is a sea zone; a transport's is a coast it drops cargo on). An unload onto a hostile coast
+    // is an amphibious assault, so it reads as 'combat' (drawn red, staged during Conduct Combat);
+    // every other cargo step is 'none'.
+    if (step.cargo) {
+      const hostileUnload =
+        step.cargo.role === 'unload' &&
+        isHostileUnloadTarget(step.territoryName, unit.nationality, landTerritoryControllerByName);
+      return { ...step, combatType: hostileUnload ? 'combat' : 'none' };
+    }
+    return { ...step, combatType: combatTypes[index] };
+  });
+}
+
+/** Whether an unload target coast is controlled by an enemy of the unloading nation. */
+function isHostileUnloadTarget(
+  territory: TerritoryName,
+  nation: Nationality,
+  landTerritoryControllerByName: MapStateModel['landTerritoryControllerByName'],
+): boolean {
+  const controller = landTerritoryControllerByName[territory as LandTerritoryName];
+  return controller !== undefined && NATION_ALLIANCE[controller] !== NATION_ALLIANCE[nation];
 }
 
 function copyCoordinatesBySquadId(

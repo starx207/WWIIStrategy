@@ -92,10 +92,13 @@ export class TurnFlowService {
     const phase = this.turnPhase();
     const nation = this.currentNation();
 
-    // Leaving combat movement: record which units committed to combat (before their plans are
-    // consumed below), resolve anti-aircraft fire over fly-over territories, then undefended
-    // captures and blitz, before battles are shown.
+    // Leaving combat movement: first materialize the transport half of the phase (board planned
+    // loads, move the loaded transports, and stage their amphibious assaults) so it feeds the
+    // downstream steps exactly as an immediate assault used to; then record which units committed to
+    // combat (before their plans are consumed below), resolve anti-aircraft fire over fly-over
+    // territories, then undefended captures and blitz, before battles are shown.
     if (phase === TurnPhase.COMBAT_MOVEMENT && nation) {
+      this.store.dispatch(new MapActions.ApplyAmphibiousCombatMovePlans(nation));
       this.store.dispatch(new MapActions.RecordCombatCommitments(nation));
       this.combatOrchestrator.resolveAntiAircraftFire();
       this.store.dispatch(new MapActions.ResolveAutomaticCaptures(nation));

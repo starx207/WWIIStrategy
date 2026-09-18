@@ -236,15 +236,17 @@ export class MapSelectors {
   /**
    * Territories the selected squad could load onto / unload into, tagged by kind so the map can
    * color them distinctly. `load` = adjacent sea zones holding a same-nation transport with room
-   * (offered only while the land squad still has unspent movement). `unload` = friendly coasts
-   * adjacent to the transport's *planned* final sea position, once it will hold cargo. Disjoint from
+   * (offered only while the land squad still has unspent movement). `unload` = coasts adjacent to the
+   * transport's *planned* final sea position, once it will hold cargo — **friendly** coasts during
+   * non-combat move, **hostile** coasts (an amphibious assault) during combat move. Disjoint from
    * `selectedSquadNextAdjacentDestinations` (cross-kind moves are never ordinary destinations) —
    * mirrors the guards in `GameMap.tryLoadOrUnload`.
    */
-  @Selector([MapState, GameSelectors.gamePhase])
+  @Selector([MapState, GameSelectors.gamePhase, GameSelectors.turnPhase])
   static selectedSquadCargoDestinations(
     state: MapStateModel,
     gamePhase: GamePhase,
+    turnPhase: TurnPhase,
   ): SquadCargoDestinations {
     const empty: SquadCargoDestinations = { load: [], unload: [] };
     const selectedSquad = state.selectedSquad;
@@ -290,9 +292,13 @@ export class MapSelectors {
       }
       const seaPosition = plannedTransportSeaPosition(plan, selectedTerritory);
       const adjacent = ADJACENT_TERRITORIES_BY_NAME[seaPosition] ?? [];
+      // Combat move authors amphibious assaults (hostile coasts); non-combat move lands cargo on
+      // friendly coasts. The materialization pass for each phase routes the unload accordingly.
+      const wantHostile = turnPhase === TurnPhase.COMBAT_MOVEMENT;
       const unload = adjacent.filter(
         (territory) =>
-          canUnloadTo(seaPosition, territory) && !isHostileCoast(state, territory, nation),
+          canUnloadTo(seaPosition, territory) &&
+          isHostileCoast(state, territory, nation) === wantHostile,
       );
       return { load: [], unload };
     }

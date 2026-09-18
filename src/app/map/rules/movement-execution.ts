@@ -1,13 +1,14 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { Nationality } from '@ww2/shared/nationality';
+import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
 import { UnitType } from '@ww2/shared/unit-type';
 import { TurnPhase } from '@ww2/game/turn-phase';
-import { TerritoryName } from '../../territories/territory-names';
+import { LandTerritoryName, TerritoryName } from '../../territories/territory-names';
 import { SquadMovementPlan } from '../map-state';
 import { CargoByCarrierUnitId } from './carrier-cargo';
-import { loadCargo, unloadToTerritory } from './amphibious';
+import { loadCargo, stageAmphibiousAssault, unloadToTerritory } from './amphibious';
 
 type UnitsByTerritory = Partial<Record<TerritoryName, MilitaryUnit[]>>;
+type AmphibiousAssaults = Partial<Record<LandTerritoryName, string[]>>;
 
 /** Recover the nationality + unit type encoded in a map squad id (`map-squad|territory|nat|type`). */
 export function parseSquadId(
@@ -179,4 +180,174 @@ export function executeMovementPlans(
   }
 
   return { unitsByTerritoryName: units, cargoByCarrierUnitId: cargo, remainingPlans };
+}
+
+export interface ExecuteAmphibiousCombatMoveResult {
+  unitsByTerritoryName: UnitsByTerritory;
+  cargoByCarrierUnitId: CargoByCarrierUnitId;
+  amphibiousAssaultsByTerritory: AmphibiousAssaults;
+  remainingPlans: Record<string, SquadMovementPlan>;
+}
+
+/**
+ * Materialize the transport half of the combat-movement phase, ahead of `RecordCombatCommitments`
+ * (see `TurnFlowService.advancePhase`). Runs the same three passes as `executeMovementPlans` but
+ * restricted to transport cargo operations — a land squad's `role:'load'` plan and a transport's
+ * `role:'unload'` plan — leaving land attackers, aircraft, carriers, and naval-combat transports
+ * for the existing combat/auto-capture paths:
+ *  1. **loads** board a land squad's units onto their target transport's current sea zone;
+ *  2. **transport moves** relocate each unloading transport (dragging its cargo) to its final sea
+ *     step;
+ *  3. **unloads** drop cargo from the transport's post-move sea zone — a **hostile** coast stages an
+ *     amphibious assault (units stay physically in the sea zone, their ids go to
+ *     `amphibiousAssaultsByTerritory`, resolved downstream exactly as before), a friendly coast is
+ *     occupied immediately.
+ * The consumed plans are removed; everything else is preserved. Pure function.
+ */
+export function executeAmphibiousCombatMovePlans(params: {
+  unitsByTerritoryName: UnitsByTerritory;
+  movementPlansBySquadId: Record<string, SquadMovementPlan>;
+  cargoByCarrierUnitId: CargoByCarrierUnitId;
+  amphibiousAssaultsByTerritory: AmphibiousAssaults;
+  landControl: Record<LandTerritoryName, Nationality>;
+  nation: Nationality;
+}): ExecuteAmphibiousCombatMoveResult {
+  const { landControl, nation } = params;
+  let units: UnitsByTerritory = { ...params.unitsByTerritoryName };
+  let cargo: CargoByCarrierUnitId = { ...params.cargoByCarrierUnitId };
+  let amphibious: AmphibiousAssaults = { ...params.amphibiousAssaultsByTerritory };
+  const remainingPlans: Record<string, SquadMovementPlan> = {};
+
+  const terminalCargoRole = (plan: SquadMovementPlan) =>
+    plan.phase === TurnPhase.COMBAT_MOVEMENT && plan.path.length > 0
+      ? plan.path[plan.path.length - 1].cargo?.role
+      : undefined;
+
+  const entries = Object.entries(params.movementPlansBySquadId);
+
+  // Keep every plan that isn't a transport cargo operation (land attackers, aircraft, carriers,
+  // naval-combat transports) — those resolve through the existing combat/auto-capture machinery.
+  for (const [squadId, plan] of entries) {
+    if (terminalCargoRole(plan) === undefined) {
+      remainingPlans[squadId] = plan;
+    }
+  }
+
+  // Pass 1 — loads.
+  for (const [squadId, plan] of entries) {
+    if (terminalCargoRole(plan) !== 'load') {
+      continue;
+    }
+    const terminal = plan.path[plan.path.length - 1];
+    const squad = parseSquadId(squadId);
+    if (!squad || terminal.cargo?.role !== 'load') {
+      continue;
+    }
+    const transportTerritory = findTerritoryForUnitId(units, terminal.cargo.transportId);
+    if (!transportTerritory) {
+      continue;
+    }
+    const originUnits = units[plan.startingTerritoryName] ?? [];
+    const loadingIds = originUnits
+      .filter((unit) => unit.nationality === squad.nationality && unit.type === squad.unitType)
+      .map((unit) => unit.id);
+    if (loadingIds.length === 0) {
+      continue;
+    }
+    const result = loadCargo({
+      unitsByTerritory: units,
+      cargoByCarrierUnitId: cargo,
+      transportId: terminal.cargo.transportId,
+      transportTerritory,
+      unitIds: loadingIds,
+      fromTerritory: plan.startingTerritoryName,
+    });
+    units = result.unitsByTerritoryName;
+    cargo = result.cargoByCarrierUnitId;
+  }
+
+  // Pass 2 — transport moves (dragging cargo) to the final sea step before the unload.
+  for (const [squadId, plan] of entries) {
+    if (terminalCargoRole(plan) !== 'unload') {
+      continue;
+    }
+    const squad = parseSquadId(squadId);
+    if (!squad) {
+      continue;
+    }
+    const origin = plan.startingTerritoryName;
+    const moveSteps = plan.path.filter((step) => !step.cargo);
+    const destination = moveSteps[moveSteps.length - 1]?.territoryName;
+    if (!destination || destination === origin) {
+      continue;
+    }
+    const originUnits = units[origin] ?? [];
+    const transports = originUnits.filter(
+      (unit) => unit.nationality === squad.nationality && unit.type === squad.unitType,
+    );
+    if (transports.length === 0) {
+      continue;
+    }
+    const cargoIds = new Set(transports.flatMap((transport) => cargo[transport.id] ?? []));
+    const movingIds = new Set([...transports.map((unit) => unit.id), ...cargoIds]);
+    const moving = originUnits.filter((unit) => movingIds.has(unit.id));
+
+    units[origin] = originUnits.filter((unit) => !movingIds.has(unit.id));
+    units[destination] = [...(units[destination] ?? []), ...moving];
+  }
+
+  // Pass 3 — unloads from the transport's post-move sea zone: hostile stages an assault, friendly
+  // occupies immediately.
+  for (const [squadId, plan] of entries) {
+    if (terminalCargoRole(plan) !== 'unload') {
+      continue;
+    }
+    const squad = parseSquadId(squadId);
+    if (!squad) {
+      continue;
+    }
+    const target = plan.path[plan.path.length - 1].territoryName as LandTerritoryName;
+    const moveSteps = plan.path.filter((step) => !step.cargo);
+    const transportTerritory =
+      moveSteps[moveSteps.length - 1]?.territoryName ?? plan.startingTerritoryName;
+    const transports = (units[transportTerritory] ?? []).filter(
+      (unit) => unit.nationality === squad.nationality && unit.type === squad.unitType,
+    );
+    const controller = landControl[target];
+    const hostile =
+      controller !== undefined && NATION_ALLIANCE[controller] !== NATION_ALLIANCE[nation];
+
+    for (const transport of transports) {
+      if ((cargo[transport.id] ?? []).length === 0) {
+        continue;
+      }
+      if (hostile) {
+        const result = stageAmphibiousAssault({
+          cargoByCarrierUnitId: cargo,
+          amphibiousAssaultsByTerritory: amphibious,
+          transportId: transport.id,
+          targetTerritory: target,
+        });
+        cargo = result.cargoByCarrierUnitId;
+        amphibious = result.amphibiousAssaultsByTerritory;
+      } else {
+        const result = unloadToTerritory({
+          unitsByTerritory: units,
+          cargoByCarrierUnitId: cargo,
+          transportId: transport.id,
+          transportTerritory,
+          targetTerritory: target,
+        });
+        units = result.unitsByTerritoryName;
+        cargo = result.cargoByCarrierUnitId;
+      }
+    }
+  }
+
+  return {
+    unitsByTerritoryName: units,
+    cargoByCarrierUnitId: cargo,
+    amphibiousAssaultsByTerritory: amphibious,
+    remainingPlans,
+  };
 }

@@ -31,9 +31,8 @@ import { GameSelectors } from '@ww2/game/game-selectors';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
 import { MOVEMENT_PHASES, MovementPhase, TurnPhase } from '@ww2/game/turn-phase';
 import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
-import { LandTerritoryName } from '../../territories/territory-names';
 import { parseSquadId } from '../rules/movement-execution';
-import { canUnloadTo, findLoadableTransport } from '../rules/amphibious';
+import { findLoadableTransport } from '../rules/amphibious';
 import { PlacementService } from '../../production/placement.service';
 
 @Component({
@@ -325,22 +324,20 @@ export class GameMap implements OnInit, OnDestroy {
    * Handle a territory click as a transport load (land squad → adjacent transport) or unload
    * (loaded transport → adjacent land). Returns true when the click was consumed as a cargo action.
    *
-   * Non-combat move defers these as undoable plan steps (executed at phase exit alongside every
-   * other move — see executeMovementPlans). Combat move keeps the immediate LoadCargo/UnloadCargo
-   * path for now, including offensive amphibious-assault staging; WS7b converts that to the same
-   * deferred model with its own combat-move materialization pass.
+   * Both movement phases defer these as undoable plan steps, executed at phase exit alongside every
+   * other move: non-combat via executeMovementPlans, combat via executeAmphibiousCombatMovePlans
+   * (which stages a hostile unload as an amphibious assault). The load/unload targets offered differ
+   * by phase — see selectedSquadCargoDestinations.
    */
   private tryLoadOrUnload(clickedTerritory: TerritoryName, coordinate: number[]): boolean {
     const phase = this.currentTurnPhase();
     if (![...MOVEMENT_PHASES].includes(phase)) {
       return false;
     }
-    return phase === TurnPhase.NON_COMBAT_MOVEMENT
-      ? this.tryPlanCargoStep(clickedTerritory, coordinate)
-      : this.tryImmediateLoadOrUnload(clickedTerritory);
+    return this.tryPlanCargoStep(clickedTerritory, coordinate);
   }
 
-  /** Non-combat: append a deferred load/unload step to the selected squad's plan. */
+  /** Append a deferred load/unload step to the selected squad's plan. */
   private tryPlanCargoStep(clickedTerritory: TerritoryName, coordinate: number[]): boolean {
     const selected = this.selectedSquad();
     if (!selected) {
@@ -385,50 +382,6 @@ export class GameMap implements OnInit, OnDestroy {
         new MapActions.PlanSquadMovementStep(clickedTerritory, coordinate, { role: 'unload' }),
       );
       return true;
-    }
-
-    return false;
-  }
-
-  /** Combat move: immediate load / unload (unload stages an amphibious assault on a hostile coast). */
-  private tryImmediateLoadOrUnload(clickedTerritory: TerritoryName): boolean {
-    const selected = this.selectedSquad();
-    if (!selected) {
-      return false;
-    }
-    const parsed = parseSquadId(selected.id);
-    const selectedTerritory = selected.id.split('|')[1] as TerritoryName | undefined;
-    const nation = this.activeNationality();
-    if (!parsed || !selectedTerritory || !nation) {
-      return false;
-    }
-
-    if (LAND_UNIT_TYPES.includes(parsed.unitType)) {
-      const transportId = findLoadableTransport({
-        fromTerritory: selectedTerritory,
-        seaZone: clickedTerritory,
-        cargoUnitCount: selected.unitIds.length,
-        nation,
-        unitsByTerritory: this.unitsByTerritoryName(),
-        cargoByCarrierUnitId: this.cargoByCarrierUnitId(),
-      });
-      if (transportId) {
-        this.store.dispatch(
-          new MapActions.LoadCargo(transportId, selected.unitIds, selectedTerritory),
-        );
-        return true;
-      }
-    }
-
-    if (parsed.unitType === UnitType.TRANSPORT) {
-      const transportId = selected.unitIds[0];
-      const hasCargo = (this.cargoByCarrierUnitId()[transportId] ?? []).length > 0;
-      if (hasCargo && canUnloadTo(selectedTerritory, clickedTerritory)) {
-        this.store.dispatch(
-          new MapActions.UnloadCargo(transportId, clickedTerritory as LandTerritoryName),
-        );
-        return true;
-      }
     }
 
     return false;
