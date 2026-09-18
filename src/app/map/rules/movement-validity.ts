@@ -3,7 +3,7 @@ import { EffectiveMapUnit } from '../effective-map-unit';
 import { SquadMovementPlan } from '../map-state';
 import { LandTerritoryName, TerritoryName } from '../../territories/territory-names';
 import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
-import { AIR_UNIT_TYPES, SEA_UNIT_TYPES } from '@ww2/shared/unit-type';
+import { AIR_UNIT_TYPES, SEA_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { TurnPhase } from '@ww2/game/turn-phase';
 
 type IsMovementPlanValidParams = {
@@ -21,6 +21,14 @@ const isValidSeaMovement = ({
 }: IsMovementPlanValidParams): boolean => {
   if (plan.phase === TurnPhase.NON_COMBAT_MOVEMENT) {
     return !plan.path.some((step) => step.combatType !== 'none');
+  }
+
+  // Transports have no attack value — they never fight sea units, they position for an amphibious
+  // assault (whose unload step / staging is validated separately). So a transport's combat move to
+  // hostile-adjacent waters is valid even with no enemy at the destination; otherwise the transport
+  // reads as invalid until the unload step is added and blocks leaving the phase.
+  if (unit.type === UnitType.TRANSPORT) {
+    return true;
   }
 
   // Determine the alligience of the units in the destination territory.
