@@ -23,12 +23,12 @@ const isValidSeaMovement = ({
     return !plan.path.some((step) => step.combatType !== 'none');
   }
 
-  // Transports have no attack value — they never fight sea units, they position for an amphibious
-  // assault (whose unload step / staging is validated separately). So a transport's combat move to
-  // hostile-adjacent waters is valid even with no enemy at the destination; otherwise the transport
-  // reads as invalid until the unload step is added and blocks leaving the phase.
+  // Transports have no attack value — they never fight sea units, so their only purpose in the
+  // combat-movement phase is an amphibious assault. A transport's combat move is therefore valid
+  // only when it ends by unloading its cargo onto a coast; a move that stops in open water (no
+  // unload step) is an incomplete assault and reads as invalid until the unload is added.
   if (unit.type === UnitType.TRANSPORT) {
-    return true;
+    return plan.path[plan.path.length - 1].cargo?.role === 'unload';
   }
 
   // Determine the alligience of the units in the destination territory.
