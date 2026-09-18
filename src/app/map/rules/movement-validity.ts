@@ -3,7 +3,7 @@ import { EffectiveMapUnit } from '../effective-map-unit';
 import { SquadMovementPlan } from '../map-state';
 import { LandTerritoryName, TerritoryName } from '../../territories/territory-names';
 import { NATION_ALLIANCE, Nationality } from '@ww2/shared/nationality';
-import { AIR_UNIT_TYPES, SEA_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
+import { AIR_UNIT_TYPES, SEA_UNIT_TYPES } from '@ww2/shared/unit-type';
 import { TurnPhase } from '@ww2/game/turn-phase';
 
 type IsMovementPlanValidParams = {
@@ -23,15 +23,10 @@ const isValidSeaMovement = ({
     return !plan.path.some((step) => step.combatType !== 'none');
   }
 
-  // Transports have no attack value — they never fight sea units, so their only purpose in the
-  // combat-movement phase is an amphibious assault. A transport's combat move is therefore valid
-  // only when it ends by unloading its cargo onto a coast; a move that stops in open water (no
-  // unload step) is an incomplete assault and reads as invalid until the unload is added.
-  if (unit.type === UnitType.TRANSPORT) {
-    return plan.path[plan.path.length - 1].cargo?.role === 'unload';
-  }
-
-  // Determine the alligience of the units in the destination territory.
+  // A combat move into open water is only valid when it engages the enemy at the destination. This
+  // covers warships attacking and transports acting as cannon fodder to shield other ships; a
+  // transport that instead ends by unloading onto a coast (an amphibious assault) is already
+  // accepted by the cargo terminal check in isMovementPlanValid before we get here.
   const lastTerritory = plan.path[plan.path.length - 1].territoryName;
   const lastTerritoryUnits = unitsByTerritoryName[lastTerritory] ?? [];
   const lastTerritoryAlligience = lastTerritoryUnits.map(
