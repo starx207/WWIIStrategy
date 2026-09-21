@@ -71,32 +71,3 @@ export function landingAssignmentNeeded(
   }
   return false;
 }
-
-/**
- * Validate an assignment: every surviving aircraft lands in a zone designated for its type and no
- * zone exceeds its per-type capacity.
- */
-export function isValidLandingAssignment(
-  survivingAircraft: MilitaryUnit[],
-  assignment: Record<string, TerritoryName>,
-  caps: LandingCapsByType,
-): boolean {
-  const usedByTypeZone = new Map<string, number>();
-  for (const unit of survivingAircraft) {
-    const zone = assignment[unit.id];
-    if (!zone) {
-      return false;
-    }
-    const cap = caps.get(unit.type)?.get(zone);
-    if (cap === undefined) {
-      return false;
-    }
-    const key = `${unit.type}|${zone}`;
-    const used = (usedByTypeZone.get(key) ?? 0) + 1;
-    if (used > cap) {
-      return false;
-    }
-    usedByTypeZone.set(key, used);
-  }
-  return true;
-}

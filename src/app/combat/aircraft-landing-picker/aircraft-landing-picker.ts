@@ -1,26 +1,34 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
+import { Nationality } from '@ww2/shared/nationality';
 import { UnitType } from '@ww2/shared/unit-type';
 import { MilitaryUnitIcon } from '@ww2/shared/military-unit-icon';
 import { TerritoryName } from '../../territories/territory-names';
-import {
-  LandingAssignmentRequest,
-  candidateZonesForType,
-  isValidLandingAssignment,
-} from '../aircraft-landing';
+import { LandingAssignmentRequest, candidateZonesForType } from '../aircraft-landing';
 
-interface ZoneOption {
-  territory: TerritoryName;
+/** A single "how many of this type land here" stepper. */
+interface LandingSlot {
+  key: string;
+  type: UnitType;
+  typeLabel: string;
+  nationality: Nationality;
+  count: number;
   cap: number;
-  /** Whether picking this zone for the current aircraft would exceed its capacity. */
-  full: boolean;
+  canIncrement: boolean;
+  canDecrement: boolean;
 }
 
-interface AircraftRow {
-  unit: MilitaryUnit;
+interface ZoneGroup {
+  zone: TerritoryName;
+  slots: LandingSlot[];
+}
+
+/** How many of each type still need a landing zone. */
+interface TypeRemaining {
+  type: UnitType;
   typeLabel: string;
-  selected: TerritoryName;
-  options: ZoneOption[];
+  remaining: number;
+  total: number;
 }
 
 const TYPE_LABEL: Partial<Record<UnitType, string>> = {
@@ -28,10 +36,13 @@ const TYPE_LABEL: Partial<Record<UnitType, string>> = {
   [UnitType.BOMBER]: 'Bomber',
 };
 
+const slotKey = (type: UnitType, zone: TerritoryName): string => `${type}|${zone}`;
+
 /**
- * After a battle, lets the player choose where each surviving aircraft lands, within the capacity of
- * the zones the flight was originally designated to (see aircraft-landing.ts). Emits the chosen
- * zone-per-aircraft map when confirmed.
+ * After a battle, lets the player choose how many surviving aircraft of each type land in each of
+ * the zones the flight was designated to. Steppers enforce each zone's per-type capacity and the
+ * pool of survivors, so only a complete, valid assignment can be confirmed. Emits the resulting
+ * zone-per-aircraft map.
  */
 @Component({
   selector: 'ww2-aircraft-landing-picker',
@@ -43,57 +54,148 @@ export class AircraftLandingPicker {
   readonly request = input.required<LandingAssignmentRequest>();
   readonly landingConfirmed = output<Record<string, TerritoryName>>();
 
-  /** Explicit per-aircraft overrides; merged over the request's defaults to form the assignment. */
-  private readonly choices = signal<Record<string, TerritoryName>>({});
+  /** Counts per `${type}|${zone}`; null until the player first adjusts, when it snapshots defaults. */
+  private readonly overrideCounts = signal<Record<string, number> | null>(null);
 
-  private readonly assignment = computed<Record<string, TerritoryName>>(() => ({
-    ...this.request().defaultZoneByUnitId,
-    ...this.choices(),
-  }));
-
-  /** Rows to render — one per surviving aircraft, with its eligible zones and current pick. */
-  protected readonly rows = computed<AircraftRow[]>(() => {
+  /** The originally-designated distribution, used as the starting point (always within caps). */
+  private readonly defaultCounts = computed<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
     const request = this.request();
-    const assignment = this.assignment();
-
-    // Current usage per (type, zone) so we can flag zones that are full for other aircraft.
-    const usage = new Map<string, number>();
     for (const unit of request.aircraft) {
-      const zone = assignment[unit.id];
-      const key = `${unit.type}|${zone}`;
-      usage.set(key, (usage.get(key) ?? 0) + 1);
+      const zone = request.defaultZoneByUnitId[unit.id];
+      if (zone) {
+        counts[slotKey(unit.type, zone)] = (counts[slotKey(unit.type, zone)] ?? 0) + 1;
+      }
+    }
+    return counts;
+  });
+
+  private readonly counts = computed<Record<string, number>>(
+    () => this.overrideCounts() ?? this.defaultCounts(),
+  );
+
+  /** Distinct aircraft types among the survivors, with their surviving totals. */
+  private readonly totalsByType = computed<Map<UnitType, number>>(() => {
+    const totals = new Map<UnitType, number>();
+    for (const unit of this.request().aircraft) {
+      totals.set(unit.type, (totals.get(unit.type) ?? 0) + 1);
+    }
+    return totals;
+  });
+
+  private assignedForType(type: UnitType, counts: Record<string, number>): number {
+    const caps = this.request().caps.get(type);
+    if (!caps) {
+      return 0;
+    }
+    let assigned = 0;
+    for (const zone of caps.keys()) {
+      assigned += counts[slotKey(type, zone)] ?? 0;
+    }
+    return assigned;
+  }
+
+  /** Unplaced survivors remaining, per type. */
+  protected readonly remainingByType = computed<TypeRemaining[]>(() => {
+    const counts = this.counts();
+    return [...this.totalsByType().entries()].map(([type, total]) => ({
+      type,
+      typeLabel: TYPE_LABEL[type] ?? type,
+      total,
+      remaining: total - this.assignedForType(type, counts),
+    }));
+  });
+
+  /** The zones (with their per-type steppers) the player distributes survivors across. */
+  protected readonly zoneGroups = computed<ZoneGroup[]>(() => {
+    const request = this.request();
+    const counts = this.counts();
+    const nationality = request.aircraft[0]?.nationality;
+
+    // Remaining pool per type, so a stepper's "+" can be blocked once nothing is left to place.
+    const remaining = new Map<UnitType, number>();
+    for (const { type, remaining: left } of this.remainingByType()) {
+      remaining.set(type, left);
     }
 
-    return request.aircraft.map((unit) => {
-      const selected = assignment[unit.id];
-      const options = candidateZonesForType(request.caps, unit.type).map((territory) => {
-        const cap = request.caps.get(unit.type)?.get(territory) ?? 0;
-        const used = usage.get(`${unit.type}|${territory}`) ?? 0;
-        // A zone is "full" for this aircraft when it is already at capacity with other aircraft.
-        const full = territory !== selected && used >= cap;
-        return { territory, cap, full };
-      });
-      return {
-        unit,
-        typeLabel: TYPE_LABEL[unit.type] ?? unit.type,
-        selected,
-        options,
-      };
+    // Zones in a stable order, gathered across every type that can land somewhere.
+    const zoneOrder: TerritoryName[] = [];
+    const seen = new Set<TerritoryName>();
+    for (const [type] of this.totalsByType()) {
+      for (const zone of candidateZonesForType(request.caps, type)) {
+        if (!seen.has(zone)) {
+          seen.add(zone);
+          zoneOrder.push(zone);
+        }
+      }
+    }
+
+    return zoneOrder.map((zone) => {
+      const slots: LandingSlot[] = [];
+      for (const [type] of this.totalsByType()) {
+        const cap = request.caps.get(type)?.get(zone);
+        if (cap === undefined) {
+          continue; // this zone was never a landing zone for this type
+        }
+        const count = counts[slotKey(type, zone)] ?? 0;
+        slots.push({
+          key: slotKey(type, zone),
+          type,
+          typeLabel: TYPE_LABEL[type] ?? type,
+          nationality,
+          count,
+          cap,
+          canIncrement: count < cap && (remaining.get(type) ?? 0) > 0,
+          canDecrement: count > 0,
+        });
+      }
+      return { zone, slots };
     });
   });
 
   protected readonly canConfirm = computed(() =>
-    isValidLandingAssignment(this.request().aircraft, this.assignment(), this.request().caps),
+    this.remainingByType().every((entry) => entry.remaining === 0),
   );
 
-  protected onZoneChange(unitId: string, territory: string): void {
-    this.choices.update((current) => ({ ...current, [unitId]: territory as TerritoryName }));
+  protected adjust(type: UnitType, zone: TerritoryName, delta: number): void {
+    const counts = { ...this.counts() };
+    const key = slotKey(type, zone);
+    const next = (counts[key] ?? 0) + delta;
+    const cap = this.request().caps.get(type)?.get(zone) ?? 0;
+    if (next < 0 || next > cap) {
+      return;
+    }
+    if (delta > 0 && this.assignedForType(type, counts) >= (this.totalsByType().get(type) ?? 0)) {
+      return; // no survivors of this type left to place
+    }
+    counts[key] = next;
+    this.overrideCounts.set(counts);
   }
 
   protected confirm(): void {
     if (!this.canConfirm()) {
       return;
     }
-    this.landingConfirmed.emit(this.assignment());
+
+    const request = this.request();
+    const counts = this.counts();
+    const unitsByType = new Map<UnitType, MilitaryUnit[]>();
+    for (const unit of request.aircraft) {
+      const list = unitsByType.get(unit.type) ?? [];
+      list.push(unit);
+      unitsByType.set(unit.type, list);
+    }
+
+    const assignment: Record<string, TerritoryName> = {};
+    for (const [type, units] of unitsByType) {
+      let index = 0;
+      for (const zone of candidateZonesForType(request.caps, type)) {
+        const n = counts[slotKey(type, zone)] ?? 0;
+        for (let placed = 0; placed < n; placed++) {
+          assignment[units[index++].id] = zone;
+        }
+      }
+    }
+    this.landingConfirmed.emit(assignment);
   }
 }

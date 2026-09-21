@@ -2,35 +2,55 @@
   <p class="landing-picker__eyebrow">Post-Combat</p>
   <h2 class="landing-picker__title">Assign Aircraft Landings</h2>
   <p class="landing-picker__description">
-    Choose where each surviving aircraft lands. Each zone can only take as many as were originally
-    sent there.
+    Choose how many surviving aircraft land in each zone. Each zone can only take as many as were
+    originally sent there.
   </p>
 
-  <ul class="landing-picker__list">
-    @for (row of rows(); track row.unit.id) {
-      <li class="landing-picker__row">
-        <ww2-military-unit-icon
-          class="landing-picker__icon"
-          [nationality]="row.unit.nationality"
-          [unitType]="row.unit.type"
-        />
-        <span class="landing-picker__type">{{ row.typeLabel }}</span>
-        <label class="landing-picker__field">
-          <span class="landing-picker__field-label">lands at</span>
-          <select
-            [value]="row.selected"
-            (change)="onZoneChange(row.unit.id, $any($event.target).value)"
-          >
-            @for (option of row.options; track option.territory) {
-              <option [value]="option.territory" [disabled]="option.full">
-                {{ option.territory }} ({{ option.cap }} max)
-              </option>
-            }
-          </select>
-        </label>
+  <ul class="landing-picker__remaining">
+    @for (entry of remainingByType(); track entry.type) {
+      <li [class.landing-picker__remaining--done]="entry.remaining === 0">
+        {{ entry.typeLabel }}s to place: <strong>{{ entry.remaining }}</strong> of {{ entry.total }}
       </li>
     }
   </ul>
+
+  <div class="landing-picker__zones">
+    @for (group of zoneGroups(); track group.zone) {
+      <div class="landing-picker__zone">
+        <h3 class="landing-picker__zone-name">{{ group.zone }}</h3>
+        @for (slot of group.slots; track slot.key) {
+          <div class="landing-picker__slot">
+            <ww2-military-unit-icon
+              class="landing-picker__icon"
+              [nationality]="slot.nationality"
+              [unitType]="slot.type"
+            />
+            <span class="landing-picker__type">{{ slot.typeLabel }}</span>
+            <span class="landing-picker__cap">(max {{ slot.cap }})</span>
+            <div class="landing-picker__stepper">
+              <button
+                type="button"
+                aria-label="Remove one"
+                [disabled]="!slot.canDecrement"
+                (click)="adjust(slot.type, group.zone, -1)"
+              >
+                −
+              </button>
+              <span class="landing-picker__count">{{ slot.count }}</span>
+              <button
+                type="button"
+                aria-label="Add one"
+                [disabled]="!slot.canIncrement"
+                (click)="adjust(slot.type, group.zone, 1)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
 
   <div class="landing-picker__actions">
     <button type="button" (click)="confirm()" [disabled]="!canConfirm()">Confirm Landings</button>
