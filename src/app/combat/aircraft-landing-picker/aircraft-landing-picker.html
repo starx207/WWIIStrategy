@@ -1,0 +1,38 @@
+<section class="landing-picker">
+  <p class="landing-picker__eyebrow">Post-Combat</p>
+  <h2 class="landing-picker__title">Assign Aircraft Landings</h2>
+  <p class="landing-picker__description">
+    Choose where each surviving aircraft lands. Each zone can only take as many as were originally
+    sent there.
+  </p>
+
+  <ul class="landing-picker__list">
+    @for (row of rows(); track row.unit.id) {
+      <li class="landing-picker__row">
+        <ww2-military-unit-icon
+          class="landing-picker__icon"
+          [nationality]="row.unit.nationality"
+          [unitType]="row.unit.type"
+        />
+        <span class="landing-picker__type">{{ row.typeLabel }}</span>
+        <label class="landing-picker__field">
+          <span class="landing-picker__field-label">lands at</span>
+          <select
+            [value]="row.selected"
+            (change)="onZoneChange(row.unit.id, $any($event.target).value)"
+          >
+            @for (option of row.options; track option.territory) {
+              <option [value]="option.territory" [disabled]="option.full">
+                {{ option.territory }} ({{ option.cap }} max)
+              </option>
+            }
+          </select>
+        </label>
+      </li>
+    }
+  </ul>
+
+  <div class="landing-picker__actions">
+    <button type="button" (click)="confirm()" [disabled]="!canConfirm()">Confirm Landings</button>
+  </div>
+</section>

@@ -9,7 +9,9 @@ import { TechPanel } from '../../production/tech-panel/tech-panel';
 import { PlacementPanel } from '../../production/placement-panel/placement-panel';
 import { ConductCombatPanel } from '../../combat/conduct-combat-panel/conduct-combat-panel';
 import { BattleBoard } from '../../combat/battle-board/battle-board';
+import { AircraftLandingPicker } from '../../combat/aircraft-landing-picker/aircraft-landing-picker';
 import { CombatOrchestrator } from '../../combat/combat-orchestrator';
+import { TerritoryName } from '../../territories/territory-names';
 import { HandoffScreen } from '../handoff/handoff-screen';
 import { VictoryScreen } from '../../victory/victory-screen/victory-screen';
 import { GameControlsWidget } from '../game-controls/game-controls-widget';
@@ -25,6 +27,7 @@ import { TurnFlowService } from '../turn-flow.service';
     PlacementPanel,
     ConductCombatPanel,
     BattleBoard,
+    AircraftLandingPicker,
     HandoffScreen,
     VictoryScreen,
     GameControlsWidget,
@@ -43,12 +46,27 @@ export class GameShell {
     () => this.combatOrchestrator.activeBattleTerritory() !== null,
   );
   protected readonly shoreBombardment = this.combatOrchestrator.shoreBombardmentReport;
+  protected readonly pendingLandingAssignment = this.combatOrchestrator.pendingLandingAssignment;
   protected readonly handoffPending = this.turnFlow.handoffPending;
   protected readonly victoryResult = this.turnFlow.victoryResult;
 
   protected onBattleAcknowledged(): void {
+    // If surviving aircraft have a landing choice, prompt for it and hold the result until confirmed.
+    if (this.combatOrchestrator.requiresLandingAssignment()) {
+      this.combatOrchestrator.beginLandingAssignment();
+      return;
+    }
     this.combatOrchestrator.finishBattle();
-    // When the last battle is resolved, advance straight out of combat resolution.
+    this.advanceIfBattlesDone();
+  }
+
+  protected onLandingConfirmed(assignment: Record<string, TerritoryName>): void {
+    this.combatOrchestrator.finishBattle(assignment);
+    this.advanceIfBattlesDone();
+  }
+
+  /** When the last battle is resolved, advance straight out of combat resolution. */
+  private advanceIfBattlesDone(): void {
     if (this.combatOrchestrator.pendingBattles().length === 0) {
       this.turnFlow.advancePhase();
     }

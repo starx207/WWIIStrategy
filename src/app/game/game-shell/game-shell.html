@@ -19,7 +19,7 @@
   <ww2-conduct-combat-panel></ww2-conduct-combat-panel>
 }
 
-@if (battleActive()) {
+@if (battleActive() && !pendingLandingAssignment()) {
   <div class="battle-overlay">
     @if (shoreBombardment(); as bombardment) {
       <div class="shore-bombardment-banner">
@@ -30,6 +30,15 @@
       </div>
     }
     <ww2-battle-board (battleAcknowledged)="onBattleAcknowledged()"></ww2-battle-board>
+  </div>
+}
+
+@if (pendingLandingAssignment(); as landingRequest) {
+  <div class="battle-overlay">
+    <ww2-aircraft-landing-picker
+      [request]="landingRequest"
+      (landingConfirmed)="onLandingConfirmed($event)"
+    />
   </div>
 }
 

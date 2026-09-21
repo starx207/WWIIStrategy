@@ -19,6 +19,12 @@ import {
   computePendingBattles,
   computeShoreBombardment,
 } from './combat-orchestration';
+import {
+  LandingAssignmentRequest,
+  aircraftOnly,
+  computeLandingCaps,
+  landingAssignmentNeeded,
+} from './aircraft-landing';
 
 export interface AntiAircraftReportEntry {
   territory: string;
@@ -49,17 +55,27 @@ export class CombatOrchestrator {
   /** Shore bombardment that supported the current amphibious assault, if any. */
   readonly shoreBombardmentReport = signal<ShoreBombardmentReport | null>(null);
 
+  /**
+   * Set after a battle is acknowledged when the player must choose where surviving aircraft land
+   * (more than one designated zone for a type, with some but not all of that type surviving). While
+   * set, the battle result is held until the choice is confirmed via finishBattle.
+   */
+  readonly pendingLandingAssignment = signal<LandingAssignmentRequest | null>(null);
+
   private originByUnitId: BattleSetup['originByUnitId'] = {};
   private returnByUnitId: BattleSetup['returnByUnitId'] = {};
   private attackingSquadIds: string[] = [];
+  private originalAttackerAircraft: MilitaryUnit[] = [];
 
   /** Clear any in-progress battle state (called when starting or loading a game). */
   reset(): void {
     this.originByUnitId = {};
     this.returnByUnitId = {};
     this.attackingSquadIds = [];
+    this.originalAttackerAircraft = [];
     this.antiAircraftReport.set([]);
     this.shoreBombardmentReport.set(null);
+    this.pendingLandingAssignment.set(null);
     this.activeBattleTerritory.set(null);
   }
 
@@ -145,6 +161,8 @@ export class CombatOrchestrator {
     this.originByUnitId = originByUnitId;
     this.returnByUnitId = returnByUnitId;
     this.attackingSquadIds = attackingSquadIds;
+    // Remember the aircraft that set out, so post-battle we know each landing zone's capacity.
+    this.originalAttackerAircraft = aircraftOnly(attackers);
 
     // Shore bombardment supports an amphibious assault: friendly battleships in the launching sea
     // zones fire before the land battle, thinning the defenders.
@@ -180,8 +198,32 @@ export class CombatOrchestrator {
     this.activeBattleTerritory.set(territory);
   }
 
-  /** Apply the finished battle's result to the map and clear the active battle. */
-  finishBattle(): void {
+  /**
+   * Whether acknowledging the current battle should prompt the player to choose where surviving
+   * aircraft land (see landingAssignmentNeeded). Called before finishBattle.
+   */
+  requiresLandingAssignment(): boolean {
+    const survivors = aircraftOnly(this.store.selectSnapshot(CombatSelectors.rawAttackingArmy));
+    return landingAssignmentNeeded(this.originalAttackerAircraft, survivors, this.returnByUnitId);
+  }
+
+  /** Open the landing-assignment prompt for the current battle's surviving aircraft. */
+  beginLandingAssignment(): void {
+    const survivors = aircraftOnly(this.store.selectSnapshot(CombatSelectors.rawAttackingArmy));
+    const caps = computeLandingCaps(this.originalAttackerAircraft, this.returnByUnitId);
+    const defaultZoneByUnitId: Record<string, TerritoryName> = {};
+    for (const unit of survivors) {
+      defaultZoneByUnitId[unit.id] = this.returnByUnitId[unit.id];
+    }
+    this.pendingLandingAssignment.set({ aircraft: survivors, caps, defaultZoneByUnitId });
+  }
+
+  /**
+   * Apply the finished battle's result to the map and clear the active battle. `landingOverrides`
+   * (from the landing picker) redirect surviving aircraft to the zones the player chose, replacing
+   * their originally-designated landing zones.
+   */
+  finishBattle(landingOverrides: Record<string, TerritoryName> = {}): void {
     const territory = this.activeBattleTerritory();
     if (!territory) {
       return;
@@ -215,7 +257,7 @@ export class CombatOrchestrator {
       this.store.dispatch(new MapActions.SetTerritoryUnits(territory, survivingDefenders));
     }
 
-    this.returnSurvivors(departing);
+    this.returnSurvivors(departing, { ...this.returnByUnitId, ...landingOverrides });
     this.store.dispatch(new MapActions.RemoveMovementPlans(this.attackingSquadIds));
     if (isLand) {
       // Clear any amphibious assault staged against this territory now that it's resolved.
@@ -225,14 +267,19 @@ export class CombatOrchestrator {
     this.originByUnitId = {};
     this.returnByUnitId = {};
     this.attackingSquadIds = [];
+    this.originalAttackerAircraft = [];
+    this.pendingLandingAssignment.set(null);
     this.activeBattleTerritory.set(null);
   }
 
   /** Send surviving attackers that didn't occupy the territory to their landing/return territory. */
-  private returnSurvivors(survivors: MilitaryUnit[]): void {
+  private returnSurvivors(
+    survivors: MilitaryUnit[],
+    returnByUnitId: Record<string, TerritoryName>,
+  ): void {
     const byTerritory = new Map<TerritoryName, MilitaryUnit[]>();
     for (const unit of survivors) {
-      const destination = this.returnByUnitId[unit.id];
+      const destination = returnByUnitId[unit.id];
       if (!destination) {
         continue;
       }
