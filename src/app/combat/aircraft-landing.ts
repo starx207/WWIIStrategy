@@ -9,8 +9,6 @@ export type LandingCapsByType = Map<UnitType, Map<TerritoryName, number>>;
 export interface LandingAssignmentRequest {
   aircraft: MilitaryUnit[];
   caps: LandingCapsByType;
-  /** Each surviving aircraft's originally-designated landing zone (the default choice). */
-  defaultZoneByUnitId: Record<string, TerritoryName>;
 }
 
 /** The aircraft (fighters/bombers) among a list of units. */

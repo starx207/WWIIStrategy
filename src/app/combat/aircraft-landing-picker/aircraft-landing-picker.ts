@@ -54,25 +54,9 @@ export class AircraftLandingPicker {
   readonly request = input.required<LandingAssignmentRequest>();
   readonly landingConfirmed = output<Record<string, TerritoryName>>();
 
-  /** Counts per `${type}|${zone}`; null until the player first adjusts, when it snapshots defaults. */
-  private readonly overrideCounts = signal<Record<string, number> | null>(null);
-
-  /** The originally-designated distribution, used as the starting point (always within caps). */
-  private readonly defaultCounts = computed<Record<string, number>>(() => {
-    const counts: Record<string, number> = {};
-    const request = this.request();
-    for (const unit of request.aircraft) {
-      const zone = request.defaultZoneByUnitId[unit.id];
-      if (zone) {
-        counts[slotKey(unit.type, zone)] = (counts[slotKey(unit.type, zone)] ?? 0) + 1;
-      }
-    }
-    return counts;
-  });
-
-  private readonly counts = computed<Record<string, number>>(
-    () => this.overrideCounts() ?? this.defaultCounts(),
-  );
+  /** How many of each type the player has placed in each zone, keyed by `${type}|${zone}`. Starts
+   * empty — the player assigns every survivor themselves rather than inheriting the flight plans. */
+  private readonly counts = signal<Record<string, number>>({});
 
   /** Distinct aircraft types among the survivors, with their surviving totals. */
   private readonly totalsByType = computed<Map<UnitType, number>>(() => {
@@ -169,7 +153,7 @@ export class AircraftLandingPicker {
       return; // no survivors of this type left to place
     }
     counts[key] = next;
-    this.overrideCounts.set(counts);
+    this.counts.set(counts);
   }
 
   protected confirm(): void {

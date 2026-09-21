@@ -226,11 +226,7 @@ export class CombatOrchestrator {
   beginLandingAssignment(): void {
     const survivors = aircraftOnly(this.store.selectSnapshot(CombatSelectors.rawAttackingArmy));
     const caps = computeLandingCaps(this.originalAttackerAircraft, this.returnByUnitId);
-    const defaultZoneByUnitId: Record<string, TerritoryName> = {};
-    for (const unit of survivors) {
-      defaultZoneByUnitId[unit.id] = this.returnByUnitId[unit.id];
-    }
-    this.pendingLandingAssignment.set({ aircraft: survivors, caps, defaultZoneByUnitId });
+    this.pendingLandingAssignment.set({ aircraft: survivors, caps });
   }
 
   /**
