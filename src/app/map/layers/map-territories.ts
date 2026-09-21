@@ -59,6 +59,12 @@ const unloadTargetZoneStyle = new Style({
   stroke: new Stroke({ color: 'rgba(150, 110, 210, 0.95)', width: 3 }),
 });
 
+// Post-combat aircraft landing zones — yellow, echoing the selected/placement highlight.
+const landingTargetZoneStyle = new Style({
+  fill: new Fill({ color: 'rgba(255, 210, 74, 0.26)' }),
+  stroke: new Stroke({ color: 'rgba(255, 210, 74, 0.95)', width: 3 }),
+});
+
 export type TerritoryLayer = VectorLayer<VectorSource<Feature<Geometry>>, Feature<Geometry>>;
 
 export type TerritoryStyleId =
@@ -70,7 +76,8 @@ export type TerritoryStyleId =
   | 'placement-candidate'
   | 'placement-full'
   | 'load-target'
-  | 'unload-target';
+  | 'unload-target'
+  | 'landing-target';
 
 export type TerritoryLayerOptions = {
   stylePicker: (feature: FeatureLike) => TerritoryStyleId;
@@ -110,6 +117,8 @@ export const mapTerritoriesLayer = ({
         return loadTargetZoneStyle;
       case 'unload-target':
         return unloadTargetZoneStyle;
+      case 'landing-target':
+        return landingTargetZoneStyle;
       default:
         return landZoneStyle;
     }

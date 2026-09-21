@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { Nationality } from '@ww2/shared/nationality';
@@ -61,6 +61,21 @@ export class CombatOrchestrator {
    * set, the battle result is held until the choice is confirmed via finishBattle.
    */
   readonly pendingLandingAssignment = signal<LandingAssignmentRequest | null>(null);
+
+  /** The candidate landing zones for the current assignment prompt, for the map to highlight. */
+  readonly landingHighlightZones = computed<TerritoryName[]>(() => {
+    const request = this.pendingLandingAssignment();
+    if (!request) {
+      return [];
+    }
+    const zones = new Set<TerritoryName>();
+    for (const byZone of request.caps.values()) {
+      for (const zone of byZone.keys()) {
+        zones.add(zone);
+      }
+    }
+    return [...zones];
+  });
 
   private originByUnitId: BattleSetup['originByUnitId'] = {};
   private returnByUnitId: BattleSetup['returnByUnitId'] = {};

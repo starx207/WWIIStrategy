@@ -16,6 +16,22 @@
   background: rgba(10, 14, 20, 0.75);
 }
 
+// The landing picker floats at the bottom (no full backdrop) so the highlighted landing zones on
+// the map behind it stay visible while the player assigns aircraft.
+.landing-overlay {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.landing-overlay > * {
+  pointer-events: auto;
+}
+
 .shore-bombardment-banner {
   margin-bottom: 0.75rem;
   padding: 0.5rem 1rem;

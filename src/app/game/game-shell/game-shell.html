@@ -34,7 +34,7 @@
 }
 
 @if (pendingLandingAssignment(); as landingRequest) {
-  <div class="battle-overlay">
+  <div class="landing-overlay">
     <ww2-aircraft-landing-picker
       [request]="landingRequest"
       (landingConfirmed)="onLandingConfirmed($event)"

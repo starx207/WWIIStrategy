@@ -34,6 +34,7 @@ import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
 import { parseSquadId } from '../rules/movement-execution';
 import { findLoadableTransport } from '../rules/amphibious';
 import { PlacementService } from '../../production/placement.service';
+import { CombatOrchestrator } from '../../combat/combat-orchestrator';
 
 @Component({
   selector: 'ww2-game-map',
@@ -89,6 +90,8 @@ export class GameMap implements OnInit, OnDestroy {
     MapSelectors.capturedControlMarkers,
   );
   private readonly placementService = inject(PlacementService);
+  private readonly combatOrchestrator = inject(CombatOrchestrator);
+  private readonly landingHighlightZones = this.combatOrchestrator.landingHighlightZones;
 
   private map!: OlMap;
   private territoriesLayer?: TerritoryLayer;
@@ -134,6 +137,7 @@ export class GameMap implements OnInit, OnDestroy {
         this.cargoDestinations,
         this.placementService.candidateTerritories,
         this.placementService.focusedTerritory,
+        this.landingHighlightZones,
       ],
     });
     this.cleanupFns.push(territoryCleanup);
@@ -255,6 +259,10 @@ export class GameMap implements OnInit, OnDestroy {
   selectZoneStyle(feature: FeatureLike): TerritoryStyleId {
     const territoryName = feature.get('name') as TerritoryName | undefined;
     if (typeof territoryName === 'string') {
+      // Post-combat landing prompt: highlight the zones surviving aircraft may land in.
+      if (this.landingHighlightZones().includes(territoryName)) {
+        return 'landing-target';
+      }
       if (this.nextAdjacentDestinations().includes(territoryName)) {
         return 'movement-candidate';
       }
