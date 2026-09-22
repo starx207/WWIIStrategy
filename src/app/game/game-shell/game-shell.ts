@@ -3,7 +3,8 @@ import { Store } from '@ngxs/store';
 import { AppHeader } from '../../app-header/app-header';
 import { GameMap } from '@ww2/map/game-map/game-map';
 import { GameSelectors } from '@ww2/game/game-selectors';
-import { TurnPhase } from '@ww2/game/turn-phase';
+import { MOVEMENT_PHASES, TurnPhase } from '@ww2/game/turn-phase';
+import { SquadDetachmentPicker } from '@ww2/map/squad-detachment-picker/squad-detachment-picker';
 import { PurchasePanel } from '../../production/purchase-panel/purchase-panel';
 import { TechPanel } from '../../production/tech-panel/tech-panel';
 import { PlacementPanel } from '../../production/placement-panel/placement-panel';
@@ -28,6 +29,7 @@ import { TurnFlowService } from '../turn-flow.service';
     ConductCombatPanel,
     BattleBoard,
     AircraftLandingPicker,
+    SquadDetachmentPicker,
     HandoffScreen,
     VictoryScreen,
     GameControlsWidget,
@@ -42,6 +44,9 @@ export class GameShell {
 
   protected readonly TurnPhase = TurnPhase;
   protected readonly turnPhase = this.store.selectSignal(GameSelectors.turnPhase);
+  protected readonly movementPhaseActive = computed(() =>
+    [...MOVEMENT_PHASES].includes(this.turnPhase()),
+  );
   protected readonly battleActive = computed(
     () => this.combatOrchestrator.activeBattleTerritory() !== null,
   );

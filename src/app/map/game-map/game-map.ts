@@ -35,6 +35,7 @@ import { parseSquadId } from '../rules/movement-execution';
 import { findLoadableTransport } from '../rules/amphibious';
 import { PlacementService } from '../../production/placement.service';
 import { CombatOrchestrator } from '../../combat/combat-orchestrator';
+import { SquadDetachmentService } from '../squad-detachment.service';
 
 @Component({
   selector: 'ww2-game-map',
@@ -92,6 +93,7 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly placementService = inject(PlacementService);
   private readonly combatOrchestrator = inject(CombatOrchestrator);
   private readonly landingHighlightZones = this.combatOrchestrator.landingHighlightZones;
+  private readonly detachment = inject(SquadDetachmentService);
 
   private map!: OlMap;
   private territoriesLayer?: TerritoryLayer;
@@ -230,7 +232,12 @@ export class GameMap implements OnInit, OnDestroy {
       if (clickedTerritory && this.nextAdjacentDestinations().includes(clickedTerritory)) {
         this.selectedZoneId = undefined;
         this.store.dispatch(
-          new MapActions.PlanSquadMovementStep(clickedTerritory, event.coordinate),
+          new MapActions.PlanSquadMovementStep(
+            clickedTerritory,
+            event.coordinate,
+            undefined,
+            this.detachment.count() ?? undefined,
+          ),
         );
         return;
       }
@@ -413,7 +420,14 @@ export class GameMap implements OnInit, OnDestroy {
     if (!coordinate) {
       return;
     }
-    this.store.dispatch(new MapActions.PlanSquadMovementStep(territory, coordinate));
+    this.store.dispatch(
+      new MapActions.PlanSquadMovementStep(
+        territory,
+        coordinate,
+        undefined,
+        this.detachment.count() ?? undefined,
+      ),
+    );
   }
 
   private onSquadSelected(squad: MilitaryUnitSquad<MilitaryUnit>) {
@@ -428,14 +442,17 @@ export class GameMap implements OnInit, OnDestroy {
         this.tryPlanMoveToDestinationSquad(squad);
         return;
       }
-      // Units that combat-moved or fought this turn can't move again in non-combat. A mixed
-      // group (some committed, some idle) locks as a whole — split-squad movement isn't built yet.
+      // Units that combat-moved or fought this turn can't move again in non-combat. A stack that
+      // mixes committed and idle units (they reunited in one territory after combat) locks as a
+      // whole — detaching idle units out of a post-combat mix is not supported.
       if (phase === TurnPhase.NON_COMBAT_MOVEMENT) {
         const committed = this.combatCommittedUnitIds();
         if (squad.units.some((unit) => committed.includes(unit.id))) {
           return;
         }
       }
+      // A fresh selection starts at "move the whole stack"; the picker re-derives from here.
+      this.detachment.reset();
       const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
       const hasMovementPlans = this.hasMovementPlansWithPath();
       this.store.dispatch(

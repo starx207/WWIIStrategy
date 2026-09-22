@@ -27,6 +27,27 @@ export interface ExecuteMovementResult {
   remainingPlans: Record<string, SquadMovementPlan>;
 }
 
+/**
+ * The origin units a plan actually relocates: its squad's like units in `originUnits`, narrowed to
+ * the plan's `unitIds` when it is a detachment (a subset split off the stack). No `unitIds` = the
+ * whole stack (legacy). Sibling detachment plans of one stack carry disjoint `unitIds`, so applying
+ * this per plan never double-moves a unit.
+ */
+function planMovingUnits(
+  originUnits: MilitaryUnit[],
+  squad: { nationality: Nationality; unitType: UnitType },
+  plan: SquadMovementPlan,
+): MilitaryUnit[] {
+  const likeUnits = originUnits.filter(
+    (unit) => unit.nationality === squad.nationality && unit.type === squad.unitType,
+  );
+  if (!plan.unitIds) {
+    return likeUnits;
+  }
+  const ids = new Set(plan.unitIds);
+  return likeUnits.filter((unit) => ids.has(unit.id));
+}
+
 function findTerritoryForUnitId(
   units: UnitsByTerritory,
   unitId: string,
@@ -89,9 +110,7 @@ export function executeMovementPlans(
       continue;
     }
     const originUnits = units[plan.startingTerritoryName] ?? [];
-    const loadingIds = originUnits
-      .filter((unit) => unit.nationality === squad.nationality && unit.type === squad.unitType)
-      .map((unit) => unit.id);
+    const loadingIds = planMovingUnits(originUnits, squad, plan).map((unit) => unit.id);
     if (loadingIds.length === 0) {
       continue;
     }
@@ -126,9 +145,7 @@ export function executeMovementPlans(
     }
 
     const originUnits = units[origin] ?? [];
-    const squadUnits = originUnits.filter(
-      (unit) => unit.nationality === squad.nationality && unit.type === squad.unitType,
-    );
+    const squadUnits = planMovingUnits(originUnits, squad, plan);
     if (squadUnits.length === 0) {
       continue;
     }

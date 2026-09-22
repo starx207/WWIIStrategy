@@ -42,6 +42,12 @@
   </div>
 }
 
+@if (movementPhaseActive()) {
+  <div class="detachment-overlay">
+    <ww2-squad-detachment-picker />
+  </div>
+}
+
 @if (handoffPending()) {
   <ww2-handoff-screen></ww2-handoff-screen>
 }

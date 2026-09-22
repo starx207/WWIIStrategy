@@ -50,6 +50,10 @@ export interface SquadMovementPlan {
   startingTerritoryName: TerritoryName;
   path: SquadMovementStep[];
   isValid: boolean;
+  // A detachment (split): the specific units this plan moves. Absent = the whole stack (all
+  // same-nation/type units at the origin) — the legacy whole-squad move, unchanged. When present,
+  // the plan is keyed by a detachment-suffixed squad id (`map-squad|terr|nat|type|d<n>`).
+  unitIds?: string[];
 }
 
 export interface MapStateModel {
@@ -67,8 +71,15 @@ export interface MapStateModel {
   amphibiousAssaultsByTerritory: Partial<Record<LandTerritoryName, string[]>>;
   squadLayoutCoordinatesBySquadId: Record<string, Coordinate>;
   selectedSquad?: {
+    // The derived squad clicked: a base stack id `map-squad|terr|nat|type` (the unallocated
+    // remainder) or a detachment id `…|d<n>` (a subset already moving).
     id: string;
+    // The units of that derived squad — for a base id this is the remainder (units allocated to
+    // sibling detachment plans are hidden by `createMapSquads`), so a split can never re-use them.
     unitIds: string[];
+    // The plan this squad's orders read/write. Starts equal to `id`; the first step of a split
+    // migrates it to a freshly-minted detachment key.
+    activePlanKey: string;
   };
   movementPlansBySquadId: Record<string, SquadMovementPlan>;
   // Units that combat-moved or staged an amphibious assault this turn — locked out of non-combat
@@ -98,22 +109,28 @@ export class MapState {
   @Action(MapActions.SelectSquad)
   selectSquad(context: MapStateContext, action: MapActions.SelectSquad) {
     const state = context.getState();
+    const squadId = action.squad.id;
     const selectedSquad = {
-      id: action.squad.id,
+      id: squadId,
       unitIds: action.squad.units.map((unit) => unit.id),
+      // Selecting a moving detachment edits its own plan; selecting a base stack starts a new order.
+      activePlanKey: squadId,
     };
     const startingTerritoryName = findTerritoryForUnitId(state, selectedSquad.unitIds[0]);
-    const existingPlan = state.movementPlansBySquadId[selectedSquad.id];
+    const existingPlan = state.movementPlansBySquadId[selectedSquad.activePlanKey];
 
     context.patchState({
       selectedSquad,
+      // Eagerly create an empty plan under the base id so destination highlighting works before the
+      // first step. Never do this for a detachment key (its plan already exists, and an empty plan
+      // without unitIds under a suffixed key would move nothing).
       movementPlansBySquadId:
-        existingPlan || !startingTerritoryName
+        existingPlan || !startingTerritoryName || isDetachmentSquadId(squadId)
           ? state.movementPlansBySquadId
           : {
               ...state.movementPlansBySquadId,
-              [selectedSquad.id]: {
-                squadId: selectedSquad.id,
+              [selectedSquad.activePlanKey]: {
+                squadId: selectedSquad.activePlanKey,
                 phase: action.phase,
                 startingTerritoryName,
                 path: [],
@@ -127,13 +144,40 @@ export class MapState {
   planSquadMovementStep(context: MapStateContext, action: MapActions.PlanSquadMovementStep) {
     const state = context.getState();
     const selectedSquad = state.selectedSquad;
-    const selectedSquadId = selectedSquad?.id;
-    const selectedPlan = selectedSquadId
-      ? state.movementPlansBySquadId[selectedSquadId]
-      : undefined;
-
-    if (!selectedSquadId || !selectedPlan) {
+    if (!selectedSquad) {
       return;
+    }
+
+    let activePlanKey = selectedSquad.activePlanKey;
+    let plans = state.movementPlansBySquadId;
+    let selectedPlan = plans[activePlanKey];
+    if (!selectedPlan) {
+      return;
+    }
+
+    // The split is decided on the FIRST step of an order, and only from a base stack (a detachment
+    // that is already moving just keeps appending). Split off a detachment when the player asked to
+    // move fewer than the remaining units, or when this stack already has sibling detachments (in
+    // which case even a "move all the rest" order must bind its own units so execution doesn't grab
+    // the whole stack and double-move the siblings' units).
+    if (selectedPlan.path.length === 0 && !isDetachmentSquadId(activePlanKey)) {
+      const baseId = activePlanKey;
+      const remainder = selectedSquad.unitIds.length;
+      const count = Math.max(1, Math.min(action.detachmentCount ?? remainder, remainder));
+      if (count < remainder || hasSiblingDetachments(baseId, plans)) {
+        const { [baseId]: _emptyBasePlan, ...rest } = plans;
+        const detachmentKey = nextDetachmentKey(baseId, rest);
+        activePlanKey = detachmentKey;
+        plans = rest;
+        selectedPlan = {
+          squadId: detachmentKey,
+          phase: selectedPlan.phase,
+          startingTerritoryName: selectedPlan.startingTerritoryName,
+          path: [],
+          isValid: true,
+          unitIds: selectedSquad.unitIds.slice(0, count),
+        };
+      }
     }
 
     // Aircraft only fight in a single destination, so combat type depends on the whole path (see
@@ -166,9 +210,10 @@ export class MapState {
     });
 
     context.patchState({
+      selectedSquad: { ...selectedSquad, activePlanKey },
       movementPlansBySquadId: {
-        ...state.movementPlansBySquadId,
-        [selectedSquadId]: {
+        ...plans,
+        [activePlanKey]: {
           ...newPlan,
           isValid: isValid,
         },
@@ -180,12 +225,10 @@ export class MapState {
   undoSquadMovementStep(context: MapStateContext) {
     const state = context.getState();
     const selected = state.selectedSquad;
-    const selectedSquadId = selected?.id;
-    const selectedPlan = selectedSquadId
-      ? state.movementPlansBySquadId[selectedSquadId]
-      : undefined;
+    const activePlanKey = selected?.activePlanKey;
+    const selectedPlan = activePlanKey ? state.movementPlansBySquadId[activePlanKey] : undefined;
 
-    if (!selectedSquadId || !selectedPlan || selectedPlan.path.length === 0) {
+    if (!selected || !activePlanKey || !selectedPlan || selectedPlan.path.length === 0) {
       // Nothing to pop on the transport's own plan — but a load lives on the boarding land squad's
       // plan (that squad is hidden while aboard), so let Undo on the transport reverse the most
       // recent load, keeping load/move/unload undoable as one operation.
@@ -205,6 +248,30 @@ export class MapState {
     // recompute the remaining path's combat types rather than just slicing.
     const remainingSteps = selectedPlan.path.slice(0, -1);
     const unit = findUnitForSelectedSquad(state);
+
+    // Undoing a detachment's last step dissolves it: drop the plan so its units rejoin the
+    // remainder, and point the selection back at the base stack (recreating its empty highlight
+    // plan) so the player can immediately re-order the reunited stack.
+    if (remainingSteps.length === 0 && isDetachmentSquadId(activePlanKey)) {
+      const baseId = baseSquadIdOf(activePlanKey);
+      const { [activePlanKey]: _dissolved, ...rest } = state.movementPlansBySquadId;
+      context.patchState({
+        selectedSquad: { ...selected, activePlanKey: baseId },
+        movementPlansBySquadId: rest[baseId]
+          ? rest
+          : {
+              ...rest,
+              [baseId]: {
+                squadId: baseId,
+                phase: selectedPlan.phase,
+                startingTerritoryName: selectedPlan.startingTerritoryName,
+                path: [],
+                isValid: true,
+              },
+            },
+      });
+      return;
+    }
 
     const newPlan = {
       ...selectedPlan,
@@ -229,7 +296,7 @@ export class MapState {
     context.patchState({
       movementPlansBySquadId: {
         ...state.movementPlansBySquadId,
-        [selectedSquadId]: {
+        [activePlanKey]: {
           ...newPlan,
           isValid: isValid ?? false,
         },
@@ -241,7 +308,9 @@ export class MapState {
   setAircraftCombatNode(context: MapStateContext, action: MapActions.SetAircraftCombatNode) {
     const state = context.getState();
     const selectedSquad = state.selectedSquad;
-    const selectedPlan = selectedSquad ? state.movementPlansBySquadId[selectedSquad.id] : undefined;
+    const selectedPlan = selectedSquad
+      ? state.movementPlansBySquadId[selectedSquad.activePlanKey]
+      : undefined;
     const unit = findUnitForSelectedSquad(state);
 
     if (
@@ -292,7 +361,7 @@ export class MapState {
     context.patchState({
       movementPlansBySquadId: {
         ...state.movementPlansBySquadId,
-        [selectedSquad.id]: {
+        [selectedSquad.activePlanKey]: {
           ...newPlan,
           isValid: isValid,
         },
@@ -308,11 +377,11 @@ export class MapState {
       return;
     }
 
-    // Clear the selected squad's plan plus any loads onto it (a transport owns its whole operation),
+    // Clear the active order's plan plus any loads onto it (a transport owns its whole operation),
     // so clearing a transport also releases the units it had queued to board.
     const toRemove = new Set<string>(associatedLoadPlanSquadIds(state, selected.unitIds));
-    if (state.movementPlansBySquadId[selected.id]) {
-      toRemove.add(selected.id);
+    if (state.movementPlansBySquadId[selected.activePlanKey]) {
+      toRemove.add(selected.activePlanKey);
     }
     if (toRemove.size === 0) {
       return;
@@ -321,7 +390,15 @@ export class MapState {
     const movementPlansBySquadId = Object.fromEntries(
       Object.entries(state.movementPlansBySquadId).filter(([squadId]) => !toRemove.has(squadId)),
     );
-    context.patchState({ movementPlansBySquadId });
+    // If we cleared a detachment, its units rejoin the remainder — repoint the selection at the base
+    // stack so the reunited stack is immediately orderable again.
+    const activePlanKey = isDetachmentSquadId(selected.activePlanKey)
+      ? baseSquadIdOf(selected.activePlanKey)
+      : selected.activePlanKey;
+    context.patchState({
+      movementPlansBySquadId,
+      selectedSquad: { ...selected, activePlanKey },
+    });
   }
 
   @Action(MapActions.ClearAllMovementPlans)
@@ -586,6 +663,32 @@ function copyCoordinatesBySquadId(
   return Object.fromEntries(
     Object.entries(coordinatesBySquadId).map(([squadId, coordinate]) => [squadId, [...coordinate]]),
   );
+}
+
+/** A detachment plan key (`map-squad|terr|nat|type|d<n>`) carries a 5th segment; a base stack id
+ * (`map-squad|terr|nat|type`) has exactly four. */
+function isDetachmentSquadId(squadId: string): boolean {
+  return squadId.split('|').length > 4;
+}
+
+/** The base stack id underlying any squad id — drops a detachment suffix, leaves a base id alone. */
+function baseSquadIdOf(squadId: string): string {
+  return squadId.split('|').slice(0, 4).join('|');
+}
+
+/** Whether the stack already has one or more detachment plans split off it. */
+function hasSiblingDetachments(baseId: string, plans: Record<string, SquadMovementPlan>): boolean {
+  const prefix = `${baseId}|d`;
+  return Object.keys(plans).some((key) => key.startsWith(prefix));
+}
+
+/** The next free detachment key for a stack (`…|d1`, `…|d2`, …). */
+function nextDetachmentKey(baseId: string, plans: Record<string, SquadMovementPlan>): string {
+  let n = 1;
+  while (plans[`${baseId}|d${n}`]) {
+    n += 1;
+  }
+  return `${baseId}|d${n}`;
 }
 
 function findTerritoryForUnitId(state: MapStateModel, unitId?: string): TerritoryName | undefined {

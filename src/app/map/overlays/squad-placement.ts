@@ -228,7 +228,7 @@ function buildDesiredSquadOverlays(
       squadId: squad.id,
       layout: createSingleSquadLayout(squad),
       coordinate: finalCoordinate,
-      variant: selectedSquad?.id === plan.squadId ? 'movement-final' : 'normal',
+      variant: selectedSquad?.activePlanKey === plan.squadId ? 'movement-final' : 'normal',
       disabled: false,
       onTop: true,
     });

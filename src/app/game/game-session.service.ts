@@ -9,6 +9,7 @@ import { FIRST_TURN_PHASE } from './turn-phase';
 import { TurnFlowService } from './turn-flow.service';
 import { CombatOrchestrator } from '@ww2/combat/combat-orchestrator';
 import { PlacementService } from '@ww2/production/placement.service';
+import { SquadDetachmentService } from '@ww2/map/squad-detachment.service';
 import { defaultSaveFileName, deserializeGame, serializeGame } from './game-serialization';
 
 export interface NewGameConfig {
@@ -28,6 +29,7 @@ export class GameSessionService {
   private readonly turnFlow = inject(TurnFlowService);
   private readonly combatOrchestrator = inject(CombatOrchestrator);
   private readonly placementService = inject(PlacementService);
+  private readonly squadDetachment = inject(SquadDetachmentService);
 
   /**
    * The default state of every slice, captured the first time this service is constructed —
@@ -41,6 +43,7 @@ export class GameSessionService {
     this.turnFlow.reset();
     this.combatOrchestrator.reset();
     this.placementService.reset();
+    this.squadDetachment.reset();
     this.store.dispatch([
       new SessionActions.StartNewGame(config.players, config.nationAssignments, config.houseRules),
       // A game begins with the Soviet Union's first turn. (Turn-order / starting-phase specifics
@@ -57,6 +60,7 @@ export class GameSessionService {
     this.turnFlow.reset();
     this.combatOrchestrator.reset();
     this.placementService.reset();
+    this.squadDetachment.reset();
     this.store.dispatch(new SessionActions.SetLoadedFileName(fileName));
   }
 

@@ -68,7 +68,9 @@ export function attackedTerritoryForPlan(plan: SquadMovementPlan): TerritoryName
   return plan.path[plan.path.length - 1].territoryName;
 }
 
-/** The units a combat-move plan would commit (all like units of its squad at the origin). */
+/** The units a combat-move plan would commit: its squad's like units at the origin, narrowed to the
+ * plan's `unitIds` when it is a detachment (a subset split off the stack). No `unitIds` = the whole
+ * stack (legacy). */
 export function movingUnitsForPlan(
   plan: SquadMovementPlan,
   unitsByTerritory: UnitsByTerritory,
@@ -77,9 +79,14 @@ export function movingUnitsForPlan(
   if (!squad) {
     return [];
   }
-  return (unitsByTerritory[plan.startingTerritoryName] ?? []).filter(
+  const likeUnits = (unitsByTerritory[plan.startingTerritoryName] ?? []).filter(
     (unit) => unit.nationality === squad.nationality && unit.type === squad.unitType,
   );
+  if (!plan.unitIds) {
+    return likeUnits;
+  }
+  const ids = new Set(plan.unitIds);
+  return likeUnits.filter((unit) => ids.has(unit.id));
 }
 
 function combatMovePlans(plans: SquadMovementPlan[]): SquadMovementPlan[] {

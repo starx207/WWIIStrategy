@@ -118,8 +118,13 @@ export function resolveAutomaticCaptures(params: {
     }
 
     const originUnits = units[plan.startingTerritoryName] ?? [];
+    // A detachment plan captures only its own units (a subset of the stack); a whole-stack plan
+    // (no unitIds) captures every like unit, as before.
+    const detachmentIds = plan.unitIds ? new Set(plan.unitIds) : undefined;
     const isMoving = (unit: MilitaryUnit) =>
-      unit.nationality === squad.nationality && unit.type === squad.unitType;
+      unit.nationality === squad.nationality &&
+      unit.type === squad.unitType &&
+      (!detachmentIds || detachmentIds.has(unit.id));
     const moving = originUnits.filter(isMoving);
     if (moving.length === 0) {
       continue;

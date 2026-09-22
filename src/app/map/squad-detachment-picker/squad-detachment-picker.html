@@ -1,0 +1,43 @@
+@if (visible()) {
+  <section class="detachment-picker">
+    <p class="detachment-picker__eyebrow">Split Squad</p>
+    <div class="detachment-picker__row">
+      @if (nationality(); as nationality) {
+        @if (unitType(); as unitType) {
+          <ww2-military-unit-icon
+            class="detachment-picker__icon"
+            [nationality]="nationality"
+            [unitType]="unitType"
+          />
+        }
+      }
+      <div class="detachment-picker__stepper">
+        <button
+          type="button"
+          aria-label="Move one fewer"
+          [disabled]="!canDecrement()"
+          (click)="adjust(-1)"
+        >
+          −
+        </button>
+        <span class="detachment-picker__count">{{ count() }}</span>
+        <button
+          type="button"
+          aria-label="Move one more"
+          [disabled]="!canIncrement()"
+          (click)="adjust(1)"
+        >
+          +
+        </button>
+      </div>
+      <span class="detachment-picker__label">of {{ total() }} to move</span>
+    </div>
+    <p class="detachment-picker__hint">
+      @if (staying() > 0) {
+        {{ staying() }} will stay behind. Click a destination to send {{ count() }}.
+      } @else {
+        Moving the whole squad. Click a destination.
+      }
+    </p>
+  </section>
+}

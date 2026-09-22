@@ -27,6 +27,10 @@ export namespace MapActions {
       public coordinate: Coordinate,
       // When set, the appended step is a deferred load/unload rather than an ordinary move.
       public cargo?: SquadMovementStepCargo,
+      // How many units of the selected stack this order moves. Only consulted on the FIRST step of
+      // an order: a value below the stack's remaining count (or a stack that already has sibling
+      // detachments) splits off a detachment. Absent = the whole (remaining) stack.
+      public detachmentCount?: number,
     ) {}
   }
 

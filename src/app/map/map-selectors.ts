@@ -101,6 +101,14 @@ export class MapSelectors {
       ...allAmphibiousUnitIds(state.amphibiousAssaultsByTerritory),
       ...plannedLoads.hiddenUnitIds,
     ]);
+    // Units allocated to a detachment (subset) plan are peeled out of their stack into that plan's
+    // own squad, so the stack renders as the unallocated remainder plus one squad per detachment.
+    const detachmentByUnitId = new Map<string, string>();
+    for (const [squadId, plan] of Object.entries(state.movementPlansBySquadId)) {
+      for (const unitId of plan.unitIds ?? []) {
+        detachmentByUnitId.set(unitId, squadId);
+      }
+    }
     return Object.fromEntries(
       Object.entries(state.unitsByTerritoryName)
         .map(([territoryName, units]) => [
@@ -111,6 +119,7 @@ export class MapSelectors {
             state.cargoByCarrierUnitId,
             hiddenUnitIds,
             plannedLoads.cargoTypesByTransportId,
+            detachmentByUnitId,
           ),
         ])
         .filter(([, squads]) => squads.length > 0),
@@ -151,8 +160,35 @@ export class MapSelectors {
 
   @Selector([MapState])
   static selectedSquadMovementPlan(state: MapStateModel): SquadMovementPlan | undefined {
-    const selectedSquadId = state.selectedSquad?.id;
-    return selectedSquadId ? state.movementPlansBySquadId[selectedSquadId] : undefined;
+    const activePlanKey = state.selectedSquad?.activePlanKey;
+    return activePlanKey ? state.movementPlansBySquadId[activePlanKey] : undefined;
+  }
+
+  /**
+   * How many units of the selected stack are available to split into the next order (the
+   * unallocated remainder). Zero when no eligible split is possible: nothing selected, a
+   * transport/carrier (cargo splitting is a separate workstream), or an order already underway
+   * (its first step locks the detachment). The detachment picker shows only when this exceeds 1.
+   */
+  @Selector([MapState])
+  static selectedSquadDetachableCount(state: MapStateModel): number {
+    const selected = state.selectedSquad;
+    if (!selected) {
+      return 0;
+    }
+    const parsed = parseSquadId(selected.id);
+    if (
+      !parsed ||
+      parsed.unitType === UnitType.TRANSPORT ||
+      parsed.unitType === UnitType.AIRCRAFT_CARRIER
+    ) {
+      return 0;
+    }
+    const plan = state.movementPlansBySquadId[selected.activePlanKey];
+    if ((plan?.path.length ?? 0) > 0) {
+      return 0;
+    }
+    return selected.unitIds.length;
   }
 
   @Selector([MapState])
@@ -171,7 +207,7 @@ export class MapSelectors {
     if (!selected) {
       return false;
     }
-    if ((state.movementPlansBySquadId[selected.id]?.path.length ?? 0) > 0) {
+    if ((state.movementPlansBySquadId[selected.activePlanKey]?.path.length ?? 0) > 0) {
       return true;
     }
     const ids = new Set(selected.unitIds);
@@ -192,7 +228,7 @@ export class MapSelectors {
       return 0;
     }
 
-    const selectedPlan = state.movementPlansBySquadId[selectedSquad.id];
+    const selectedPlan = state.movementPlansBySquadId[selectedSquad.activePlanKey];
     if (!selectedPlan) {
       return 0;
     }
@@ -220,7 +256,7 @@ export class MapSelectors {
       return [];
     }
 
-    const selectedPlan = state.movementPlansBySquadId[selectedSquad.id];
+    const selectedPlan = state.movementPlansBySquadId[selectedSquad.activePlanKey];
     const { unit } = findTerritoryForUnitId(state, selectedSquad.unitIds[0]);
     if (!unit) {
       return [];
@@ -261,7 +297,18 @@ export class MapSelectors {
       return empty;
     }
 
-    const plan = state.movementPlansBySquadId[selectedSquad.id];
+    // Cargo splitting is a separate workstream: load/unload stays a whole-stack action. Refuse it
+    // whenever this order is (or shares a stack with) a detachment, so the cargo passes always see
+    // the full stack.
+    const baseId = selectedSquad.id.split('|').slice(0, 4).join('|');
+    const isSubsetOrder =
+      selectedSquad.id.split('|').length > 4 ||
+      Object.keys(state.movementPlansBySquadId).some((key) => key.startsWith(`${baseId}|d`));
+    if (isSubsetOrder) {
+      return empty;
+    }
+
+    const plan = state.movementPlansBySquadId[selectedSquad.activePlanKey];
 
     if (LAND_UNIT_TYPES.includes(parsed.unitType)) {
       // A land squad that has already spent movement can no longer load (its move is committed).
@@ -391,12 +438,15 @@ function createMapSquads(
   cargoByCarrierUnitId: CargoByCarrierUnitId,
   hiddenUnitIds: Set<string>,
   plannedCargoTypesByTransportId: Record<string, UnitType[]> = {},
+  detachmentByUnitId: Map<string, string> = new Map(),
 ): MilitaryUnitSquad<MilitaryUnit>[] {
   // Loaded cargo (and units staged for an amphibious assault) are shown on their carrier / not at all.
   const renderableUnits = units.filter((unit) => !hiddenUnitIds.has(unit.id));
 
+  // Group by detachment plan key when a unit is allocated to one, else by nationality|type. This
+  // yields the base remainder squad plus one squad per detachment sharing the territory.
   const groups = renderableUnits.reduce<SquadGroups>((currentGroups, unit) => {
-    const groupKey = `${unit.nationality}|${unit.type}`;
+    const groupKey = detachmentByUnitId.get(unit.id) ?? `${unit.nationality}|${unit.type}`;
     currentGroups[groupKey] = [...(currentGroups[groupKey] ?? []), unit];
     return currentGroups;
   }, {});
@@ -408,9 +458,17 @@ function createMapSquads(
   return Object.entries(groups)
     .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
     .map(([groupKey, squadUnits]) => {
-      const [nationality, unitType] = groupKey.split('|');
+      // A detachment group's key is already a full squad id (`map-squad|…|d<n>`); a base group's key
+      // is `nationality|type`. Nationality/type are the same across the group, so read them off a
+      // member. Transports/carriers are never split, so a detachment group never carries cargo.
+      const isDetachmentGroup = groupKey.startsWith('map-squad|');
+      const { nationality, type: unitType } = squadUnits[0];
+      const squadId = isDetachmentGroup
+        ? groupKey
+        : `map-squad|${territoryName}|${nationality}|${unitType}`;
       const cargo: UnitType[] =
-        unitType === UnitType.AIRCRAFT_CARRIER || unitType === UnitType.TRANSPORT
+        !isDetachmentGroup &&
+        (unitType === UnitType.AIRCRAFT_CARRIER || unitType === UnitType.TRANSPORT)
           ? squadUnits.flatMap((carrier) => [
               ...(cargoByCarrierUnitId[carrier.id] ?? []).flatMap((cargoId) => {
                 const cargoUnit = unitById.get(cargoId);
@@ -421,11 +479,6 @@ function createMapSquads(
               ...(plannedCargoTypesByTransportId[carrier.id] ?? []),
             ])
           : [];
-      return new MilitaryUnitSquad(
-        squadUnits,
-        `map-squad|${territoryName}|${nationality}|${unitType}`,
-        undefined,
-        cargo,
-      );
+      return new MilitaryUnitSquad(squadUnits, squadId, undefined, cargo);
     });
 }
