@@ -47,3 +47,6 @@ Thumbs.db
 
 # AI Artifacts
 .codex
+
+# Cypress
+cypress/screenshots/*
