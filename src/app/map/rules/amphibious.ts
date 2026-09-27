@@ -4,7 +4,7 @@ import { UnitType } from '@ww2/shared/unit-type';
 import { LandTerritoryName, TerritoryName } from '../../territories/territory-names';
 import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
 import { ADJACENT_TERRITORIES_BY_NAME } from '../../territories/territory-adjacency';
-import { CargoByCarrierUnitId, remainingCapacity } from './carrier-cargo';
+import { CargoByCarrierUnitId, canTransportHoldTypes } from './carrier-cargo';
 import type { SquadMovementPlan } from '../map-state';
 
 type UnitsByTerritory = Partial<Record<TerritoryName, MilitaryUnit[]>>;
@@ -28,28 +28,50 @@ export function plannedTransportSeaPosition(
 }
 
 /**
- * Find a same-nationality transport in `seaZone` (adjacent to `fromTerritory`) with room for
- * `cargoUnitCount` more land units, or undefined if none qualifies. Used to decide whether clicking
- * a sea zone with a land squad selected should load it.
+ * Find a same-nationality transport in `seaZone` (adjacent to `fromTerritory`) that could legally
+ * hold `cargoUnitCount` more units of `cargoUnitType` on top of what it already carries, or undefined
+ * if none qualifies. Used to decide whether clicking a sea zone with a land squad selected should
+ * load it. Enforces the infantry-anchored composition rule (see `canTransportHoldTypes`), not just a
+ * count.
  */
 export function findLoadableTransport(params: {
   fromTerritory: TerritoryName;
   seaZone: TerritoryName;
   cargoUnitCount: number;
+  cargoUnitType: UnitType;
   nation: Nationality;
   unitsByTerritory: UnitsByTerritory;
   cargoByCarrierUnitId: CargoByCarrierUnitId;
+  // Transports that already acted this turn (e.g. ran a combat cargo op): a transport participates in
+  // cargo ops in only one phase, so a committed one can't be loaded onto again.
+  committedUnitIds?: Set<string>;
+  // Types of not-yet-executed loads already planned onto each transport this phase, charged against
+  // its capacity so it can't be overcommitted across several load orders.
+  plannedCargoTypesByTransportId?: Record<string, UnitType[]>;
 }): string | undefined {
-  const { fromTerritory, seaZone, cargoUnitCount, nation } = params;
+  const { fromTerritory, seaZone, cargoUnitCount, cargoUnitType, nation, committedUnitIds } =
+    params;
   if (TERRITORY_INFO_BY_NAME[seaZone].kind !== 'sea' || !isAdjacent(fromTerritory, seaZone)) {
     return undefined;
   }
-  const transport = (params.unitsByTerritory[seaZone] ?? []).find(
-    (unit) =>
-      unit.type === UnitType.TRANSPORT &&
-      unit.nationality === nation &&
-      remainingCapacity(UnitType.TRANSPORT, params.cargoByCarrierUnitId[unit.id]) >= cargoUnitCount,
+  // Loaded cargo units sit physically in the transport's sea zone, so their types are resolvable here.
+  const typeById = new Map(
+    (params.unitsByTerritory[seaZone] ?? []).map((unit) => [unit.id, unit.type]),
   );
+  const incoming = Array<UnitType>(cargoUnitCount).fill(cargoUnitType);
+  const transport = (params.unitsByTerritory[seaZone] ?? []).find((unit) => {
+    if (unit.type !== UnitType.TRANSPORT || unit.nationality !== nation) {
+      return false;
+    }
+    if (committedUnitIds?.has(unit.id)) {
+      return false;
+    }
+    const existingTypes = (params.cargoByCarrierUnitId[unit.id] ?? [])
+      .map((cargoId) => typeById.get(cargoId))
+      .filter((type): type is UnitType => type !== undefined);
+    const plannedTypes = params.plannedCargoTypesByTransportId?.[unit.id] ?? [];
+    return canTransportHoldTypes([...existingTypes, ...plannedTypes, ...incoming]);
+  });
   return transport?.id;
 }
 
@@ -102,7 +124,8 @@ export function loadCargo(params: {
 
 /**
  * Unload a transport's cargo onto a friendly territory: move the loaded land units from the
- * transport's sea zone into the target territory and clear the transport's cargo. Pure function.
+ * transport's sea zone into the target territory. When `unitIds` is given, only those cargo units
+ * disembark and the rest stay aboard; otherwise the whole cargo unloads. Pure function.
  */
 export function unloadToTerritory(params: {
   unitsByTerritory: UnitsByTerritory;
@@ -110,17 +133,22 @@ export function unloadToTerritory(params: {
   transportId: string;
   transportTerritory: TerritoryName;
   targetTerritory: TerritoryName;
+  unitIds?: string[];
 }): LoadCargoResult {
   const units: UnitsByTerritory = { ...params.unitsByTerritory };
   const cargo: CargoByCarrierUnitId = { ...params.cargoByCarrierUnitId };
 
-  const cargoIds = new Set(cargo[params.transportId] ?? []);
+  const currentCargo = cargo[params.transportId] ?? [];
+  const requested = params.unitIds ? new Set(params.unitIds) : undefined;
+  const unloadingIds = new Set(
+    requested ? currentCargo.filter((id) => requested.has(id)) : currentCargo,
+  );
   const seaUnits = units[params.transportTerritory] ?? [];
-  const unloading = seaUnits.filter((unit) => cargoIds.has(unit.id));
+  const unloading = seaUnits.filter((unit) => unloadingIds.has(unit.id));
 
-  units[params.transportTerritory] = seaUnits.filter((unit) => !cargoIds.has(unit.id));
+  units[params.transportTerritory] = seaUnits.filter((unit) => !unloadingIds.has(unit.id));
   units[params.targetTerritory] = [...(units[params.targetTerritory] ?? []), ...unloading];
-  cargo[params.transportId] = [];
+  cargo[params.transportId] = currentCargo.filter((id) => !unloadingIds.has(id));
 
   return { unitsByTerritoryName: units, cargoByCarrierUnitId: cargo };
 }
@@ -132,21 +160,28 @@ export interface StageAssaultResult {
 
 /**
  * Stage an amphibious assault: move a transport's cargo ids into the assault list for a hostile
- * territory (the units stay physically in the sea zone until combat resolves) and clear the
- * transport's cargo. Pure function.
+ * territory (the units stay physically in the sea zone until combat resolves). When `unitIds` is
+ * given, only those cargo units are staged and the rest stay aboard; otherwise the whole cargo is
+ * staged. Pure function.
  */
 export function stageAmphibiousAssault(params: {
   cargoByCarrierUnitId: CargoByCarrierUnitId;
   amphibiousAssaultsByTerritory: AmphibiousAssaults;
   transportId: string;
   targetTerritory: LandTerritoryName;
+  unitIds?: string[];
 }): StageAssaultResult {
   const cargo: CargoByCarrierUnitId = { ...params.cargoByCarrierUnitId };
   const amphibious: AmphibiousAssaults = { ...params.amphibiousAssaultsByTerritory };
 
-  const cargoIds = cargo[params.transportId] ?? [];
-  amphibious[params.targetTerritory] = [...(amphibious[params.targetTerritory] ?? []), ...cargoIds];
-  cargo[params.transportId] = [];
+  const currentCargo = cargo[params.transportId] ?? [];
+  const requested = params.unitIds ? new Set(params.unitIds) : undefined;
+  const stagingIds = requested ? currentCargo.filter((id) => requested.has(id)) : currentCargo;
+  amphibious[params.targetTerritory] = [
+    ...(amphibious[params.targetTerritory] ?? []),
+    ...stagingIds,
+  ];
+  cargo[params.transportId] = requested ? currentCargo.filter((id) => !requested.has(id)) : [];
 
   return { cargoByCarrierUnitId: cargo, amphibiousAssaultsByTerritory: amphibious };
 }

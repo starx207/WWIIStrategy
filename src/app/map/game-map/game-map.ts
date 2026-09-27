@@ -17,7 +17,7 @@ import { Map as OlMap } from 'ol';
 import { containsExtent, getCenter } from 'ol/extent';
 import { configureMap, mapExtent } from '../map-config';
 import { mapTerritoriesLayer, TerritoryLayer, TerritoryStyleId } from '../layers/map-territories';
-import { MapSelectors } from '../map-selectors';
+import { collectPlannedLoads, MapSelectors } from '../map-selectors';
 import { connectSquadOverlaysToMap } from '../overlays/squad-placement';
 import { connectControlMarkersToMap } from '../overlays/control-marker-placement';
 import { TERRITORY_INFO_BY_NAME } from '../../territories/territory-info';
@@ -36,6 +36,7 @@ import { findLoadableTransport } from '../rules/amphibious';
 import { PlacementService } from '../../production/placement.service';
 import { CombatOrchestrator } from '../../combat/combat-orchestrator';
 import { SquadDetachmentService } from '../squad-detachment.service';
+import { CargoUnloadService } from '../cargo-unload.service';
 
 @Component({
   selector: 'ww2-game-map',
@@ -94,6 +95,48 @@ export class GameMap implements OnInit, OnDestroy {
   private readonly combatOrchestrator = inject(CombatOrchestrator);
   private readonly landingHighlightZones = this.combatOrchestrator.landingHighlightZones;
   private readonly detachment = inject(SquadDetachmentService);
+  private readonly cargoUnload = inject(CargoUnloadService);
+
+  /**
+   * The subset of `cargoDestinations().load` that actually fits the *currently chosen* split count.
+   * The selector offers any sea zone whose transport can take at least one unit of the squad's type;
+   * this narrows to zones whose transport can take the number the player picked in the detachment
+   * stepper, so the load highlight tracks the stepper (a selector can't read that transient signal).
+   */
+  private readonly loadTargets = computed<TerritoryName[]>(() => {
+    const selected = this.selectedSquad();
+    const load = this.cargoDestinations().load;
+    if (!selected || load.length === 0) {
+      return load;
+    }
+    const parsed = parseSquadId(selected.id);
+    const fromTerritory = selected.id.split('|')[1] as TerritoryName | undefined;
+    const nation = this.activeNationality();
+    if (!parsed || !fromTerritory || !nation) {
+      return load;
+    }
+    const count = this.detachment.count() ?? selected.unitIds.length;
+    const units = this.unitsByTerritoryName();
+    const cargo = this.cargoByCarrierUnitId();
+    const committedUnitIds = new Set(this.combatCommittedUnitIds());
+    const plannedCargoTypesByTransportId = collectPlannedLoads(
+      this.movementPlansBySquadId(),
+      units,
+    ).cargoTypesByTransportId;
+    return load.filter((seaZone) =>
+      findLoadableTransport({
+        fromTerritory,
+        seaZone,
+        cargoUnitCount: count,
+        cargoUnitType: parsed.unitType,
+        nation,
+        unitsByTerritory: units,
+        cargoByCarrierUnitId: cargo,
+        committedUnitIds,
+        plannedCargoTypesByTransportId,
+      }),
+    );
+  });
 
   private map!: OlMap;
   private territoriesLayer?: TerritoryLayer;
@@ -137,6 +180,7 @@ export class GameMap implements OnInit, OnDestroy {
         this.nextAdjacentDestinations,
         this.selectedSquadMovementPlan,
         this.cargoDestinations,
+        this.detachment.count,
         this.placementService.candidateTerritories,
         this.placementService.focusedTerritory,
         this.landingHighlightZones,
@@ -273,11 +317,10 @@ export class GameMap implements OnInit, OnDestroy {
       if (this.nextAdjacentDestinations().includes(territoryName)) {
         return 'movement-candidate';
       }
-      const cargo = this.cargoDestinations();
-      if (cargo.load.includes(territoryName)) {
+      if (this.loadTargets().includes(territoryName)) {
         return 'load-target';
       }
-      if (cargo.unload.includes(territoryName)) {
+      if (this.cargoDestinations().unload.includes(territoryName)) {
         return 'unload-target';
       }
 
@@ -364,26 +407,33 @@ export class GameMap implements OnInit, OnDestroy {
     if (!parsed || !selectedTerritory || !nation) {
       return false;
     }
-    const cargoDestinations = this.cargoDestinations();
-
     if (
       LAND_UNIT_TYPES.includes(parsed.unitType) &&
-      cargoDestinations.load.includes(clickedTerritory)
+      this.loadTargets().includes(clickedTerritory)
     ) {
+      const count = this.detachment.count() ?? selected.unitIds.length;
       const transportId = findLoadableTransport({
         fromTerritory: selectedTerritory,
         seaZone: clickedTerritory,
-        cargoUnitCount: selected.unitIds.length,
+        cargoUnitCount: count,
+        cargoUnitType: parsed.unitType,
         nation,
         unitsByTerritory: this.unitsByTerritoryName(),
         cargoByCarrierUnitId: this.cargoByCarrierUnitId(),
+        committedUnitIds: new Set(this.combatCommittedUnitIds()),
+        plannedCargoTypesByTransportId: collectPlannedLoads(
+          this.movementPlansBySquadId(),
+          this.unitsByTerritoryName(),
+        ).cargoTypesByTransportId,
       });
       if (transportId) {
         this.store.dispatch(
-          new MapActions.PlanSquadMovementStep(clickedTerritory, coordinate, {
-            role: 'load',
-            transportId,
-          }),
+          new MapActions.PlanSquadMovementStep(
+            clickedTerritory,
+            coordinate,
+            { role: 'load', transportId },
+            this.detachment.count() ?? undefined,
+          ),
         );
         return true;
       }
@@ -391,10 +441,19 @@ export class GameMap implements OnInit, OnDestroy {
 
     if (
       parsed.unitType === UnitType.TRANSPORT &&
-      cargoDestinations.unload.includes(clickedTerritory)
+      this.cargoDestinations().unload.includes(clickedTerritory)
     ) {
+      // Which loaded units disembark; null (the default) unloads the whole cargo. An explicit empty
+      // selection means "keep everything aboard", so it authors no unload.
+      const chosen = this.cargoUnload.selectedUnitIds();
+      if (chosen !== null && chosen.length === 0) {
+        return false;
+      }
       this.store.dispatch(
-        new MapActions.PlanSquadMovementStep(clickedTerritory, coordinate, { role: 'unload' }),
+        new MapActions.PlanSquadMovementStep(clickedTerritory, coordinate, {
+          role: 'unload',
+          unitIds: chosen ?? undefined,
+        }),
       );
       return true;
     }
@@ -451,8 +510,10 @@ export class GameMap implements OnInit, OnDestroy {
           return;
         }
       }
-      // A fresh selection starts at "move the whole stack"; the picker re-derives from here.
+      // A fresh selection starts at "move the whole stack" / "unload everything"; the pickers
+      // re-derive from here.
       this.detachment.reset();
+      this.cargoUnload.reset();
       const canChangeMovementPlan = this.canChangeSelectedMovementPlan();
       const hasMovementPlans = this.hasMovementPlansWithPath();
       this.store.dispatch(

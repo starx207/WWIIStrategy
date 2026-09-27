@@ -14,7 +14,7 @@ import {
   plannedTransportSeaPosition,
 } from './rules/amphibious';
 import { calculateAdjacentDestinations } from './rules/movement-calculator';
-import { parseSquadId } from './rules/movement-execution';
+import { parseSquadId, planMovingUnits } from './rules/movement-execution';
 import { createResolvedRuleContext } from './rule-context.factory';
 import { RuleState } from '@ww2/settings/settings-state';
 import { SettingsSelectors } from '@ww2/settings/settings-selectors';
@@ -31,6 +31,17 @@ export type SelectedSquadState = NonNullable<MapStateModel['selectedSquad']>;
 export interface SquadCargoDestinations {
   load: TerritoryName[];
   unload: TerritoryName[];
+}
+
+/**
+ * A unit carried by the selected transport squad, tagged by when it boarded. `carried-over` units
+ * loaded on a previous turn and may elect to stay aboard during a combat unload; `loaded-this-phase`
+ * units have a planned load this phase and, in the combat phase, cannot stay aboard when unloading.
+ */
+export interface TransportCargoUnit {
+  id: string;
+  type: UnitType;
+  provenance: 'carried-over' | 'loaded-this-phase';
 }
 
 type SquadGroups = Record<string, MilitaryUnit[]>;
@@ -60,16 +71,21 @@ function isHostileCoast(
 /**
  * A deferred load step (a land squad's plan whose terminal step targets a transport) doesn't
  * physically move its units until phase exit — but the transport should already read as carrying
- * them. This resolves each planned load to the boarding units so the map can hide them at their
- * origin and show their types on the target transport's cargo badge right away.
+ * them. This resolves each planned load to the boarding units (honoring a detachment's `unitIds`, so
+ * a subset load only accounts for the units actually boarding) so the map can hide them at their
+ * origin and show their types on the target transport's cargo badge right away. Also used to charge
+ * planned loads against a transport's remaining capacity so it can't be overcommitted.
  */
-function collectPlannedLoads(state: MapStateModel): {
+export function collectPlannedLoads(
+  movementPlansBySquadId: Record<string, SquadMovementPlan>,
+  unitsByTerritoryName: Partial<Record<TerritoryName, MilitaryUnit[]>>,
+): {
   hiddenUnitIds: Set<string>;
   cargoTypesByTransportId: Record<string, UnitType[]>;
 } {
   const hiddenUnitIds = new Set<string>();
   const cargoTypesByTransportId: Record<string, UnitType[]> = {};
-  for (const plan of Object.values(state.movementPlansBySquadId)) {
+  for (const plan of Object.values(movementPlansBySquadId)) {
     const terminal = plan.path[plan.path.length - 1];
     if (terminal?.cargo?.role !== 'load') {
       continue;
@@ -78,8 +94,10 @@ function collectPlannedLoads(state: MapStateModel): {
     if (!squad) {
       continue;
     }
-    const boarding = (state.unitsByTerritoryName[plan.startingTerritoryName] ?? []).filter(
-      (unit) => unit.nationality === squad.nationality && unit.type === squad.unitType,
+    const boarding = planMovingUnits(
+      unitsByTerritoryName[plan.startingTerritoryName] ?? [],
+      squad,
+      plan,
     );
     const transportId = terminal.cargo.transportId;
     for (const unit of boarding) {
@@ -95,7 +113,10 @@ export class MapSelectors {
   static squadsByTerritoryName(
     state: MapStateModel,
   ): Record<TerritoryName, MilitaryUnitSquad<MilitaryUnit>[]> {
-    const plannedLoads = collectPlannedLoads(state);
+    const plannedLoads = collectPlannedLoads(
+      state.movementPlansBySquadId,
+      state.unitsByTerritoryName,
+    );
     const hiddenUnitIds = new Set([
       ...allCargoUnitIds(state.cargoByCarrierUnitId),
       ...allAmphibiousUnitIds(state.amphibiousAssaultsByTerritory),
@@ -297,17 +318,6 @@ export class MapSelectors {
       return empty;
     }
 
-    // Cargo splitting is a separate workstream: load/unload stays a whole-stack action. Refuse it
-    // whenever this order is (or shares a stack with) a detachment, so the cargo passes always see
-    // the full stack.
-    const baseId = selectedSquad.id.split('|').slice(0, 4).join('|');
-    const isSubsetOrder =
-      selectedSquad.id.split('|').length > 4 ||
-      Object.keys(state.movementPlansBySquadId).some((key) => key.startsWith(`${baseId}|d`));
-    if (isSubsetOrder) {
-      return empty;
-    }
-
     const plan = state.movementPlansBySquadId[selectedSquad.activePlanKey];
 
     if (LAND_UNIT_TYPES.includes(parsed.unitType)) {
@@ -315,15 +325,26 @@ export class MapSelectors {
       if ((plan?.path.length ?? 0) > 0) {
         return empty;
       }
+      // Baseline: any adjacent sea zone whose transport could accept at least one unit of this type.
+      // The exact chosen split count is applied as a reactive filter in the map component
+      // (GameMap.loadTargets), since a selector can't read the transient detachment-count signal.
       const adjacent = ADJACENT_TERRITORIES_BY_NAME[selectedTerritory] ?? [];
+      const committedUnitIds = new Set(state.combatCommittedUnitIds);
+      const plannedCargoTypesByTransportId = collectPlannedLoads(
+        state.movementPlansBySquadId,
+        state.unitsByTerritoryName,
+      ).cargoTypesByTransportId;
       const load = adjacent.filter((territory) =>
         findLoadableTransport({
           fromTerritory: selectedTerritory,
           seaZone: territory,
-          cargoUnitCount: selectedSquad.unitIds.length,
+          cargoUnitCount: 1,
+          cargoUnitType: parsed.unitType,
           nation,
           unitsByTerritory: state.unitsByTerritoryName,
           cargoByCarrierUnitId: state.cargoByCarrierUnitId,
+          committedUnitIds,
+          plannedCargoTypesByTransportId,
         }),
       );
       return { load, unload: [] };
@@ -351,6 +372,65 @@ export class MapSelectors {
     }
 
     return empty;
+  }
+
+  /**
+   * The units the selected transport squad is carrying (or about to carry via a planned load this
+   * phase), tagged by provenance, for the unload picker. Empty unless a transport squad with cargo is
+   * selected. Carried-over units already sit in the transport's sea zone; loaded-this-phase units are
+   * still at their origin as deferred load plans, so both are resolved from their respective places.
+   */
+  @Selector([MapState])
+  static selectedTransportCargo(state: MapStateModel): TransportCargoUnit[] {
+    const selected = state.selectedSquad;
+    if (!selected) {
+      return [];
+    }
+    const parsed = parseSquadId(selected.id);
+    const selectedTerritory = selected.id.split('|')[1] as TerritoryName | undefined;
+    if (!parsed || parsed.unitType !== UnitType.TRANSPORT || !selectedTerritory) {
+      return [];
+    }
+
+    const transportIds = new Set(selected.unitIds);
+    const seaUnitsById = new Map(
+      (state.unitsByTerritoryName[selectedTerritory] ?? []).map((unit) => [unit.id, unit]),
+    );
+
+    // Carried-over cargo: ids already recorded against this squad's transports, physically co-located
+    // with the transport in its sea zone.
+    const carriedOver: TransportCargoUnit[] = [];
+    for (const transportId of selected.unitIds) {
+      for (const cargoId of state.cargoByCarrierUnitId[transportId] ?? []) {
+        const unit = seaUnitsById.get(cargoId);
+        if (unit) {
+          carriedOver.push({ id: unit.id, type: unit.type, provenance: 'carried-over' });
+        }
+      }
+    }
+
+    // Loaded-this-phase: deferred load plans whose terminal step targets one of this squad's transports.
+    const loadedThisPhase: TransportCargoUnit[] = [];
+    for (const plan of Object.values(state.movementPlansBySquadId)) {
+      const terminal = plan.path[plan.path.length - 1];
+      if (terminal?.cargo?.role !== 'load' || !transportIds.has(terminal.cargo.transportId)) {
+        continue;
+      }
+      const squad = parseSquadId(plan.squadId);
+      if (!squad) {
+        continue;
+      }
+      const boarding = planMovingUnits(
+        state.unitsByTerritoryName[plan.startingTerritoryName] ?? [],
+        squad,
+        plan,
+      );
+      for (const unit of boarding) {
+        loadedThisPhase.push({ id: unit.id, type: unit.type, provenance: 'loaded-this-phase' });
+      }
+    }
+
+    return [...carriedOver, ...loadedThisPhase];
   }
 
   @Selector([MapState])

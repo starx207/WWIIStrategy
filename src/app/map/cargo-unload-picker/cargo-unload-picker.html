@@ -1,0 +1,41 @@
+@if (visible()) {
+  <section class="cargo-unload-picker">
+    <p class="cargo-unload-picker__eyebrow">Unload Cargo</p>
+    <ul class="cargo-unload-picker__list">
+      @for (unit of cargo(); track unit.id) {
+        <li>
+          <button
+            type="button"
+            class="cargo-unload-picker__item"
+            [class.cargo-unload-picker__item--checked]="isChecked(unit)"
+            [attr.aria-pressed]="isChecked(unit)"
+            [disabled]="isLocked(unit)"
+            (click)="toggle(unit)"
+          >
+            <span class="cargo-unload-picker__check" aria-hidden="true">
+              {{ isChecked(unit) ? '✓' : '' }}
+            </span>
+            @if (nationality(); as nationality) {
+              <ww2-military-unit-icon
+                class="cargo-unload-picker__icon"
+                [nationality]="nationality"
+                [unitType]="unit.type"
+              />
+            }
+            <span class="cargo-unload-picker__type">{{ unit.type }}</span>
+            @if (isLocked(unit)) {
+              <span class="cargo-unload-picker__badge">must land</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+    <p class="cargo-unload-picker__hint">
+      @if (checkedCount() > 0) {
+        {{ checkedCount() }} of {{ cargo().length }} will unload. Click a coast to land them.
+      } @else {
+        None selected — the transport keeps its cargo aboard.
+      }
+    </p>
+  </section>
+}

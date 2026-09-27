@@ -5,6 +5,7 @@ import { GameMap } from '@ww2/map/game-map/game-map';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { MOVEMENT_PHASES, TurnPhase } from '@ww2/game/turn-phase';
 import { SquadDetachmentPicker } from '@ww2/map/squad-detachment-picker/squad-detachment-picker';
+import { CargoUnloadPicker } from '@ww2/map/cargo-unload-picker/cargo-unload-picker';
 import { PurchasePanel } from '../../production/purchase-panel/purchase-panel';
 import { TechPanel } from '../../production/tech-panel/tech-panel';
 import { PlacementPanel } from '../../production/placement-panel/placement-panel';
@@ -30,6 +31,7 @@ import { TurnFlowService } from '../turn-flow.service';
     BattleBoard,
     AircraftLandingPicker,
     SquadDetachmentPicker,
+    CargoUnloadPicker,
     HandoffScreen,
     VictoryScreen,
     GameControlsWidget,

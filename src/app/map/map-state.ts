@@ -31,7 +31,10 @@ export type SquadMovementStepCombatType = 'none' | 'combat' | 'under-fire';
  * transport's terminal step onto an adjacent land territory means "unload cargo here". These are
  * applied at phase exit (see `executeMovementPlans`), so they stay undoable like any other step.
  */
-export type SquadMovementStepCargo = { role: 'load'; transportId: string } | { role: 'unload' };
+export type SquadMovementStepCargo =
+  | { role: 'load'; transportId: string }
+  // `unitIds` names which loaded cargo units disembark; absent = unload the whole cargo (legacy).
+  | { role: 'unload'; unitIds?: string[] };
 
 export interface SquadMovementStep {
   territoryName: TerritoryName;
@@ -554,13 +557,20 @@ export class MapState {
   @Action(MapActions.RecordCombatCommitments)
   recordCombatCommitments(context: MapStateContext, action: MapActions.RecordCombatCommitments) {
     const state = context.getState();
+    // Union with any ids already committed this phase exit (e.g. transports flagged by
+    // ApplyAmphibiousCombatMovePlans, whose plans are consumed before this runs).
     context.patchState({
-      combatCommittedUnitIds: collectCombatCommittedUnitIds({
-        nation: action.nationality,
-        plans: Object.values(state.movementPlansBySquadId),
-        unitsByTerritory: state.unitsByTerritoryName,
-        amphibiousAssaultsByTerritory: state.amphibiousAssaultsByTerritory,
-      }),
+      combatCommittedUnitIds: [
+        ...new Set([
+          ...state.combatCommittedUnitIds,
+          ...collectCombatCommittedUnitIds({
+            nation: action.nationality,
+            plans: Object.values(state.movementPlansBySquadId),
+            unitsByTerritory: state.unitsByTerritoryName,
+            amphibiousAssaultsByTerritory: state.amphibiousAssaultsByTerritory,
+          }),
+        ]),
+      ],
     });
   }
 
@@ -596,6 +606,12 @@ export class MapState {
       cargoByCarrierUnitId: result.cargoByCarrierUnitId,
       amphibiousAssaultsByTerritory: result.amphibiousAssaultsByTerritory,
       movementPlansBySquadId: result.remainingPlans,
+      // A transport that ran a combat cargo op is locked out of non-combat cargo ops (rule: a
+      // transport participates in one phase only). RecordCombatCommitments (dispatched next) unions
+      // with this rather than overwriting it, since the transport's plan is already consumed here.
+      combatCommittedUnitIds: [
+        ...new Set([...state.combatCommittedUnitIds, ...result.committedTransportIds]),
+      ],
     });
   }
 }

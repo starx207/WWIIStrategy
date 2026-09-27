@@ -1,5 +1,5 @@
 import { MilitaryUnit } from '@ww2/shared/military-unit';
-import { LAND_UNIT_TYPES, UnitType } from '@ww2/shared/unit-type';
+import { UnitType } from '@ww2/shared/unit-type';
 import { TerritoryName } from '../../territories/territory-names';
 
 /** Fighters an aircraft carrier can carry. */
@@ -7,6 +7,14 @@ export const CARRIER_CAPACITY = 2;
 
 /** Land units a transport can carry. */
 export const TRANSPORT_CAPACITY = 2;
+
+/** Unit types a transport is allowed to carry (unlike `LAND_UNIT_TYPES`, this includes AA guns). */
+export const TRANSPORT_CARGO_TYPES = [
+  UnitType.INFANTRY,
+  UnitType.ARTILLERY,
+  UnitType.TANK,
+  UnitType.ANTI_AIR_GUN,
+];
 
 /** Maps a carrying unit id (carrier or transport) to the ids of the units loaded on it. */
 export type CargoByCarrierUnitId = Record<string, string[]>;
@@ -28,9 +36,25 @@ export function canCarry(carryingUnitType: UnitType, cargoUnitType: UnitType): b
     return cargoUnitType === UnitType.FIGHTER_JET;
   }
   if (carryingUnitType === UnitType.TRANSPORT) {
-    return LAND_UNIT_TYPES.includes(cargoUnitType);
+    return TRANSPORT_CARGO_TYPES.includes(cargoUnitType);
   }
   return false;
+}
+
+/**
+ * Whether a transport may hold the given set of cargo types at once. Infantry-anchored rule: up to
+ * `TRANSPORT_CAPACITY` units, every one an eligible cargo type, and any full (2-unit) load must
+ * include at least one infantry. So a single unit of any eligible type is fine, infantry+anything
+ * eligible is fine, but two non-infantry units (e.g. artillery+tank) are not.
+ */
+export function canTransportHoldTypes(cargoTypes: UnitType[]): boolean {
+  if (cargoTypes.length > TRANSPORT_CAPACITY) {
+    return false;
+  }
+  if (!cargoTypes.every((type) => TRANSPORT_CARGO_TYPES.includes(type))) {
+    return false;
+  }
+  return cargoTypes.length < 2 || cargoTypes.some((type) => type === UnitType.INFANTRY);
 }
 
 /** Remaining capacity of a carrying unit given its current cargo. */

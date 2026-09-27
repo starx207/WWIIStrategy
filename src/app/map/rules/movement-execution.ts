@@ -33,7 +33,7 @@ export interface ExecuteMovementResult {
  * whole stack (legacy). Sibling detachment plans of one stack carry disjoint `unitIds`, so applying
  * this per plan never double-moves a unit.
  */
-function planMovingUnits(
+export function planMovingUnits(
   originUnits: MilitaryUnit[],
   squad: { nationality: Nationality; unitType: UnitType },
   plan: SquadMovementPlan,
@@ -173,7 +173,9 @@ export function executeMovementPlans(
     if (!squad) {
       continue;
     }
-    const target = plan.path[plan.path.length - 1].territoryName;
+    const terminal = plan.path[plan.path.length - 1];
+    const target = terminal.territoryName;
+    const unloadUnitIds = terminal.cargo?.role === 'unload' ? terminal.cargo.unitIds : undefined;
     const moveSteps = plan.path.filter((step) => !step.cargo);
     const transportTerritory =
       moveSteps[moveSteps.length - 1]?.territoryName ?? plan.startingTerritoryName;
@@ -190,6 +192,7 @@ export function executeMovementPlans(
         transportId: transport.id,
         transportTerritory,
         targetTerritory: target,
+        unitIds: unloadUnitIds,
       });
       units = result.unitsByTerritoryName;
       cargo = result.cargoByCarrierUnitId;
@@ -204,6 +207,9 @@ export interface ExecuteAmphibiousCombatMoveResult {
   cargoByCarrierUnitId: CargoByCarrierUnitId;
   amphibiousAssaultsByTerritory: AmphibiousAssaults;
   remainingPlans: Record<string, SquadMovementPlan>;
+  // Transports that loaded or unloaded during combat movement. A transport participates in cargo
+  // ops in only one phase, so these are marked combat-committed to lock them out of non-combat.
+  committedTransportIds: string[];
 }
 
 /**
@@ -234,6 +240,7 @@ export function executeAmphibiousCombatMovePlans(params: {
   let cargo: CargoByCarrierUnitId = { ...params.cargoByCarrierUnitId };
   let amphibious: AmphibiousAssaults = { ...params.amphibiousAssaultsByTerritory };
   const remainingPlans: Record<string, SquadMovementPlan> = {};
+  const committedTransportIds = new Set<string>();
 
   const terminalCargoRole = (plan: SquadMovementPlan) =>
     plan.phase === TurnPhase.COMBAT_MOVEMENT && plan.path.length > 0
@@ -265,9 +272,7 @@ export function executeAmphibiousCombatMovePlans(params: {
       continue;
     }
     const originUnits = units[plan.startingTerritoryName] ?? [];
-    const loadingIds = originUnits
-      .filter((unit) => unit.nationality === squad.nationality && unit.type === squad.unitType)
-      .map((unit) => unit.id);
+    const loadingIds = planMovingUnits(originUnits, squad, plan).map((unit) => unit.id);
     if (loadingIds.length === 0) {
       continue;
     }
@@ -281,6 +286,7 @@ export function executeAmphibiousCombatMovePlans(params: {
     });
     units = result.unitsByTerritoryName;
     cargo = result.cargoByCarrierUnitId;
+    committedTransportIds.add(terminal.cargo.transportId);
   }
 
   // Pass 2 — transport moves (dragging cargo) to the final sea step before the unload.
@@ -323,7 +329,9 @@ export function executeAmphibiousCombatMovePlans(params: {
     if (!squad) {
       continue;
     }
-    const target = plan.path[plan.path.length - 1].territoryName as LandTerritoryName;
+    const terminal = plan.path[plan.path.length - 1];
+    const target = terminal.territoryName as LandTerritoryName;
+    const unloadUnitIds = terminal.cargo?.role === 'unload' ? terminal.cargo.unitIds : undefined;
     const moveSteps = plan.path.filter((step) => !step.cargo);
     const transportTerritory =
       moveSteps[moveSteps.length - 1]?.territoryName ?? plan.startingTerritoryName;
@@ -338,12 +346,14 @@ export function executeAmphibiousCombatMovePlans(params: {
       if ((cargo[transport.id] ?? []).length === 0) {
         continue;
       }
+      committedTransportIds.add(transport.id);
       if (hostile) {
         const result = stageAmphibiousAssault({
           cargoByCarrierUnitId: cargo,
           amphibiousAssaultsByTerritory: amphibious,
           transportId: transport.id,
           targetTerritory: target,
+          unitIds: unloadUnitIds,
         });
         cargo = result.cargoByCarrierUnitId;
         amphibious = result.amphibiousAssaultsByTerritory;
@@ -354,6 +364,7 @@ export function executeAmphibiousCombatMovePlans(params: {
           transportId: transport.id,
           transportTerritory,
           targetTerritory: target,
+          unitIds: unloadUnitIds,
         });
         units = result.unitsByTerritoryName;
         cargo = result.cargoByCarrierUnitId;
@@ -366,5 +377,6 @@ export function executeAmphibiousCombatMovePlans(params: {
     cargoByCarrierUnitId: cargo,
     amphibiousAssaultsByTerritory: amphibious,
     remainingPlans,
+    committedTransportIds: [...committedTransportIds],
   };
 }
