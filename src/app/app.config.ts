@@ -41,10 +41,10 @@ export const appConfig: ApplicationConfig = {
       ],
       withNgxsReduxDevtoolsPlugin(),
       withNgxsRouterPlugin(),
-      // withNgxsStoragePlugin({
-      //   keys: '*',
-      //   storage: StorageOption.SessionStorage, // TODO: I want to use local storage in final version
-      // })
+      withNgxsStoragePlugin({
+        keys: '*',
+        storage: StorageOption.LocalStorage,
+      }),
     ),
     // Treasuries sit leftmost, then the contextual phase/movement widgets.
     { provide: HEADER_WIDGETS, useValue: TreasuryWidget, multi: true },
