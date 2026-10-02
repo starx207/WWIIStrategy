@@ -9,6 +9,7 @@ pkgs.mkShell {
       numpy
       pillow
     ]))
+    just
   ];
 
   shellHook = ''
