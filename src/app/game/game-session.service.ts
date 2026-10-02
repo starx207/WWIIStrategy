@@ -12,6 +12,8 @@ import { PlacementService } from '@ww2/production/placement.service';
 import { SquadDetachmentService } from '@ww2/map/squad-detachment.service';
 import { CargoUnloadService } from '@ww2/map/cargo-unload.service';
 import { defaultSaveFileName, deserializeGame, serializeGame } from './game-serialization';
+import { StateReset } from 'ngxs-reset-plugin';
+import { ALL_GAME_STATES } from './all-game-states';
 
 export interface NewGameConfig {
   players: Player[];
@@ -33,15 +35,9 @@ export class GameSessionService {
   private readonly squadDetachment = inject(SquadDetachmentService);
   private readonly cargoUnload = inject(CargoUnloadService);
 
-  /**
-   * The default state of every slice, captured the first time this service is constructed —
-   * before any gameplay has mutated the store (the landing page is the first screen).
-   */
-  private readonly pristineSnapshot = this.store.snapshot();
-
   /** Reset all slices to defaults, then record the chosen players / rules and start the first turn. */
   startNewGame(config: NewGameConfig): void {
-    this.store.reset(this.pristineSnapshot);
+    this.store.dispatch(new StateReset(...ALL_GAME_STATES));
     this.turnFlow.reset();
     this.combatOrchestrator.reset();
     this.placementService.reset();
@@ -77,9 +73,7 @@ export class GameSessionService {
   /** Suggested filename for the save dialog: the loaded file's name, else a timestamped default. */
   suggestedSaveFileName(): string {
     const loaded = this.store.selectSnapshot((state) => state['session']?.loadedFileName) as
-      | string
-      | null
-      | undefined;
+      string | null | undefined;
     return loaded ?? defaultSaveFileName();
   }
 
