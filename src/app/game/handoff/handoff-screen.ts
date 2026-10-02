@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { Alliance, NATION_ALLIANCE } from '@ww2/shared/nationality';
 import { NATIONALITY_LABEL } from '@ww2/shared/nationality-label';
@@ -12,6 +12,7 @@ import { TurnFlowService } from '../turn-flow.service';
   selector: 'ww2-handoff-screen',
   imports: [],
   templateUrl: './handoff-screen.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './handoff-screen.scss',
 })
 export class HandoffScreen {

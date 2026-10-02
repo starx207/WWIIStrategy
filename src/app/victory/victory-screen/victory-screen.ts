@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { Alliance } from '@ww2/shared/nationality';
@@ -10,6 +10,7 @@ import { TurnFlowService } from '../../game/turn-flow.service';
   selector: 'ww2-victory-screen',
   imports: [],
   templateUrl: './victory-screen.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './victory-screen.scss',
 })
 export class VictoryScreen {

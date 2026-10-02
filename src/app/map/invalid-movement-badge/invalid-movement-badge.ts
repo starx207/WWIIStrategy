@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { MapSelectors } from '../map-selectors';
 
@@ -6,6 +6,7 @@ import { MapSelectors } from '../map-selectors';
   selector: 'ww2-invalid-movement-badge',
   imports: [],
   templateUrl: './invalid-movement-badge.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './invalid-movement-badge.scss',
 })
 export class InvalidMovementBadge {

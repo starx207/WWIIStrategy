@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { AppHeader } from '../../app-header/app-header';
 import { GameMap } from '@ww2/map/game-map/game-map';
@@ -37,6 +37,7 @@ import { TurnFlowService } from '../turn-flow.service';
     GameControlsWidget,
   ],
   templateUrl: './game-shell.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './game-shell.scss',
 })
 export class GameShell {

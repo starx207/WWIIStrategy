@@ -8,6 +8,7 @@ import {
   effect,
   output,
   viewChild,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { Battalion } from '../battalion/battalion';
 import { UpperCasePipe } from '@angular/common';
@@ -28,6 +29,7 @@ const MAX_DICE_COUNT = 20;
   imports: [Battalion, UpperCasePipe, Dice, ModalDialog],
   templateUrl: './battle-board.html',
   styleUrl: './battle-board.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   host: {
     class: 'battle-board',
   },

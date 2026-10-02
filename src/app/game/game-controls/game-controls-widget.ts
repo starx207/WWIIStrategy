@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { GameSessionService } from '../game-session.service';
 
@@ -10,6 +10,7 @@ import { GameSessionService } from '../game-session.service';
   selector: 'ww2-game-controls-widget',
   imports: [],
   templateUrl: './game-controls-widget.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './game-controls-widget.scss',
 })
 export class GameControlsWidget {

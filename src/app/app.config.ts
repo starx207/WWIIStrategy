@@ -10,7 +10,7 @@ import { withNgxsReduxDevtoolsPlugin } from '@ngxs/devtools-plugin';
 import { withNgxsRouterPlugin } from '@ngxs/router-plugin';
 import { StorageOption, withNgxsStoragePlugin } from '@ngxs/storage-plugin';
 import { provideStore } from '@ngxs/store';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { CombatState } from './combat/combat-state';
 import { MapState } from './map/map-state';
 import { SettingsState } from './settings/settings-state';
@@ -28,7 +28,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideHttpClient(),
+    provideHttpClient(withXhr()),
     provideStore(
       [
         CombatState,

@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { UnitType } from '@ww2/shared/unit-type';
 import { MilitaryUnitIcon } from '@ww2/shared/military-unit-icon';
@@ -16,6 +16,7 @@ import { cartCost } from '../production-state';
   selector: 'ww2-purchase-panel',
   imports: [MilitaryUnitIcon],
   templateUrl: './purchase-panel.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './purchase-panel.scss',
 })
 export class PurchasePanel {

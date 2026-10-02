@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { MilitaryUnitIcon } from '@ww2/shared/military-unit-icon';
 import { GameSelectors } from '@ww2/game/game-selectors';
@@ -19,6 +19,7 @@ import { parseSquadId } from '../rules/movement-execution';
   selector: 'ww2-cargo-unload-picker',
   imports: [MilitaryUnitIcon],
   templateUrl: './cargo-unload-picker.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './cargo-unload-picker.scss',
 })
 export class CargoUnloadPicker {

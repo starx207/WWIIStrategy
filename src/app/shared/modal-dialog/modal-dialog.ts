@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'ww2-modal-dialog',
@@ -6,6 +6,7 @@ import { Component, ElementRef, ViewChild } from '@angular/core';
   imports: [],
   templateUrl: './modal-dialog.html',
   styleUrl: './modal-dialog.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   host: {
     '[class.visible]': 'visible',
   },

@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { MapSelectors } from '@ww2/map/map-selectors';
 import { GameSelectors } from '@ww2/game/game-selectors';
@@ -11,6 +11,7 @@ import { computePendingBattles } from '../combat-orchestration';
   selector: 'ww2-conduct-combat-panel',
   imports: [],
   templateUrl: './conduct-combat-panel.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './conduct-combat-panel.scss',
 })
 export class ConductCombatPanel {

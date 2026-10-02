@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { GameSelectors } from '@ww2/game/game-selectors';
 import { nationalityForGamePhase } from '@ww2/game/game-phase';
@@ -13,6 +13,7 @@ import { TurnFlowService } from '../turn-flow.service';
   selector: 'ww2-phase-control',
   imports: [],
   templateUrl: './phase-control.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './phase-control.scss',
 })
 export class PhaseControl {

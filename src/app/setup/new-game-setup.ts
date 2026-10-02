@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Alliance, NATION_ALLIANCE, NATIONALITIES, Nationality } from '@ww2/shared/nationality';
 import { VICTORY_CONDITION_LABEL, VictoryCondition } from '@ww2/victory/data/victory-cities';
@@ -27,6 +27,7 @@ function defaultPlayerFor(nationality: Nationality): string {
   selector: 'ww2-new-game-setup',
   imports: [],
   templateUrl: './new-game-setup.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './new-game-setup.scss',
 })
 export class NewGameSetup {

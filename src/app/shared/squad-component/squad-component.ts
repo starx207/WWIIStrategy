@@ -1,5 +1,5 @@
 import { CdkMenuModule } from '@angular/cdk/menu';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { MilitaryUnitIcon } from '../military-unit-icon';
 import { MilitaryUnitSquad } from '../military-unit-squad';
 import {
@@ -31,6 +31,7 @@ export interface SquadContextActionSelected<T extends EffectiveUnit | MilitaryUn
   imports: [CdkMenuModule, MilitaryUnitIcon, ContextMenuComponent],
   templateUrl: './squad-component.html',
   styleUrl: './squad-component.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   host: {
     '[class]': 'hostClasses()',
     '(click)': 'selectSquad()',

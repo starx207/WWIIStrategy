@@ -1,4 +1,13 @@
-import { Component, computed, inject, Input, input, signal, Signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  Input,
+  input,
+  signal,
+  Signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import {
   SquadContextAction,
   SquadDirection,
@@ -31,6 +40,7 @@ export function findPendingCasualtyInSquad(
   imports: [SquadComponent],
   templateUrl: './battalion.html',
   styleUrl: './battalion.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   host: {
     '[class]': 'hostClasses()',
   },

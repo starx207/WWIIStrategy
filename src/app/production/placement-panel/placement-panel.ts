@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { UnitType } from '@ww2/shared/unit-type';
 import { MilitaryUnitIcon } from '@ww2/shared/military-unit-icon';
 import { UNIT_TYPE_LABEL } from '@ww2/shared/unit-type-label';
@@ -21,6 +21,7 @@ interface StagedGroup {
   selector: 'ww2-placement-panel',
   imports: [MilitaryUnitIcon],
   templateUrl: './placement-panel.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './placement-panel.scss',
 })
 export class PlacementPanel {

@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CdkMenuModule } from '@angular/cdk/menu';
 
 export interface ContextMenuAction<TContext = unknown> {
@@ -17,6 +17,7 @@ export interface ContextMenuActionSelected<TContext = unknown> {
   selector: 'ww2-context-menu',
   imports: [CdkMenuModule],
   templateUrl: './context-menu.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './context-menu.scss',
 })
 export class ContextMenuComponent {

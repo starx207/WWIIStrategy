@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { Nationality } from '@ww2/shared/nationality';
 import { NATIONALITY_SHORT_LABEL } from '@ww2/shared/nationality-label';
@@ -10,6 +10,7 @@ import { EconomySelectors } from '../economy-selectors';
   selector: 'ww2-treasury-widget',
   imports: [],
   templateUrl: './treasury-widget.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './treasury-widget.scss',
 })
 export class TreasuryWidget {

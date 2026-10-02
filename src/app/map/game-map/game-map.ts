@@ -10,6 +10,7 @@ import {
   OnDestroy,
   OnInit,
   ViewChild,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { FeatureLike } from 'ol/Feature';
@@ -42,6 +43,7 @@ import { CargoUnloadService } from '../cargo-unload.service';
   selector: 'ww2-game-map',
   imports: [],
   templateUrl: './game-map.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './game-map.scss',
 })
 export class GameMap implements OnInit, OnDestroy {

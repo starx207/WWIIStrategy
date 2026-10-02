@@ -1,4 +1,12 @@
-import { Component, computed, inject, input, output, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  ViewEncapsulation,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { SquadComponent } from '@ww2/shared/squad-component/squad-component';
 import { MapSquadLayout } from '../map-squad-layout';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
@@ -13,6 +21,7 @@ export type MapSquadOverlayVariant = 'normal' | 'movement-start' | 'movement-fin
   imports: [SquadComponent],
   templateUrl: './map-squad-overlay.html',
   styleUrl: './map-squad-overlay.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   encapsulation: ViewEncapsulation.None,
 })
 export class MapSquadOverlay {

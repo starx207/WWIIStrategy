@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { TechnologyId } from '@ww2/settings/settings-state';
 import {
@@ -21,6 +21,7 @@ import { SessionSelectors } from '../../session/session-selectors';
   selector: 'ww2-tech-panel',
   imports: [Dice],
   templateUrl: './tech-panel.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './tech-panel.scss',
 })
 export class TechPanel {

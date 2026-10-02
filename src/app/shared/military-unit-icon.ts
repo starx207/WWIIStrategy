@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, ChangeDetectionStrategy } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { NEUTRAL_UNIT_TYPES, UNIT_TYPES, UnitType } from './unit-type';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -20,6 +20,7 @@ import { NATIONALITIES, Nationality } from './nationality';
       fill-opacity: 1;
     }
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   host: {
     '[class]': '"military-unit-icon " + nationalityClass()',
   },

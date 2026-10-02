@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { NgComponentOutlet } from '@angular/common';
 import { Store } from '@ngxs/store';
 import { GameSelectors } from '@ww2/game/game-selectors';
@@ -9,6 +9,7 @@ import { HEADER_WIDGETS } from './header-widget';
   selector: 'ww2-app-header',
   imports: [NgComponentOutlet],
   templateUrl: './app-header.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './app-header.scss',
 })
 export class AppHeader {

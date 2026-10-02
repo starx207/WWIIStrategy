@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { MilitaryUnit } from '@ww2/shared/military-unit';
 import { Nationality } from '@ww2/shared/nationality';
 import { UnitType } from '@ww2/shared/unit-type';
@@ -48,6 +48,7 @@ const slotKey = (type: UnitType, zone: TerritoryName): string => `${type}|${zone
   selector: 'ww2-aircraft-landing-picker',
   imports: [MilitaryUnitIcon],
   templateUrl: './aircraft-landing-picker.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './aircraft-landing-picker.scss',
 })
 export class AircraftLandingPicker {

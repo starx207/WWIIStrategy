@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { GameSessionService } from '../game/game-session.service';
 
@@ -6,6 +6,7 @@ import { GameSessionService } from '../game/game-session.service';
   selector: 'ww2-landing-page',
   imports: [],
   templateUrl: './landing-page.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './landing-page.scss',
 })
 export class LandingPage {

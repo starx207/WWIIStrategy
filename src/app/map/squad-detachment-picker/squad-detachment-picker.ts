@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { MilitaryUnitIcon } from '@ww2/shared/military-unit-icon';
 import { MapSelectors } from '../map-selectors';
@@ -17,6 +17,7 @@ import { parseSquadId } from '../rules/movement-execution';
   selector: 'ww2-squad-detachment-picker',
   imports: [MilitaryUnitIcon],
   templateUrl: './squad-detachment-picker.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './squad-detachment-picker.scss',
 })
 export class SquadDetachmentPicker {
